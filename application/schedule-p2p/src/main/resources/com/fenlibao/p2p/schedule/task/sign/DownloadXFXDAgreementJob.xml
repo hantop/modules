@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <!-- 消费信贷 下载 协议-->
+	<bean id="downloadXFXDAgreementJob"
+		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.sign.DownloadXFXDAgreementJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler 
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to 
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="downloadXFXDAgreementTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="downloadXFXDAgreementJob" />
+		<!-- 线上频率5min-->
+		<property name="cronExpression" value="0 0/5 * * * ?" />
+		<!--0 0/15-->
+	</bean>
+
+</beans>

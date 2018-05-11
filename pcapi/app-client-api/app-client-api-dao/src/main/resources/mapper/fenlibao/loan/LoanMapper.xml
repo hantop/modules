@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="LoanMapper">
+	<insert id="add" parameterType="LoanApplicationForm">
+		INSERT INTO flb.loan_application (
+			user_id,amount_range,contacts,phone_num,district_full_name,annual_income,has_room,has_car,_code
+		) VALUES (
+			#{userId},#{amountRange},#{contacts},#{phoneNum},#{districtFullName},#{annualIncome},#{room},#{car},#{code}
+		)
+	</insert>
+	
+	<select id="getUntreatedQty" parameterType="java.lang.String" resultType="java.lang.Integer">
+		SELECT COUNT(id) FROM flb.loan_application WHERE user_id = #{userId} AND processing_status = 0 LIMIT 1
+	</select>
+	
+	<select id="getNewestCode" resultType="java.lang.String">
+		SELECT _code FROM flb.loan_application ORDER BY _code DESC LIMIT 1
+	</select>
+	
+	<select id="getRealName" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT F02 FROM s61.t6141 WHERE F01 = #{userId} LIMIT 1
+	</select>
+</mapper>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserOriginMapper">
+    <select id="getUserOrigin" resultType="UserOrigin">
+		SELECT
+			id,
+			channel_code channelCode,
+			user_id userId,
+			client_type_id clientTypeId
+		FROM
+			flb.t_user_origin
+		<where>
+			user_id = #{userId}
+		</where>
+    </select>
+</mapper>

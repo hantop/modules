@@ -1,0 +1,530 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CouponMapper">
+    <insert id="addUserRateCoupons" parameterType="java.util.Map">
+        insert into flb.t_user_coupon (user_id,coupon_id,activity_id,grant_status,coupon_status,valid_time)
+        values
+        <foreach collection="userCouponInfos" item= "item" index ="index" separator=",">
+            (#{item.userId},#{item.couponId},#{item.activityId},1,1,#{item.validTime})
+        </foreach>
+    </insert>
+
+    <select id="getRateCoupons" parameterType="String" resultType="RateCoupon">
+        SELECT
+            act.id activityId,
+            coupon.id,
+            coupon.coupon_code couponCode,
+            coupon.coupon_type_id couponTypeId,
+            coupon.effect_day effectDay,
+            coupon.max_invest_money maxInvestMoney,
+            coupon.min_invest_money minInvestMoney,
+            coupon.max_invest_day maxInvestDay,
+            coupon.min_invest_day minInvestDay,
+            coupon.scope,
+            coupon.create_time createTime,
+            coupon.update_time updateTime
+        FROM
+            flb.t_coupon coupon
+        INNER JOIN flb.t_coupon_activity ca ON ca.coupon_id = coupon.id
+        INNER JOIN flb.t_activity act ON act.id = ca.activity_id
+        WHERE
+            act.`code` = #{activityCode}
+        AND SYSDATE() BETWEEN ca.start_time AND ca.end_time
+    </select>
+
+    <!--获取用户的优惠劵列表-->
+    <select id="getMyConpons" parameterType="java.util.Map" resultMap="UserCouponInfoMap">
+        SELECT
+            a.id,
+            a.couponId,
+            a.scope,
+            a.effectDay,
+            a.maxInvestMoney,
+            a.minInvestMoney,
+            a.maxInvestDay,
+            a.minInvestDay,
+            a.validTime,
+            a.surplusDays,
+            a.STATUS,
+            s62.t6211.F02 typeName,
+            s62.t6211.F01 typeId,
+            s62.t6211.F05 typeCode,
+            (case when date_add(now(), INTERVAL 7 day) <![CDATA[<]]> a.validTime then 0
+            else 1 end ) overdueFlag
+        FROM(
+        SELECT
+            t_user_coupon.id,
+            flb.t_coupon.id couponId,
+            flb.t_coupon.scope,
+            flb.t_coupon.effect_day effectDay,
+            flb.t_coupon.max_invest_money maxInvestMoney,
+            flb.t_coupon.min_invest_money minInvestMoney,
+            flb.t_coupon.max_invest_day maxInvestDay,
+            flb.t_coupon.min_invest_day minInvestDay,
+            flb.t_user_coupon.valid_time validTime,
+            DATEDIFF(
+            flb.t_user_coupon.valid_time,
+            sysdate()
+            ) surplusDays,
+            flb.t_user_coupon.coupon_status STATUS,
+            t_user_coupon.create_time createTime
+        FROM
+          flb.t_coupon
+        INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+        LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+        WHERE
+            t_user_coupon.user_id = #{userId}
+        <if test="status == 3">
+            AND t_user_coupon.coupon_status = 1
+            <![CDATA[AND t_user_coupon.valid_time < NOW()]]>
+        </if>
+        <if test="status == 1">
+            AND t_user_coupon.coupon_status = 1
+            <![CDATA[AND t_user_coupon.valid_time > NOW()]]>
+        </if>
+        <if test="status == 2">
+            AND t_user_coupon.coupon_status =2
+        </if>
+        LIMIT #{page},#{limit}) a
+        LEFT JOIN flb.t_coupon_bid_type ON a.couponId = flb.t_coupon_bid_type.coupon_id
+        LEFT JOIN s62.t6211 ON t_coupon_bid_type.bid_type_id = s62.t6211.F01
+        ORDER BY a.createTime DESC
+
+
+    </select>
+    <resultMap id="UserCouponInfoMap" type="UserCouponInfo" autoMapping="true">
+        <id property="id" column="id"></id>
+        <collection property="BidTypes" ofType="BidTypeVO" autoMapping="true"></collection>
+    </resultMap>
+
+    <!--获取用户的可使用加息卷-->
+    <select id="getAddinterestList" parameterType="java.util.Map" resultMap="AddinterestInfoMap">
+        <if test="bidId != null and bidId != ''">
+            SELECT
+            u.id,
+            u.couponId,
+            u.scope,
+            u.effectDay,
+            u.maxInvestMoney,
+            u.minInvestMoney,
+            u.maxInvestDay,
+            u.minInvestDay,
+            u.validTime,
+            DATEDIFF(u.validTime,sysdate()) surplusDays,
+            u.STATUS,
+            s62.t6211.F02 typeName,
+            s62.t6211.F01 typeId,
+            s62.t6211.F05 typeCode,
+            (case when date_add(now(), INTERVAL 7 day) <![CDATA[<]]> u.validTime then 0
+            else 1 end ) overdueFlag
+        FROM(
+        SELECT
+            id,
+            couponId,
+            scope,
+            effectDay,
+            maxInvestMoney,
+            minInvestMoney,
+            maxInvestDay,
+            minInvestDay,
+            validTime,
+            STATUS
+        FROM(
+        SELECT
+            t_user_coupon.id id,
+            flb.t_coupon.id couponId,
+            flb.t_coupon.scope scope,
+            flb.t_coupon.effect_day effectDay,
+            flb.t_coupon.max_invest_money maxInvestMoney,
+            flb.t_coupon.min_invest_money minInvestMoney,
+            flb.t_coupon.max_invest_day maxInvestDay,
+            flb.t_coupon.min_invest_day minInvestDay,
+            flb.t_user_coupon.valid_time validTime,
+            flb.t_user_coupon.coupon_status STATUS
+        FROM
+            flb.t_coupon
+        LEFT JOIN flb.t_coupon_bid_type ON flb.t_coupon.id = flb.t_coupon_bid_type.coupon_id
+        INNER JOIN s62.t6230  ON t6230.F04 = t_coupon_bid_type.bid_type_id
+        LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+        INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+        WHERE
+            t_user_coupon.user_id = #{userId}
+        AND t6230.F01 = #{bidId}
+       <![CDATA[ AND ((t6230.F09 * 30 >= t_coupon.min_invest_day AND t6230.F09 * 30 <= t_coupon.max_invest_day)
+        OR (t6230.F32 >= t_coupon.min_invest_day  AND t6230.F32 <= t_coupon.max_invest_day)
+        OR (ISNULL(t_coupon.min_invest_day) and ISNULL(t_coupon.max_invest_day)))
+        AND t_user_coupon.valid_time > CURRENT_DATE()]]>
+        AND t_user_coupon.coupon_status = 1
+        )a
+        UNION ALL
+        SELECT
+            t_user_coupon.id id,
+            flb.t_coupon.id couponId,
+            flb.t_coupon.scope scope,
+            flb.t_coupon.effect_day effectDay,
+            flb.t_coupon.max_invest_money maxInvestMoney,
+            flb.t_coupon.min_invest_money minInvestMoney,
+            flb.t_coupon.max_invest_day maxInvestDay,
+            flb.t_coupon.min_invest_day minInvestDay,
+            flb.t_user_coupon.valid_time validTime,
+            flb.t_user_coupon.coupon_status STATUS
+        FROM
+          flb.t_coupon
+        LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+        INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+        ,s62.t6230
+        WHERE
+            t_user_coupon.user_id = #{userId}
+            AND t6230.f01 = #{bidId}
+            <![CDATA[AND ((IFNULL(t6230.F09,0) * 30 >= t_coupon.min_invest_day
+            AND IFNULL(t6230.F09,0) * 30 <= t_coupon.max_invest_day)
+            OR (IFNULL(t6230.F32,0) >= t_coupon.min_invest_day
+            AND IFNULL(t6230.F32,0) <= t_coupon.max_invest_day)
+            OR (ISNULL(t_coupon.min_invest_day) and ISNULL(t_coupon.max_invest_day)))
+            AND t_user_coupon.valid_time > CURRENT_DATE()]]>
+            AND t_user_coupon.coupon_status = 1
+            AND  NOT EXISTS (SELECT t_coupon_bid_type.coupon_id FROM flb.t_coupon_bid_type where t_coupon_bid_type.coupon_id= t_coupon.id)
+            ORDER BY validTime ASC
+            LIMIT #{page},#{limit}
+            )u
+            LEFT JOIN flb.t_coupon_bid_type ON t_coupon_bid_type.coupon_id = u.couponId
+            LEFT JOIN s62.t6211 ON flb.t_coupon_bid_type.bid_type_id = s62.t6211.F01
+            ORDER BY validTime ASC
+        </if>
+        <if test="planId != null and planId != ''">
+            SELECT
+                u.id,
+                u.couponId,
+                u.scope,
+                u.effectDay,
+                u.maxInvestMoney,
+                u.minInvestMoney,
+                u.maxInvestDay,
+                u.minInvestDay,
+                u.validTime,
+                DATEDIFF(u.validTime,sysdate()) surplusDays,
+                u.STATUS,
+                s62.t6211.F02 typeName,
+                s62.t6211.F01 typeId,
+                s62.t6211.F05 typeCode,
+                (case when date_add(now(), INTERVAL 7 day) <![CDATA[<]]> u.validTime then 0
+                else 1 end ) overdueFlag
+            FROM(
+                SELECT
+                    t_user_coupon.id id,
+                    flb.t_coupon.id couponId,
+                    flb.t_coupon.scope scope,
+                    flb.t_coupon.effect_day effectDay,
+                    flb.t_coupon.max_invest_money maxInvestMoney,
+                    flb.t_coupon.min_invest_money minInvestMoney,
+                    flb.t_coupon.max_invest_day maxInvestDay,
+                    flb.t_coupon.min_invest_day minInvestDay,
+                    flb.t_user_coupon.valid_time validTime,
+                    flb.t_user_coupon.coupon_status STATUS
+                FROM flb.t_coupon
+                LEFT JOIN flb.t_coupon_bid_type ON flb.t_coupon.id = flb.t_coupon_bid_type.coupon_id
+                LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+                INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+                LEFT JOIN s62.t6211 bt ON bt.F01 = t_coupon_bid_type.bid_type_id
+                    <if test="newPlan != 1">
+                        , flb.t_plan t_plan
+                    </if>
+                    <if test="newPlan == 1">
+                        , flb.t_invest_plan t_plan
+                    </if>
+                WHERE
+                    t_user_coupon.user_id = #{userId}
+                    AND t_plan.id = #{planId}
+                    AND <![CDATA[((t_plan.cycle * 30 >= t_coupon.min_invest_day AND t_plan.cycle * 30 <= t_coupon.max_invest_day AND t_plan.cycle_type = 'm')
+                                            OR (t_plan.cycle >= t_coupon.min_invest_day AND t_plan.cycle <= t_coupon.max_invest_day AND t_plan.cycle_type = 'd')
+                                            OR (ISNULL(t_coupon.min_invest_day) and ISNULL(t_coupon.max_invest_day)))
+                    AND t_user_coupon.valid_time > CURRENT_DATE()]]>
+                    AND t_user_coupon.coupon_status = 1
+                    AND (bt.F05 = 'JH' OR NOT EXISTS(SELECT t_coupon_bid_type.coupon_id FROM flb.t_coupon_bid_type where t_coupon_bid_type.coupon_id= t_coupon.id))
+                ORDER BY validTime ASC
+                LIMIT #{page},#{limit}
+            )u
+            LEFT JOIN flb.t_coupon_bid_type ON t_coupon_bid_type.coupon_id = u.couponId
+            LEFT JOIN s62.t6211 ON flb.t_coupon_bid_type.bid_type_id = s62.t6211.F01
+            ORDER BY validTime ASC
+        </if>
+    </select>
+
+    <resultMap id="AddinterestInfoMap" type="UserCouponInfo" autoMapping="true">
+        <id property="id" column="id"></id>
+        <collection property="BidTypes" ofType="BidTypeVO" autoMapping="true"></collection>
+    </resultMap>
+
+    <!-- 获取可使用优惠劵数量 -->
+    <select id="getCouponsCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        <if test="bidId != null and bidId != ''">
+        SELECT
+            count(1)
+            FROM(
+            SELECT
+            id
+        FROM(
+        SELECT
+            t_user_coupon.id id
+        FROM
+            flb.t_coupon
+        LEFT JOIN flb.t_coupon_bid_type ON flb.t_coupon.id = flb.t_coupon_bid_type.coupon_id
+        INNER JOIN s62.t6230  ON t6230.F04 = t_coupon_bid_type.bid_type_id
+        LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+        INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+        WHERE
+            t_user_coupon.user_id = #{userId}
+        AND t6230.F01 = #{bidId}
+       <![CDATA[ AND ((t6230.F09 * 30 >= t_coupon.min_invest_day AND t6230.F09 * 30 <= t_coupon.max_invest_day)
+        OR (t6230.F32 >= t_coupon.min_invest_day  AND t6230.F32 <= t_coupon.max_invest_day)
+        OR (ISNULL(t_coupon.min_invest_day) and ISNULL(t_coupon.max_invest_day)))
+        AND t_user_coupon.valid_time > CURRENT_DATE ()]]>
+        AND t_user_coupon.coupon_status = 1
+        )a
+        UNION ALL
+        SELECT
+            t_user_coupon.id id
+        FROM
+          flb.t_coupon
+        LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+        INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+        ,s62.t6230
+        WHERE
+            t_user_coupon.user_id = #{userId}
+            AND t6230.f01 = #{bidId}
+            <![CDATA[AND ((IFNULL(t6230.F09,0) * 30 >= t_coupon.min_invest_day
+            AND IFNULL(t6230.F09,0) * 30 <= t_coupon.max_invest_day)
+            OR (IFNULL(t6230.F32,0) >= t_coupon.min_invest_day
+            AND IFNULL(t6230.F32,0) <= t_coupon.max_invest_day)
+            OR (ISNULL(t_coupon.min_invest_day) and ISNULL(t_coupon.max_invest_day)))
+            AND t_user_coupon.valid_time > CURRENT_DATE ()]]>
+            AND t_user_coupon.coupon_status = 1
+            AND  NOT EXISTS (
+            SELECT t_coupon_bid_type.coupon_id
+            FROM flb.t_coupon_bid_type
+            where t_coupon_bid_type.coupon_id= t_coupon.id)
+            )u
+        </if>
+        <if test="planId != null and planId != ''">
+        <if test="newPlan == 1">
+
+                SELECT
+                COUNT(DISTINCT(id))
+                FROM(
+                SELECT
+                t_user_coupon.id id
+                FROM flb.t_coupon
+                LEFT JOIN flb.t_coupon_bid_type ON flb.t_coupon.id = flb.t_coupon_bid_type.coupon_id
+                INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+                LEFT JOIN s62.t6211 bt ON bt.F01 = t_coupon_bid_type.bid_type_id, flb.t_invest_plan t_invest_plan
+                WHERE
+                t_user_coupon.user_id = #{userId}
+                AND t_invest_plan.id = #{planId}
+                AND <![CDATA[((t_invest_plan.cycle * 30 >= t_coupon.min_invest_day AND t_invest_plan.cycle * 30 <= t_coupon.max_invest_day AND t_invest_plan.cycle_type = 'm')
+                    OR (t_invest_plan.cycle >= t_coupon.min_invest_day AND t_invest_plan.cycle <= t_coupon.max_invest_day AND t_invest_plan.cycle_type = 'd')
+                    OR (ISNULL(t_coupon.min_invest_day) AND ISNULL(t_coupon.max_invest_day)))
+                    AND t_user_coupon.valid_time > CURRENT_DATE ()]]>
+                AND t_user_coupon.coupon_status = 1
+                AND (bt.F05 = 'JH' OR NOT EXISTS(SELECT t_coupon_bid_type.coupon_id FROM flb.t_coupon_bid_type WHERE t_coupon_bid_type.coupon_id= t_coupon.id))
+                ) u
+
+        </if>
+        <if test="newPlan == 0">
+            SELECT
+            COUNT(DISTINCT(id))
+            FROM(
+            SELECT
+            t_user_coupon.id id
+            FROM flb.t_coupon
+            LEFT JOIN flb.t_coupon_bid_type ON flb.t_coupon.id = flb.t_coupon_bid_type.coupon_id
+            INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+            LEFT JOIN s62.t6211 bt ON bt.F01 = t_coupon_bid_type.bid_type_id, flb.t_plan t_plan
+            WHERE
+            t_user_coupon.user_id = #{userId}
+            AND t_plan.id = #{planId}
+            AND <![CDATA[((t_plan.cycle * 30 >= t_coupon.min_invest_day AND t_plan.cycle * 30 <= t_coupon.max_invest_day AND t_plan.cycle_type = 'm')
+                    OR (t_plan.cycle >= t_coupon.min_invest_day AND t_plan.cycle <= t_coupon.max_invest_day AND t_plan.cycle_type = 'd')
+                    OR (ISNULL(t_coupon.min_invest_day) AND ISNULL(t_coupon.max_invest_day)))
+                    AND t_user_coupon.valid_time > CURRENT_DATE ()]]>
+            AND t_user_coupon.coupon_status = 1
+            AND (bt.F05 = 'JH' OR NOT EXISTS(SELECT t_coupon_bid_type.coupon_id FROM flb.t_coupon_bid_type WHERE t_coupon_bid_type.coupon_id= t_coupon.id))
+            ) u
+        </if>
+        </if>
+    </select>
+    <!-- 获取用戶可使用优惠劵数量 -->
+    <select id="getUserCouponsCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT
+        count(1)
+        FROM
+        flb.t_user_coupon
+        WHERE
+        user_id=#{userId}
+        AND
+        coupon_status =1
+        and valid_time > CURRENT_DATE ()
+    </select>
+    <!--更新加息卷使用状态-->
+    <update id="updateUserCoupon" parameterType="java.util.Map">
+        UPDATE flb.t_user_coupon
+        SET tender_id = #{recordId},
+            coupon_status=2
+        WHERE id = #{userCouponId}
+        AND user_id=#{userId}
+        AND  coupon_status=1
+    </update>
+
+    <update id="updateUserCouponForPlan" parameterType="java.util.Map">
+        UPDATE flb.t_user_coupon
+        SET coupon_status = 2,
+        invest_type = #{investType}
+        <if test="investType == 3">
+            , user_plan_id = #{planRecordId}
+        </if>
+        WHERE id = #{userCouponId}
+        AND user_id = #{userId}
+        AND coupon_status = 1
+    </update>
+
+    <!--更新加息卷使用状态-->
+    <insert id="insertUserCouponExt" parameterType="java.util.Map">
+        INSERT INTO flb.`t_user_coupon_ext` (user_coupon_id, tender_id)
+        SELECT tuc.id, tpbr.bid_record_id
+        FROM flb.`t_plan_bid_record` tpbr, flb.t_user_coupon tuc
+        WHERE tpbr.plan_record_id = #{planRecordId}
+            AND tuc.id = #{userCouponId}
+            AND tuc.user_id = #{userId}
+            AND tuc.coupon_status = 1
+    </insert>
+
+    <!-- 投标的时候检验加息券能否使用 -->
+    <select id="checkCouponBeforeInvest" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT
+		count(1)
+        from(
+        SELECT
+		id
+        FROM(
+        SELECT
+        t_user_coupon.id id
+        FROM
+        flb.t_coupon
+        LEFT JOIN flb.t_coupon_bid_type ON flb.t_coupon.id = flb.t_coupon_bid_type.coupon_id
+        INNER JOIN s62.t6230  ON t6230.F04 = t_coupon_bid_type.bid_type_id
+        LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+        INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+        WHERE
+        <![CDATA[t_user_coupon.user_id = #{userId}
+        AND t6230.F01 = #{bid}
+        AND ((t6230.F09 * 30 >= t_coupon.min_invest_day AND t6230.F09 * 30 <= t_coupon.max_invest_day)
+        OR (t6230.F32 >= t_coupon.min_invest_day  AND t6230.F32 <= t_coupon.max_invest_day)
+        OR (ISNULL(t_coupon.min_invest_day) and ISNULL(t_coupon.max_invest_day)))
+        AND t_user_coupon.valid_time > CURRENT_DATE ()
+        AND t_user_coupon.coupon_status = 1
+        AND (t_coupon.max_invest_money >= #{money} AND t_coupon.min_invest_money <= #{money})
+        AND t_user_coupon.id = #{couponId}
+        )a
+        UNION ALL
+        SELECT
+        t_user_coupon.id id
+        FROM
+        flb.t_coupon
+        LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+        INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+        ,s62.t6230
+        WHERE
+        t_user_coupon.user_id = #{userId}
+        AND t6230.f01 = #{bid}
+        AND ((IFNULL(t6230.F09,0) * 30 >= t_coupon.min_invest_day
+        AND IFNULL(t6230.F09,0) * 30 <= t_coupon.max_invest_day)
+        OR  (IFNULL(t6230.F32,0) >= t_coupon.min_invest_day
+        AND IFNULL(t6230.F32,0) <= t_coupon.max_invest_day)
+        OR  (ISNULL(t_coupon.min_invest_day) and ISNULL(t_coupon.max_invest_day)))
+        AND t_user_coupon.valid_time > CURRENT_DATE ()
+        AND t_user_coupon.coupon_status = 1
+        AND NOT EXISTS (SELECT t_coupon_bid_type.coupon_id FROM flb.t_coupon_bid_type where t_coupon_bid_type.coupon_id= t_coupon.id)
+        AND (t_coupon.max_invest_money >= #{money} AND t_coupon.min_invest_money <= #{money})
+        AND t_user_coupon.id = #{couponId} ]]>
+        )a
+    </select>
+
+    <select id="getByActivityCode" resultType="UserCouponInfo">
+        SELECT
+            c.id couponId,a.id activityId,c.effect_day effectDay,c.scope scope
+        FROM
+            flb.t_coupon c
+        INNER JOIN flb.t_coupon_activity ca ON c.id = ca.coupon_id
+        INNER JOIN flb.t_activity a ON ca.activity_id = a.id
+        WHERE
+            a.`code` = #{activityCode}
+        AND NOW() BETWEEN a.time_start AND a.time_end
+    </select>
+
+    <insert id="grantRateCoupon" parameterType="UserCouponInfo">
+        INSERT INTO flb.t_user_coupon (user_id,coupon_id,activity_id,valid_time,coupon_status,grant_status)
+        VALUES (#{userId},#{couponId},#{activityId},#{validTime},1,1)
+    </insert>
+
+    <select id="getByTenderSetting" resultType="UserCouponInfo" parameterType="java.util.Map">
+        SELECT
+        c.id couponId,a.id activityId,c.effect_day effectDay,c.scope scope,re.get_times times
+        FROM
+        flb.t_coupon c
+        INNER JOIN flb.t_coupon_activity ca ON c.id = ca.coupon_id
+        INNER JOIN flb.t_activity a ON ca.activity_id = a.id
+        INNER JOIN flb.t_tender_share_setting_reward re ON re.reward_id = c.id
+        WHERE
+        re.setting_id = #{settingId}
+        <if test="isNovice != null and isNovice == 0">
+            AND re.is_novice = #{isNovice}
+        </if>
+        AND NOW() BETWEEN a.time_start AND a.time_end
+    </select>
+
+    <!--获取用户的优惠劵列表-->
+    <select id="getCouponById" parameterType="java.util.Map" resultMap="UserCouponInfoMap">
+        SELECT
+            a.id,
+            a.couponId,
+            a.scope,
+            a.effectDay,
+            a.maxInvestMoney,
+            a.minInvestMoney,
+            a.maxInvestDay,
+            a.minInvestDay,
+            a.validTime,
+            a.surplusDays,
+            a.STATUS,
+            s62.t6211.F02 typeName,
+            s62.t6211.F01 typeId,
+            s62.t6211.F05 typeCode,
+            (case when date_add(now(), INTERVAL 7 day) <![CDATA[<]]> a.validTime then 0 else 1 end ) overdueFlag
+        FROM(
+            SELECT
+            t_user_coupon.id,
+            flb.t_coupon.id couponId,
+            flb.t_coupon.scope,
+            flb.t_coupon.effect_day effectDay,
+            flb.t_coupon.max_invest_money maxInvestMoney,
+            flb.t_coupon.min_invest_money minInvestMoney,
+            flb.t_coupon.max_invest_day maxInvestDay,
+            flb.t_coupon.min_invest_day minInvestDay,
+            flb.t_user_coupon.valid_time validTime,
+            DATEDIFF(
+            flb.t_user_coupon.valid_time,
+            sysdate()
+            ) surplusDays,
+            flb.t_user_coupon.coupon_status STATUS,
+            t_user_coupon.create_time createTime
+            FROM
+            flb.t_coupon
+            INNER JOIN flb.t_user_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+            LEFT JOIN flb.t_coupon_type ON flb.t_coupon.coupon_type_id = flb.t_coupon_type.id
+            WHERE t_user_coupon.user_id = #{userId}
+            AND t_user_coupon.id = #{jxqId}
+        ) a
+        LEFT JOIN flb.t_coupon_bid_type ON a.couponId = flb.t_coupon_bid_type.coupon_id
+        LEFT JOIN s62.t6211 ON t_coupon_bid_type.bid_type_id = s62.t6211.F01
+        ORDER BY a.createTime DESC
+    </select>
+</mapper>

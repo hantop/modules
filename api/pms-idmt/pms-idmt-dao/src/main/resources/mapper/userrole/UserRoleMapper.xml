@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.idmt.userrole.UserRoleMapper">
+    <select id="findRolesByUserId" resultType="com.fenlibao.model.pms.idmt.role.vo.RoleVO">
+        SELECT
+          id,
+          role_code name,
+          role_desc description,
+          create_time createTime
+        FROM
+          pms.idmt_role
+        WHERE
+          user_id = #{userId}
+    </select>
+</mapper>

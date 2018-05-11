@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="RedpacketCopyMapper">
+
+    
+    <insert id="addTruninFundsRecord" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO S61.T6102
+        SET F02 = #{truninAccountId}, F03 = #{tradeTypeId}, F04 = #{trunoutAccountId}, F05 = SYSDATE(), F06 = #{payinAmount}, F08 = #{balance}, F09 = #{remark}
+        <if test='orderId != null'>
+            , order_id = #{orderId}
+        </if>
+    </insert>
+
+    <insert id="addTrunoutFundsRecord" parameterType="java.util.Map">
+        INSERT INTO S61.T6102
+        SET F02 = #{truninAccountId}, F03 = #{tradeTypeId}, F04 = #{trunoutAccountId}, F05 = SYSDATE(), F07 = #{payoutAmount}, F08 = #{balance}, F09 = #{remark}
+        <if test='orderId != null'>
+          , order_id = #{orderId}
+        </if>
+    </insert>
+
+</mapper>

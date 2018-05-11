@@ -1,0 +1,60 @@
+#container_div {
+    width: 100%;
+}
+
+#container_div ul {
+    list-style: none;
+    float: left;
+}
+
+#container_div li {
+    display: list-item;
+}
+
+#container_div span {
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+#total_div, #statistics_div {
+    float: left;
+    font-size: 16px;
+    width: 100%;
+}
+
+.title {
+    background-color: #999999;
+    height: 40px;
+    padding-left: 10px;
+}
+
+#title_statistics {
+    padding-top: 9px;
+}
+
+#select_div div {
+    float: left;
+}
+
+#select_div_1 {
+    padding-top: 9px;
+}
+
+#select_div_2 {
+    padding-top: 3px;
+    padding-left: 10px;
+}
+
+.stitle {
+    width: 230px;
+    float: left;
+}
+
+.stitle img{
+    width: 15px;
+}
+
+.scontent {
+    width: 250px;
+    float: left;
+}

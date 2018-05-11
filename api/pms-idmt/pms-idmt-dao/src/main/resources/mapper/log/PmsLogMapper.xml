@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.idmt.log.PmsLogMapper">
+
+    <insert id="saveLog" parameterType="com.fenlibao.model.pms.idmt.log.PmsLog">
+       insert into pms.idmt_log 
+       <trim prefix="(" suffix=")" suffixOverrides=",">
+           <if test="userName != null">
+               user,
+           </if>
+           <if test="ip != null">
+               ip,
+           </if>
+           <if test="operation != null">
+               operation,
+           </if>
+       </trim>
+       <trim prefix="values (" suffix=")" suffixOverrides=",">
+           <if test="userName != null">
+               #{userName},
+           </if>
+           <if test="ip != null">
+               #{ip},
+           </if>
+           <if test="operation != null">
+               #{operation},
+           </if>
+       </trim>
+    </insert>
+
+    <select id="getPmsLog" parameterType="java.util.Map" resultType="com.fenlibao.model.pms.idmt.log.PmsLog">
+        SELECT
+        a.id id,
+        a.user userName,
+        a.ip ip,
+        a.operation operation,
+        b.realname realName,
+        b.phone phone,
+        time
+        FROM
+        pms.idmt_log a
+        LEFT JOIN pms.idmt_user b  ON a.user = b.username
+        <where>
+            <if test="startDate != null">
+                <![CDATA[AND a.time >= #{startDate}]]>
+            </if>
+            <if test="endDate != null ">
+                <![CDATA[AND a.time <= #{endDate}]]>
+            </if>
+            <if test="user != null and user != ''">
+                AND a.user LIKE  '%${user}%'
+            </if>
+            <if test="name != null and name != ''">
+                AND b.realname LIKE '%${name}%'
+            </if>
+            <if test="status != null and status != ''">
+                AND a.operation = #{status}
+            </if>
+
+        </where>
+        ORDER BY a.time DESC
+    </select>
+
+    <select id="getAllPmsLog" parameterType="java.util.Map" resultType="com.fenlibao.model.pms.idmt.log.PmsLog">
+        SELECT
+        a.id id,
+        a.username userName,
+        a.ip ip,
+        a.operation operation,
+        b.realname realName,
+        b.phone phone,
+        a.create_time time
+        FROM
+        log.t_pms_operate_log a
+        LEFT JOIN pms.idmt_user b  ON a.username = b.username
+        <where>
+            <if test="startDate != null">
+                <![CDATA[AND a.create_time >= #{startDate}]]>
+            </if>
+            <if test="endDate != null ">
+                <![CDATA[AND a.create_time <= #{endDate}]]>
+            </if>
+            <if test="user != null and user != ''">
+                AND a.username LIKE  '%${user}%'
+            </if>
+            <if test="name != null and name != ''">
+                AND b.realname LIKE '%${name}%'
+            </if>
+            <if test="status != null and status != ''">
+                AND FLOOR(a.operation/100) = #{status}
+            </if>
+
+        </where>
+        ORDER BY a.create_time DESC
+    </select>
+
+    <insert id="addOperateLog" parameterType="com.fenlibao.model.pms.common.global.OperateLog">
+        insert into log.t_pms_operate_log
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="username != null">
+                username,
+            </if>
+            <if test="ip != null">
+                ip,
+            </if>
+            <if test="operation != null">
+                operation,
+            </if>
+            <if test="requestMessage != null">
+                request_message,
+            </if>
+            <if test="status != null">
+                status,
+            </if>
+            <if test="remarks != null">
+                remarks,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="username != null">
+                #{username},
+            </if>
+            <if test="ip != null">
+                #{ip},
+            </if>
+            <if test="operation != null">
+                #{operation},
+            </if>
+            <if test="requestMessage != null">
+                #{requestMessage},
+            </if>
+            <if test="status != null">
+                #{status},
+            </if>
+            <if test="remarks != null">
+                #{remarks},
+            </if>
+        </trim>
+    </insert>
+ </mapper>

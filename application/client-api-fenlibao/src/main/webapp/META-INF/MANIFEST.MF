@@ -1,0 +1,35 @@
+Manifest-Version: 1.0
+Class-Path: payment-dm-service.jar payment-dm-dao.jar payment-dm-model
+ .jar common-api-model.jar mybatis.jar spring-context.jar payment-dm-u
+ til.jar common-api-util.jar commons-codec.jar commons-lang3.jar trade
+ -service.jar trade-dao.jar trade-model.jar trade-util.jar user-servic
+ e.jar user-dao.jar user-model.jar user-util.jar spring-aop.jar spring
+ -aspects.jar spring-beans.jar spring-context-support.jar spring-core.
+ jar spring-expression.jar spring-instrument.jar spring-instrument-tom
+ cat.jar spring-jdbc.jar spring-jms.jar spring-messaging.jar spring-or
+ m.jar spring-oxm.jar spring-test.jar spring-tx.jar spring-web.jar spr
+ ing-webmvc.jar spring-webmvc-portlet.jar spring-websocket.jar gson.ja
+ r aopalliance.jar aspectjweaver.jar commons-logging.jar payment-third
+ party-service.jar payment-thirdparty-dao.jar payment-thirdparty-model
+ .jar payment-thirdparty-util.jar lottery-service.jar lottery-util.jar
+  log4j-api.jar log4j-core.jar log4j-web.jar httpclient.jar app-client
+ -api-util.jar common-util.jar mail.jar activation.jar lianpay-standar
+ d.jar fastjson.jar third-party.jar dom4j.jar xml-apis.jar axis.jar ja
+ vax.xml.rpc-api.jar commons-discovery.jar wsdl4j.jar BestSignSDK-java
+ .jar lottery-model.jar app-client-api-model.jar lottery-dao.jar mp-se
+ rvice.jar mp-util.jar mp-model.jar mp-dao.jar sqlite-jdbc.jar app-cli
+ ent-api-service.jar channel-service.jar channel-model.jar channel-dao
+ .jar channel-util.jar owner.jar common.jar commons-io.jar slf4j-api.j
+ ar bcprov-ext-jdk15on.jar dnsjava.jar poi.jar poi-ooxml.jar poi-ooxml
+ -schemas.jar xmlbeans.jar stax-api.jar framework-common.jar log4j.jar
+  app-client-api-dao.jar spring-data-redis.jar spring-data-keyvalue.ja
+ r spring-data-commons.jar jcl-over-slf4j.jar jedis.jar jsqlparser.jar
+  commons-pool2.jar druid.jar mysql-connector-java.jar jackson-core.ja
+ r jackson-databind.jar jackson-annotations.jar mybatis-spring.jar htt
+ pcore.jar xstream.jar xmlpull.jar xpp3_min.jar javax.servlet.jsp.jstl
+ -api.jar payment-xinwang-service.jar payment-xinwang-dao.jar payment-
+ xinwang-model.jar payment-xinwang-util.jar commons-net.jar commons-co
+ llections.jar itextpdf.jar itext-asian.jar log4j-slf4j-impl.jar joda-
+ time.jar testng.jar jcommander.jar snakeyaml.jar
+Created-By: 1.7.0_80 (Oracle Corporation)
+

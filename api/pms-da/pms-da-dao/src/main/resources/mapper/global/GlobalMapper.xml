@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.global.GlobalMapper">
+
+    <select id="getBankList" resultType="com.fenlibao.model.pms.da.Bank">
+		SELECT
+			bank.F01 AS 'id',
+			bank.F02 AS 'bankName',
+			bank.F03 AS 'status',
+			bank.F04 AS 'code',
+			bank.F05 AS 'lianlianCode',
+			bank.F06 AS 'baofuCode',
+			bank.F07 AS 'xinwangCode'
+		FROM s50.t5020 bank
+		WHERE bank.F03 ='QY'
+		AND   bank.F07 is not null
+    </select>
+
+</mapper>

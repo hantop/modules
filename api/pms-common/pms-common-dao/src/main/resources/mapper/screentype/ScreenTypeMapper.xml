@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.screentype.ScreenTypeMapper">
+    <select id="getClientTypeCodeByScreenTypeId" parameterType="byte" resultType="Integer">
+        SELECT
+          clienttype_code
+        FROM
+          flb.t_screen_type
+        WHERE
+          id = #{id}
+    </select>
+
+    <sql id="base_column">
+        id,
+        clienttype_code,
+        clienttype_id,
+        code,
+        name,
+        screen_height,
+        screen_width
+    </sql>
+
+    <select id="getScreenTypes" resultType="ScreenType">
+        SELECT
+        <include refid="base_column"/>
+        FROM
+            flb.t_screen_type
+    </select>
+
+    <select id="getScreenTypesByClientTypeCode" parameterType="String" resultType="ScreenType">
+        SELECT
+        <include refid="base_column"/>
+        FROM
+            flb.t_screen_type
+        WHERE
+            clienttype_code = #{clientTypeCode}
+    </select>
+
+    <select id="getScreenTypesByClientTypeId" parameterType="Integer" resultType="ScreenType">
+        SELECT
+        <include refid="base_column"/>
+        FROM
+            flb.t_screen_type
+        WHERE
+            clienttype_id = #{clientTypeId}
+    </select>
+
+    <select id="getScreenTypeByCode" parameterType="String" resultType="ScreenType">
+        SELECT
+        <include refid="base_column"/>
+        FROM
+            flb.t_screen_type
+        WHERE
+            code = #{code}
+    </select>
+
+    <select id="getScreenTypeById" parameterType="Integer" resultType="ScreenType">
+        SELECT
+        <include refid="base_column"/>
+        FROM
+        flb.t_screen_type
+        WHERE
+        id = #{id}
+    </select>
+
+</mapper>

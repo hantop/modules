@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.loanmanage.LoanManageMapper">
+    <select id="search" resultType="BidVO">
+        SELECT
+        T6230.F01 AS bidId,
+        T6230.F02 AS userId,
+        ext.F28 contractNO,
+        CASE
+        WHEN T6110.F06 = 'ZRR' THEN
+        a.real_name
+        ELSE
+        b.F04
+        END AS NAME,
+        T6230.F03 AS title,
+        T6110.F02 account,
+        T6230.F04 AS bidTypeId,
+        T6230.F05 AS bidAmount,
+        T6230.F06 AS rate,
+        T6230.F07 AS canInvestAmount,
+        T6230.F09 AS MONTH,
+        T6230.F32 AS DAY,
+        T6230.F10 AS repayment,
+        T6230.F20 AS STATUS,
+        T6230.F24 AS applyTime,
+        T6230.F22 AS bidTime,
+        T6230.F35 AS displayTime,
+        xwProject.project_type AS projectType
+        FROM
+        S62.T6230
+        INNER JOIN S61.T6110 ON T6230.F02 = T6110.F01
+        INNER JOIN s62.t6231 ext ON ext.F01 = T6230.F01
+        INNER JOIN flb.t_xw_project xwProject ON xwProject.loan_id = T6230.F01
+        LEFT JOIN flb.t_xw_account xw ON xw.user_id = T6110.F01
+        LEFT JOIN flb.t_bid_ext_user a ON T6230.F01 = a.bid
+        LEFT JOIN s61.t6161 b ON T6230.F02 = b.F01
+        WHERE
+            T6230.F27 = 'F'
+            AND T6230.F38 = 2
+            AND T6230.F36 = '0001'
+            AND (xw.user_role = 'BORROWERS' OR xw.user_role = 'ENTRUST_BORROWERS')
+            <if test="title != null and title !=''">
+                AND T6230.F03 like '%${title}%'
+            </if>
+            <if test="bidType != null and bidType !=''">
+                AND T6230.F04 = #{bidType}
+            </if>
+            <if test="createTimeStartWork != null and createTimeStartWork !=''">
+                <![CDATA[AND T6230.F24 >= #{createTimeStartWork}]]>
+            </if>
+            <if test="createTimeEndWork != null and createTimeEndWork !=''">
+                <![CDATA[AND T6230.F24 <= #{createTimeEndWork}]]>
+            </if>
+            <if test="account != null and account !=''">
+                AND T6110.F02 = trim(#{account})
+            </if>
+            <if test="status != null and status !=''">
+                AND T6230.F20 = #{status}
+            </if>
+            <if test="contractNO != null and contractNO !=''">
+                AND ext.F28 = trim(#{contractNO})
+            </if>
+            <if test="userType != null and userType !=''">
+                AND xw.user_type = #{userType}
+            </if>
+            ORDER BY T6230.F24 DESC
+    </select>
+
+    <resultMap id="getEntrustPayBidStateMap" type="java.util.Map">
+        <result property="bidId" column="bidId"/>
+        <result property="state" column="state"/>
+    </resultMap>
+
+    <select id="getEntrustPayBidState" resultMap="getEntrustPayBidStateMap">
+        SELECT xw.loan_id bidId, request.state FROM flb.t_xw_project xw
+        LEFT JOIN flb.t_xw_request request ON xw.entrust_pay_authorize_request_no = request.request_no
+        WHERE xw.project_type = 'ENTRUST_PAY'
+        <if test="bidIds != null">
+            AND xw.loan_id IN
+            <foreach collection="bidIds" item="bidId" open="(" separator="," close=")">
+                #{bidId}
+            </foreach>
+        </if>
+    </select>
+
+    <update id="sealedBidding">
+        UPDATE S62.T6230 SET F20 = 'DFK' WHERE F01 = #{loanId}
+    </update>
+
+    <select id="getProjictInfoByLoanId" resultType="BidVO">
+        SELECT
+        T6230.F01 AS bidId,
+        T6230.F02 AS userId,
+        ext.F28 contractNO,
+        CASE
+        WHEN T6110.F06 = 'ZRR' THEN
+        a.real_name
+        ELSE
+        b.F04
+        END AS NAME,
+        T6230.F03 AS title,
+        T6110.F02 account,
+        T6230.F04 AS bidTypeId,
+        T6230.F05 AS bidAmount,
+        T6230.F06 AS rate,
+        T6230.F07 AS canInvestAmount,
+        T6230.F09 AS MONTH,
+        T6230.F32 AS DAY,
+        T6230.F10 AS repayment,
+        T6230.F20 AS STATUS,
+        T6230.F24 AS applyTime,
+        T6230.F22 AS bidTime,
+        T6230.F35 AS displayTime,
+        xwProject.project_type AS projectType
+        FROM
+        S62.T6230
+        INNER JOIN S61.T6110 ON T6230.F02 = T6110.F01
+        INNER JOIN s62.t6231 ext ON ext.F01 = T6230.F01
+        INNER JOIN flb.t_xw_project xwProject ON xwProject.loan_id = T6230.F01
+        LEFT JOIN flb.t_xw_account xw ON xw.user_id = T6110.F01
+        LEFT JOIN flb.t_bid_ext_user a ON T6230.F01 = a.bid
+        LEFT JOIN s61.t6161 b ON T6230.F02 = b.F01
+        WHERE
+        T6230.F27 = 'F'
+        AND T6230.F38 = 2
+        AND xw.user_role = 'BORROWERS'
+        <if test="loanId != null and loanId !=''">
+            AND T6230.F01 = #{loanId}
+        </if>
+        LIMIT 1
+    </select>
+
+    <select id="getBidInfoByLoanId" resultType="BidVO">
+        SELECT
+        T6230.F01 AS bidId,
+        T6230.F02 AS userId,
+        T6230.F03 AS title,
+        T6230.F04 AS bidTypeId,
+        T6230.F05 AS bidAmount,
+        T6230.F06 AS rate,
+        T6230.F07 AS canInvestAmount,
+        T6230.F09 AS MONTH,
+        T6230.F32 AS DAY,
+        T6230.F10 AS repayment,
+        T6230.F20 AS STATUS,
+        T6230.F24 AS applyTime,
+        T6230.F22 AS bidTime,
+        T6230.F35 AS displayTime
+        FROM
+        S62.T6230
+        WHERE
+        T6230.F38 = 2
+        <if test="loanId != null and loanId !=''">
+            AND T6230.F01 = #{loanId}
+        </if>
+        LIMIT 1
+    </select>
+</mapper>

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AutoReleaseCGBidMapper">
+    <select id="getYCLBidInfo" resultType="AutoReleaseCGBidinfo">
+		SELECT
+			id,
+			serial_num AS serialNum,
+			order_num AS orderNum,
+			repayment_type AS repaymentType,
+			stage_num AS stageNum,
+			amount AS amount,
+			cycle AS cycle,
+			cycle_type AS cycleType,
+			id_no AS idNo,
+			id_name AS idName,
+			phone_num AS phoneNum,
+			loan_status AS loanStatus,
+		    create_time AS createTime,
+			update_time AS updateTime,
+			deal_count AS dealCount,
+			cg_deal_count AS cgDealCount,
+			bid AS bidId
+		FROM flb.`t_consume_bidinfo`
+		LEFT JOIN s62.`t6230` ON t_consume_bidinfo.bid = t6230.F01
+		WHERE loan_status = 'YCL'
+		AND t6230.F20 = 'DFB'
+		AND t6230.F38 = 2
+		AND cg_deal_count <![CDATA[ < ]]> 3
+		ORDER BY update_time ASC
+		LIMIT 1
+	</select>
+
+    <select id="lockYCLBidInfo" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT 1 FROM flb.`t_consume_bidinfo` where id = #{id} FOR UPDATE
+	</select>
+
+    <select id="getBidStatus" parameterType="java.lang.Integer" resultType="java.lang.String">
+		SELECT F20 bidStatus FROM s62.t6230 WHERE F01 = #{bid}
+	</select>
+
+    <insert id="addToProductLib" parameterType="java.lang.Integer">
+		INSERT INTO
+		 	flb.`t_plan_product_lib` (product_type, product_id)
+		SELECT 1,#{bid} FROM DUAL
+		WHERE NOT EXISTS (
+			SELECT 1
+			FROM flb.`t_plan_product_lib`
+			WHERE
+				product_type = 1
+				AND product_id = #{bid}
+		)
+	</insert>
+
+    <update id="updateConsumeBidInfoStatus" parameterType="java.util.Map">
+        UPDATE
+        flb.`t_consume_bidinfo`
+        SET
+        <if test="status != null">
+            loan_status = #{status},
+        </if>
+        cg_deal_count = cg_deal_count + 1,
+        update_time = now()
+        WHERE id = #{id}
+    </update>
+</mapper>

@@ -1,0 +1,381 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.statistics.returnedmoney.ReturnedmoneyMapper">
+
+    <select id="getFirstReturnedmoneysTotal" resultType="int">
+        SELECT
+                COUNT(1)
+        FROM
+                s62.t6230 bid
+        INNER JOIN s62.T6250 tender ON tender.F02 = bid.F01
+        INNER JOIN s61.t6110 u ON u.F01 = tender.F03
+        INNER JOIN s61.t6141 userbase ON userbase.F01 = u.F01
+        INNER JOIN s62.t6251 finacing ON finacing.F11 = tender.F01
+        INNER JOIN (
+            <if test="receivableUsers != null">
+            SELECT
+                refund.F08 returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                AND refund.F09 = 'WH'
+                AND refund.F05 = '7001'
+                AND refund.F01 IN
+                <foreach collection="receivableUsers" item="refundId" index="index" open="(" close=")" separator=",">
+                    #{refundId}
+                </foreach>
+            </where>
+            </if>
+            <if test="receivableUsers != null and hasReceivableUsers != null">
+                UNION ALL
+            </if>
+            <if test="hasReceivableUsers != null">
+            SELECT
+                DATE_FORMAT((refund.F10),'%Y-%m-%d') returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                AND refund.F09 = 'YH'
+                AND refund.F05 = '7001'
+                AND refund.F01 IN
+                <foreach collection="hasReceivableUsers" item="refundId" index="index" open="(" close=")" separator=",">
+                    #{refundId}
+                </foreach>
+            </where>
+            </if>
+        ) refund ON refund.F11 = finacing.F01
+        LEFT JOIN pms.da_daily_user_asset asset ON asset.user_id = u.F01
+        <where>
+            <if test="startDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate >= DATE_FORMAT(#{startDate}, '%Y-%m-%d')]]>
+            </if>
+            <if test="endDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate <= DATE_FORMAT(#{endDate}, '%Y-%m-%d')]]>
+            </if>
+        </where>
+    </select>
+
+    <select id="getReturnedmoneysTotal" resultType="int">
+        SELECT
+            COUNT(1)
+        FROM
+            s62.t6230 bid
+        INNER JOIN s62.T6250 tender ON tender.F02 = bid.F01
+        INNER JOIN s61.t6110 u ON u.F01 = tender.F03
+        INNER JOIN s61.t6141 userbase ON userbase.F01 = u.F01
+        INNER JOIN s62.t6251 finacing ON finacing.F11 = tender.F01
+        INNER JOIN (
+            SELECT
+                refund.F08 returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                refund.F09 = 'WH'
+                AND refund.F05 = '7001'
+            </where>
+            UNION ALL
+            SELECT
+                DATE_FORMAT((refund.F10),'%Y-%m-%d') returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                refund.F09 = 'YH'
+                AND refund.F05 = '7001'
+            </where>
+        ) refund ON refund.F11 = finacing.F01
+        LEFT JOIN pms.da_daily_user_asset asset ON asset.user_id = u.F01
+        <where>
+            <choose>
+                <when test="status == 1">
+                    AND refund.F09 = 'YH'
+                </when>
+                <when test="status == 2">
+                    AND refund.F09 = 'WH'
+                </when>
+            </choose>
+            <if test="startDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate >= DATE_FORMAT(#{startDate}, '%Y-%m-%d')]]>
+            </if>
+            <if test="endDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate <= DATE_FORMAT(#{endDate}, '%Y-%m-%d')]]>
+            </if>
+        </where>
+    </select>
+
+    <select id="getFirstReturnedmoneys" resultType="ReturnedmoneyInfo">
+        SELECT
+                u.F04 phonenum,
+                userbase.F02 realname,
+                CONCAT(refund.returnedmoneyDate, bid.F03) loanTitle,
+                refund.F07 principal,
+                (
+                CASE
+                        WHEN bid.F09 = 0
+                        THEN 1
+                        ELSE 2
+                END
+                ) loanDeadlineType,
+                (
+                CASE
+                        WHEN bid.F09 = 0
+                        THEN bid.F32
+                        ELSE bid.F09
+                END
+                ) loanDeadline,
+                refund.returnedmoneyDate shouldReturnDate,
+                (
+                CASE
+                        WHEN refund.F09 = 'YH'
+                        THEN 1
+                        ELSE 2
+                END
+                ) STATUS,
+                asset.investing_amount investingAmount,
+                asset.balance
+        FROM
+                s62.t6230 bid
+        INNER JOIN s62.T6250 tender ON tender.F02 = bid.F01
+        INNER JOIN s61.t6110 u ON u.F01 = tender.F03
+        INNER JOIN s61.t6141 userbase ON userbase.F01 = u.F01
+        INNER JOIN s62.t6251 finacing ON finacing.F11 = tender.F01
+        INNER JOIN (
+            <if test="receivableUsers != null">
+            SELECT
+                refund.F08 returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                AND refund.F09 = 'WH'
+                AND refund.F05 = '7001'
+                AND refund.F01 IN
+                <foreach collection="receivableUsers" item="refundId" index="index" open="(" close=")" separator=",">
+                    #{refundId}
+                </foreach>
+            </where>
+            </if>
+            <if test="receivableUsers != null and hasReceivableUsers != null">
+                UNION ALL
+            </if>
+            <if test="hasReceivableUsers != null">
+            SELECT
+                DATE_FORMAT((refund.F10),'%Y-%m-%d') returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                AND refund.F09 = 'YH'
+                AND refund.F05 = '7001'
+                AND refund.F01 IN
+                <foreach collection="hasReceivableUsers" item="refundId" index="index" open="(" close=")" separator=",">
+                    #{refundId}
+                </foreach>
+            </where>
+            </if>
+        ) refund ON refund.F11 = finacing.F01
+        LEFT JOIN pms.da_daily_user_asset asset ON asset.user_id = u.F01
+        <where>
+            <if test="startDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate >= DATE_FORMAT(#{startDate}, '%Y-%m-%d')]]>
+            </if>
+            <if test="endDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate <= DATE_FORMAT(#{endDate}, '%Y-%m-%d')]]>
+            </if>
+        </where>
+    </select>
+
+    <select id="getUserReturnTypes" resultType="UserRefundStatus">
+        SELECT
+		  *
+		FROM
+		(
+			-- 查询已回款的首次回款
+			SELECT
+			  *
+			FROM
+			(
+				-- 查询已回款
+				SELECT
+					refund.F04 userId,
+					refund.F09 refundStatus,
+                    DATE_FORMAT(refund.F10, '%Y-%m-%d') returnedmoneyDate,
+					refund.F01 refundId
+				FROM
+					s62.t6251 finacing
+				INNER JOIN s62.T6252 refund ON refund.F11 = finacing.F01
+				WHERE
+				    refund.F09 = 'YH'
+                AND refund.F05 = '7001'
+				ORDER BY refund.F04, refund.F10
+			) hasReceivable
+			GROUP BY hasReceivable.userId
+			UNION ALL
+			-- 查询未回未的预计首次回款
+			SELECT
+			  *
+			FROM
+			(
+				-- 查询未回款
+				SELECT
+					refund.F04 userId,
+					refund.F09 refundStatus,
+                    refund.F08 returnedmoneyDate,
+					refund.F01 refundId
+				FROM
+					s62.t6251 finacing
+				INNER JOIN s62.T6252 refund ON refund.F11 = finacing.F01
+                WHERE
+                    refund.F09 = 'WH'
+                AND refund.F05 = '7001'
+				ORDER BY refund.F04, refund.F08
+			) receivable
+			GROUP BY receivable.userId
+		) returnedmoney
+        <where>
+            <if test="startDate!=null">
+                <![CDATA[AND returnedmoney.returnedmoneyDate >= DATE_FORMAT(#{startDate}, '%Y-%m-%d')]]>
+            </if>
+            <if test="endDate!=null">
+                <![CDATA[AND returnedmoney.returnedmoneyDate <= DATE_FORMAT(#{endDate}, '%Y-%m-%d')]]>
+            </if>
+        </where>
+    </select>
+
+    <select id="getReturnedmoneys" resultType="ReturnedmoneyInfo">
+        SELECT
+            u.F04 phonenum,
+            userbase.F02 realname,
+            CONCAT(refund.returnedmoneyDate, bid.F03) loanTitle,
+            refund.F07 principal,
+            (
+            CASE
+                WHEN bid.F09 = 0
+                THEN 1
+                ELSE 2
+            END
+            ) loanDeadlineType,
+            (
+            CASE
+                WHEN bid.F09 = 0
+                THEN bid.F32
+                ELSE bid.F09
+            END
+            ) loanDeadline,
+            refund.returnedmoneyDate shouldReturnDate,
+            (
+            CASE
+                WHEN refund.F09 = 'YH'
+                THEN 1
+                ELSE 2
+            END
+            ) STATUS,
+            IFNULL(bid_record.userInvestSum, 0) investingAmount,
+            account.balance
+        FROM
+            s62.t6230 bid
+        INNER JOIN s62.T6250 tender ON tender.F02 = bid.F01
+        INNER JOIN s61.t6110 u ON u.F01 = tender.F03
+        INNER JOIN s61.t6141 userbase ON userbase.F01 = u.F01
+        INNER JOIN s62.t6251 finacing ON finacing.F11 = tender.F01
+        INNER JOIN (
+            SELECT
+                refund.F08 returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                refund.F09 = 'WH'
+                AND refund.F05 = '7001'
+            </where>
+            UNION ALL
+            SELECT
+                DATE_FORMAT((refund.F10),'%Y-%m-%d') returnedmoneyDate,
+                refund.F07,
+                refund.F09,
+                refund.F11
+            FROM
+                s62.T6252 refund
+            <where>
+                refund.F09 = 'YH'
+                AND refund.F05 = '7001'
+            </where>
+        ) refund ON refund.F11 = finacing.F01
+		LEFT JOIN (
+            SELECT
+                bid_record.investUserId,
+                SUM(bid_record.userInvestSum) userInvestSum
+            FROM
+            (
+                SELECT
+                    tender.F03 investUserId,
+                    SUM(tender.F04) userInvestSum
+                FROM
+                    S62.T6250 tender
+                WHERE
+                    tender.F01 IN (
+                        SELECT
+                            tender.F01
+                        FROM
+                            S62.T6250 tender
+                        INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+                        WHERE
+                            bid.F20 IN ('TBZ', 'DFK')
+                    )
+                GROUP BY tender.F03
+                UNION ALL
+                SELECT
+                    refund.F04 investUserId,
+                    SUM(refund.F07) userInvestSum
+                FROM
+                    s62.t6252 refund
+                WHERE
+                    refund.F05 = '7001'
+                AND refund.F09 = 'WH'
+                GROUP BY refund.F04
+            ) bid_record
+            GROUP BY bid_record.investUserId
+        ) bid_record ON bid_record.investUserId = u.F01
+		LEFT JOIN (
+            SELECT
+                F02 userId,
+                F06 balance
+            FROM
+                s61.t6101
+            WHERE F03 = 'WLZH'
+        ) account ON account.userId = u.F01
+        <where>
+            <choose>
+                <when test="status == 1">
+                    AND refund.F09 = 'YH'
+                </when>
+                <when test="status == 2">
+                    AND refund.F09 = 'WH'
+                </when>
+            </choose>
+            <if test="startDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate >= DATE_FORMAT(#{startDate}, '%Y-%m-%d')]]>
+            </if>
+            <if test="endDate!=null">
+                <![CDATA[AND refund.returnedmoneyDate <= DATE_FORMAT(#{endDate}, '%Y-%m-%d')]]>
+            </if>
+        </where>
+    </select>
+</mapper>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SpecialAccountMapper">
+
+	<select id="getSpecialPhone" parameterType="String" resultType="SpecialAccount">
+		select
+		account.phone_num AS phoneNum,
+        account.check_time AS checkTime,
+        t6110.F01 AS userId,
+        account.message_send_count AS smsCount,
+        IF(t6141.F02=NULL,NULL,CONCAT(left(t6141.F02,1),'**')) as name
+		FROM flb.t_special_account account
+		LEFT JOIN s61.t6110 t6110 ON account.phone_num = t6110.F02
+		LEFT JOIN s61.t6141 t6141 ON t6141.F01 = t6110.F01
+		WHERE type = #{type} AND t6110.F06 = 'ZRR'
+	</select>
+
+	<update id="updateSpecialAccountSendCount" parameterType="java.util.Map">
+		UPDATE flb.t_special_account set check_time = now(),xw_investor_wlzh_balance = #{xwBalance},message_send_count = #{num}
+		where phone_num = #{phone} and type = 5
+	</update>
+
+
+</mapper>

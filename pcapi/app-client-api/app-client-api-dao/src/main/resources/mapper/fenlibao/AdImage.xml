@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AdImageMapper">
+	<select id="getAdImg" parameterType="java.util.Map" resultType="AdImage">
+		SELECT
+			t_adimg_file.id AS id,
+			t_adimg.priority AS priority,
+			CONCAT(
+				t_adimg_file.server_path,
+				t_adimg_file.relative_path
+			) AS picUrl,
+			t_adimg.ad_web_url AS responseLink,
+			t_adimg.need_login AS loginFlag
+		FROM
+			flb.t_adimg
+		INNER JOIN flb.t_adimg_clienttype ON t_adimg_clienttype.adimg_id = t_adimg.id
+		INNER JOIN flb.t_adimg_version ON t_adimg_clienttype.adimg_id = t_adimg_version.adimg_id
+		INNER JOIN flb.t_adimg_file ON t_adimg_version.adimg_id = t_adimg_file.adimg_id
+		INNER JOIN flb.t_enum ON flb.t_adimg_version.client_version = flb.t_enum.enum_key
+		INNER JOIN flb.t_screen_type ON t_adimg_file.screen_type = t_screen_type.id
+		WHERE
+			t_adimg_clienttype.client_type = #{clientTypeId} 
+		AND t_screen_type.code  = #{screenTypeId}
+		AND t_adimg.advert_type = #{advertType}
+		AND t_enum.enum_value = #{versionType} 
+		AND t_adimg.`status` = 1
+		AND (t_adimg.is_cg = #{cgNum} OR t_adimg.is_cg = 3)
+		ORDER BY
+			t_adimg.priority
+	</select>
+</mapper>

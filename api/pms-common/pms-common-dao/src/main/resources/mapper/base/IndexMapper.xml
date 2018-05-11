@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.global.IndexMapper">
+	<select id="getPmsUser" parameterType="PmsUser" resultType="PmsUser">
+		SELECT
+			id,
+			username,
+			password,
+			salt,
+			email,
+			realname,
+			phone,
+			status,
+			create_time
+		FROM pms_user
+		WHERE username=#{username} and password=#{password}
+	</select>
+</mapper>

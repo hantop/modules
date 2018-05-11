@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.platform.dao.queqianme.QueqianmeMapper">
+
+    <select id="getSerialNumCount" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select count(1)
+        from flb.t_consume_bidinfo
+        where serial_num = #{serialNum}
+    </select>
+
+    <select id="getFileSerialNum" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select count(1)
+        from flb.t_consume_extrainfo
+        where serial_num = #{serialNum}
+    </select>
+
+    <insert id="addbidinfo" parameterType="Bidinfo" useGeneratedKeys="true" keyProperty="id" >
+        insert into flb.t_consume_bidinfo (order_num, stage_num, repayment_type, serial_num, amount, cycle, cycle_type, id_no, id_name, phone_num,
+        agreement_sign_id, agreement_doc_id, flb_page_num, flb_sign_x, flb_sign_y, investor_page_num, investor_sign_x, investor_sign_y,industry,
+        address,subject_nature,loan_usage,repayment_origin)
+        values (#{orderNum}, #{stageNum}, #{repaymentType}, #{serialNum}, #{amount}, #{cycle},#{cycleType},#{idNo},#{idName},#{phoneNum},
+        #{agreementSignId}, #{agreementDocId}, #{flbPageNum}, #{flbSignX}, #{flbSignY}, #{investorPageNum}, #{investorSignX}, #{investorSignY},
+        #{industry}, #{address}, #{subjectNature}, #{loanUsage}, #{repaymentOrigin})
+    </insert>
+
+    <insert id="addextrainfo" parameterType="Bidextralinfo">
+        insert into flb.t_consume_extrainfo (loan_serial_num, serial_num, `type`, file_path)
+        values (#{loanSerialNum}, #{serialNum}, #{type}, #{filePath})
+    </insert>
+
+    <insert id="writeLog" parameterType="LogInfo">
+        insert into S71.T7120 (F02, F03, F04, F05, F06)
+        values (#{accountId}, now(), #{operateType}, #{operateDescription}, #{remoteIP})
+    </insert>
+
+    <select id="getSerialNumCountForTripleAgreement" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select count(1)
+        from flb.t_consume_tripleagreementinfo
+        where serial_num = #{serialNum}
+    </select>
+
+    <insert id="addTripleAgreementinfo" parameterType="TripleAgreementinfo">
+        insert into flb.t_consume_tripleagreementinfo (serial_num, agreement_sign_id, agreement_doc_id, flb_page_num, flb_sign_x, flb_sign_y)
+        values (#{serialNum}, #{agreementSignId}, #{agreementDocId}, #{flbPageNum}, #{flbSignX}, #{flbSignY})
+    </insert>
+
+    <insert id="addBaseInfo" parameterType="BaseInfo">
+        insert into flb.t_consume_risk_base_info (bidinfo_id,create_time, id_name, id_no, phone_num,sex,marry_status,id_location,address,qq)
+        values (#{id}, now(), #{idName}, #{idNo}, #{phoneNum}, #{sex},#{marryStatus},#{location},#{address},#{qq})
+    </insert>
+
+    <insert id="addWorkInfo" parameterType="WorkInfo">
+        insert into flb.t_consume_risk_work_info (bidinfo_id,create_time, company_name, company_phone, company_address,position,monthly_income)
+        values (#{id}, now(), #{companyName}, #{companyPhone}, #{companyAddress}, #{position},#{monthlyIncome})
+    </insert>
+
+    <insert id="addMutiplyBorrow" parameterType="MutiplyBorrow">
+        insert into flb.t_consume_risk_mutiply_borrow (bidinfo_id, create_time, device_use_muti_id_1d, device_use_muti_id_7d, id_use_muti_device_1d, id_use_muti_device_7d,
+        id_use_muti_device_1m,borrow_muti_platform_7d,borrow_muti_platform_1m,borrow_muti_platform_3m,borrow_muti_platform_6m,borrow_muti_platform_12m,borrow_muti_platform_18m,
+        borrow_muti_platform_24m,borrow_muti_platform_60m,loan_exclude_3m,loan_include_3m,loan_muti_platform_6m,loan_muti_platform_12m,loan_muti_platform_18m,loan_muti_platform_24m,
+        loan_muti_platform_60m)
+        values (#{id}, now(), #{mutiIdOneDay}, #{mutiIdSevenDay}, #{mutiDeviceOneDay}, #{mutiDeviceSevenDay},#{mutiDeviceOneMonth},#{mutiPlatformSevenDay},#{mutiPlatformOneMonth},
+        #{mutiPlatformTreeMonth},#{mutiPlatformSixMonth},#{mutiPlatformTwelveMonth},#{mutiPlatformEightteenMonth},#{mutiPlatformTwentyFourMonth},#{mutiPlatformSixtyMonth},
+        #{excludeThreeMonth},#{includeThreeMonth},#{loanPlatformSixMonth},#{loanPlatformTwelveMonth},#{loanPlatformEightteenMonth},#{loanPlatformTwentyFourMonth},
+        #{loanPlatformSixtyMonth})
+    </insert>
+
+    <insert id="addAntiFraud" parameterType="AntiFraud">
+        insert into flb.t_consume_risk_anti_fraud (bidinfo_id, create_time, auth_status, id_query_bank_badness, id_query_bank_overdue, id_query_bank_cheat,id_query_bank_lost,id_query_bank_refuse,id_query_credit_badness,id_query_p2p_badness,
+        id_query_p2p_overdue,id_query_p2p_cheat,id_query_p2p_lost,id_query_p2p_refuse,id_query_telecome_owe,id_query_insurance_cheat,id_query_court_break,id_query_court_enforced,phone_query_bank_badness,phone_query_bank_overdue,
+        phone_query_bank_cheat,phone_query_bank_lost,phone_query_bank_refuse,phone_query_p2p_badness,phone_query_p2p_overdue,phone_query_p2p_cheat,phone_query_p2p_lost,phone_query_p2p_refuse,phone_query_telecome_owe,
+        phone_query_p2p_owe,sign_query_bank_badness,sign_query_bank_overdue,sign_query_bank_cheat,sign_query_bank_lost,sign_query_bank_refuse,sign_query_p2p_badness,sign_query_p2p_overdue,sign_query_p2p_cheat,sign_query_p2p_lost,
+        sign_query_p2p_refuse,sign_query_telecome_owe,sigh_query_insurance_cheat)
+        values (#{id}, now(), #{authStatus}, #{bankBadness}, #{bankOverdue}, #{bankCheat},#{bankLost},#{bankRefuse},#{creditBadness},#{p2pBadness},#{p2pOverdue},#{p2pCheat},#{p2pLost},#{p2pRefuse},
+        #{telecomeOwe},#{insuranceCheat},#{courtBreak},#{courtEnforced},#{phoneBankBadness},#{phoneBankOverdue},#{phoneBankCheat},#{phoneBankLost},#{phoneBankRefuse},#{phoneP2pBadness},
+        #{phoneP2pOverdue},#{phoneP2pCheat},#{phoneP2pLost},#{phoneP2pRefuse},#{phoneTelecomeOwe},#{phoneInsuranceCheat},#{signBankBadness},#{signBankOverdue},#{signBankCheat},#{signBankLost},
+        #{signBankRefuse},#{signP2pBadness},#{signP2pOverdue},#{signP2pCheat},#{signP2pLost},#{signP2pRefuse},#{signTelecomeOwe},#{signInsuranceCheat})
+    </insert>
+
+    <insert id="addRiskMutiply" parameterType="RiskMutiply">
+        insert into flb.t_consume_risk_audit_info (bidinfo_id,create_time,audit_time,credit_score,audit_status)
+        values (#{id},now(),now(),#{score},#{auditStatus});
+    </insert>
+
+</mapper>

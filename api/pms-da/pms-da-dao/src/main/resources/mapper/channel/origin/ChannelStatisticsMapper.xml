@@ -1,0 +1,1556 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.channel.origin.ChannelStatisticsMapper">
+    <select id="getSortChannelStatisticses" parameterType="java.util.Map" resultType="ChannelStatisticsVO">
+        SELECT
+        channel.id,
+        channel.name,
+        channel.code,
+        register.registerCount,
+        auth.authCount,
+        recharge.rechargeSum,
+        recharge.rechargeCount,
+        invest.investSum,
+        invest.investCount,
+        activeRedpacket.activeRedpacketSum,
+        activeRedpacket.activeRedpacketCount
+        FROM
+        flb.t_channel channel
+        LEFT JOIN
+        (SELECT
+        channel.id channelId,
+        register.registerCount
+        FROM
+        flb.t_channel channel
+        LEFT JOIN
+        (SELECT
+        t1.channel_code,
+        COUNT(1) registerCount
+        FROM
+        flb.t_user_origin t1
+        INNER JOIN s61.t6110 u
+        ON t1.user_id = u.F01
+        <where>
+            <if test="startDate != null">
+                <![CDATA[AND u.F09 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND u.F09 <= #{endDate}]]>
+            </if>
+            AND u.F06 = 'ZRR'
+        </where>
+        GROUP BY t1.channel_code) register
+        ON register.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                    AND (channel.name LIKE '%${channelName}%' OR channel.code LIKE '%${channelCode}%')
+                </when>
+                <when test="channelName != null and channelName != ''">
+                    AND channel.name LIKE '%${channelName}%'
+                </when>
+                <when test="channelCode != null and channelCode != ''">
+                    AND channel.code LIKE '%${channelCode}%'
+                </when>
+            </choose>
+        </where>) register
+        ON register.channelId = channel.id
+        LEFT JOIN
+		(
+			SELECT
+                channel.id channelId,
+                COUNT(1) authCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN s61.t6141 idcard ON idcard.F01 = t1.user_id
+            INNER JOIN (
+                 SELECT
+                    DISTINCT ll_auth.user_id
+                 FROM flb.t_ll_auth ll_auth
+                 <where>
+                     <if test="startDate != null">
+                         <![CDATA[AND ll_auth.createtime >= #{startDate}]]>
+                     </if>
+                     <if test="endDate != null">
+                         <![CDATA[AND ll_auth.createtime <= #{endDate}]]>
+                     </if>
+                     AND ll_auth.status = 1
+                 </where>
+            ) ll_auth ON ll_auth.user_id = u.F01
+            <where>
+                <choose>
+                    <when test="firstChannelId == null or firstChannelId == ''">
+                            AND channel.parent_id != 0
+                    </when>
+                    <otherwise>
+                            AND channel.parent_id = #{firstChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="secondChannelId == null or secondChannelId == ''">
+                            AND channel.id != 0
+                    </when>
+                    <otherwise>
+                            AND channel.id = #{secondChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                            AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                    </when>
+                    <when test="channelName != null and channelName != ''">
+                            AND channel.name like '%${channelName}%'
+                    </when>
+                    <when test="channelCode != null and channelCode != ''">
+                            AND channel.code like '%${channelCode}%'
+                    </when>
+                </choose>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND idcard.F04 = 'TG'
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY channel.id
+		) auth
+        ON auth.channelId = channel.id
+        LEFT JOIN
+        (SELECT
+        channel.id channelId,
+        IFNULL(tab3.rechargeSum, 0) rechargeSum,
+        IFNULL(tab3.rechargeCount, 0) rechargeCount
+        FROM
+        flb.t_channel channel
+        LEFT JOIN
+        (
+        SELECT
+        t1.channel_code, SUM(s.F03) rechargeSum ,COUNT(DISTINCT u.f01) rechargeCount
+        FROM
+        flb.t_user_origin t1
+        INNER JOIN s65.t6502 s
+        ON s.F02 = t1.user_id
+        INNER JOIN s65.t6501 t
+        ON s.F01 = t.F01
+        INNER JOIN s61.t6110 u
+        ON t1.user_id = u.F01
+        <where>
+            <if test="startDate != null">
+                <![CDATA[AND u.F09 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND u.F09 <= #{endDate}]]>
+            </if>
+            <if test="startDate != null">
+                <![CDATA[AND t.F04 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND t.F04 <= #{endDate}]]>
+            </if>
+            AND t.F03 = 'CG'
+            AND u.F06 = 'ZRR'
+        </where>
+        GROUP BY t1.channel_code
+        ) tab3
+        ON tab3.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                    AND (channel.name LIKE '%${channelName}%' OR channel.code LIKE '%${channelCode}%')
+                </when>
+                <when test="channelName != null and channelName != ''">
+                    AND channel.name LIKE '%${channelName}%'
+                </when>
+                <when test="channelCode != null and channelCode != ''">
+                    AND channel.code LIKE '%${channelCode}%'
+                </when>
+            </choose>
+        </where>) recharge
+        ON recharge.channelId = channel.id
+        LEFT JOIN
+        (SELECT
+        channel.id channelId,
+        IFNULL(tab4.investSum, 0) investSum,
+        IFNULL(tab4.investCount, 0) investCount
+        FROM
+        flb.t_channel channel
+        LEFT JOIN
+        (
+        SELECT
+        t1.channel_code,SUM(tender.F04) investSum ,COUNT(DISTINCT u.f01) investCount
+        FROM
+        flb.t_user_origin t1
+        INNER JOIN s62.t6250 tender
+        ON tender.F03 = t1.user_id
+        INNER JOIN S62.T6230 bid
+        ON bid.F01 = tender.F02
+        INNER JOIN s61.t6110 u
+        ON t1.user_id = u.F01
+        <where>
+            <if test="startDate != null">
+                <![CDATA[AND u.F09 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND u.F09 <= #{endDate}]]>
+            </if>
+            <if test="startDate != null">
+                <![CDATA[AND tender.F06 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND tender.F06 <= #{endDate}]]>
+            </if>
+            AND bid.F20 != 'YLB'
+            AND u.F06 = 'ZRR'
+        </where>
+        GROUP BY t1.channel_code
+        ) tab4
+        ON tab4.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                    AND (channel.name LIKE '%${channelName}%' OR channel.code LIKE '%${channelCode}%')
+                </when>
+                <when test="channelName != null and channelName != ''">
+                    AND channel.name LIKE '%${channelName}%'
+                </when>
+                <when test="channelCode != null and channelCode != ''">
+                    AND channel.code LIKE '%${channelCode}%'
+                </when>
+            </choose>
+        </where>) invest
+        ON invest.channelId = channel.id
+        LEFT JOIN
+        (SELECT
+        channel.id channelId,
+        IFNULL(tab5.activeRedpacketSum, 0) activeRedpacketSum,
+        IFNULL(tab5.activeRedpacketCount, 0) activeRedpacketCount
+        FROM
+        flb.t_channel channel
+        LEFT JOIN
+        (
+        SELECT
+        t1.channel_code,SUM(fundsRecord.F06) activeRedpacketSum,COUNT(DISTINCT u.f01) activeRedpacketCount
+        FROM
+        flb.t_user_origin t1
+        INNER JOIN s61.t6110 u
+        ON t1.user_id = u.F01
+        INNER JOIN s61.t6101 account
+        ON account.F02 = u.F01
+        INNER JOIN s61.t6102 fundsRecord
+        ON fundsRecord.F02 = account.F01
+        <where>
+            <if test="startDate != null">
+                <![CDATA[AND u.F09 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND u.F09 <= #{endDate}]]>
+            </if>
+            <if test="startDate != null">
+                <![CDATA[AND fundsRecord.F05 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND fundsRecord.F05 <= #{endDate}]]>
+            </if>
+            AND account.F03 = 'WLZH'
+            AND fundsRecord.F03 = 5116
+            AND u.F06 = 'ZRR'
+        </where>
+        GROUP BY t1.channel_code
+        ) tab5
+        ON tab5.channel_code = channel.code
+        WHERE channel.parent_id != 0
+        AND channel.id != 0) activeRedpacket
+        ON activeRedpacket.channelId = channel.id
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                    AND (channel.name LIKE '%${channelName}%' OR channel.code LIKE '%${channelCode}%')
+                </when>
+                <when test="channelName != null and channelName != ''">
+                    AND channel.name LIKE '%${channelName}%'
+                </when>
+                <when test="channelCode != null and channelCode != ''">
+                    AND channel.code LIKE '%${channelCode}%'
+                </when>
+            </choose>
+        </where>
+        ORDER BY register.registerCount DESC
+    </select>
+
+    <select id="getChannelUserTotal" parameterType="java.util.Map" resultType="ChannelUserStatistics">
+        SELECT
+            IFNULL(SUM(total.investSum), 0) investSum,
+            IFNULL(SUM(total.investCount), 0) investCount,
+            IFNULL(SUM(total.rechargeSum), 0) rechargeSum,
+            IFNULL(SUM(total.activeRedpacketSum), 0) activeRedpacketSum
+        FROM (
+            SELECT
+              recharge.rechargeSum,
+              invest.investSum,
+              invest.investCount,
+              activeRedpacket.activeRedpacketSum
+            FROM
+              s61.t6110 u
+              INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+              INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+              LEFT JOIN S61.T6141 ubase ON ubase.F01 = u.F01
+              LEFT JOIN (
+                  SELECT
+                      u.F01 userId,
+                      SUM(s.F03) rechargeSum
+                  FROM
+                      s61.t6110 u
+                  INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+                  INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+                  INNER JOIN s65.t6502 s ON s.F02 = u.F01
+                  INNER JOIN s65.t6501 t ON t.F01 = s.F01
+                  <where>
+                      <choose>
+                          <when test="firstChannelId == null or firstChannelId == ''">
+                              AND channel.parent_id != 0
+                          </when>
+                          <otherwise>
+                              AND channel.parent_id = #{firstChannelId}
+                          </otherwise>
+                      </choose>
+                      <choose>
+                          <when test="secondChannelId == null or secondChannelId == ''">
+                              AND channel.id != 0
+                          </when>
+                          <otherwise>
+                              AND channel.id = #{secondChannelId}
+                          </otherwise>
+                      </choose>
+                      <if test="startDate != null">
+                          <![CDATA[AND u.F09 >= #{startDate}]]>
+                          <![CDATA[AND t.F04 >= #{startDate}]]>
+                      </if>
+                      <if test="endDate != null">
+                          <![CDATA[AND u.F09 <= #{endDate}]]>
+                          <![CDATA[AND t.F04 <= #{endDate}]]>
+                      </if>
+                      AND t.F03 = 'CG'
+                      AND u.F06 = 'ZRR'
+                  </where>
+                  GROUP BY u.F01
+              ) recharge ON recharge.userId = u.F01
+              LEFT JOIN (
+                  SELECT
+                      u.F01 userId,
+                      SUM(tender.F04) investSum,
+                      COUNT(1) investCount
+                  FROM
+                      s61.t6110 u
+                  INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+                  INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+                  INNER JOIN s62.t6250 tender ON tender.F03 = u.F01
+                  INNER JOIN S62.T6230 bid ON bid.F01 = tender.F02
+                  <where>
+                      <choose>
+                          <when test="firstChannelId == null or firstChannelId == ''">
+                              AND channel.parent_id != 0
+                          </when>
+                          <otherwise>
+                              AND channel.parent_id = #{firstChannelId}
+                          </otherwise>
+                      </choose>
+                      <choose>
+                          <when test="secondChannelId == null or secondChannelId == ''">
+                              AND channel.id != 0
+                          </when>
+                          <otherwise>
+                              AND channel.id = #{secondChannelId}
+                          </otherwise>
+                      </choose>
+                      <if test="startDate != null">
+                          <![CDATA[AND u.F09 >= #{startDate}]]>
+                          <![CDATA[AND tender.F06 >= #{startDate}]]>
+                      </if>
+                      <if test="endDate != null">
+                          <![CDATA[AND u.F09 <= #{endDate}]]>
+                          <![CDATA[AND tender.F06 <= #{endDate}]]>
+                      </if>
+                      AND bid.F20 != 'YLB'
+                      AND u.F06 = 'ZRR'
+                  </where>
+                  GROUP BY u.F01
+              ) invest ON invest.userId = u.F01
+              LEFT JOIN (
+                  SELECT
+                      u.F01 userId,
+                      SUM(fundsRecord.F06) activeRedpacketSum
+                  FROM
+                      s61.t6110 u
+                  INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+                  INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+                  INNER JOIN s61.t6101 account ON account.F02 = u.F01
+                  INNER JOIN s61.t6102 fundsRecord ON fundsRecord.F02 = account.F01
+                  <where>
+                      <choose>
+                          <when test="firstChannelId == null or firstChannelId == ''">
+                              AND channel.parent_id != 0
+                          </when>
+                          <otherwise>
+                              AND channel.parent_id = #{firstChannelId}
+                          </otherwise>
+                      </choose>
+                      <choose>
+                          <when test="secondChannelId == null or secondChannelId == ''">
+                              AND channel.id != 0
+                          </when>
+                          <otherwise>
+                              AND channel.id = #{secondChannelId}
+                          </otherwise>
+                      </choose>
+                      <if test="startDate != null">
+                          <![CDATA[AND u.F09 >= #{startDate}]]>
+                      </if>
+                      <if test="endDate != null">
+                          <![CDATA[AND u.F09 <= #{endDate}]]>
+                      </if>
+                      <if test="startDate != null">
+                          <![CDATA[AND fundsRecord.F05 >= #{startDate}]]>
+                      </if>
+                      <if test="endDate != null">
+                          <![CDATA[AND fundsRecord.F05 <= #{endDate}]]>
+                      </if>
+                      AND fundsRecord.F03 = 5116
+                      AND account.F03 = 'WLZH'
+                      AND u.F06 = 'ZRR'
+                  </where>
+                  GROUP BY u.F01
+              ) activeRedpacket ON activeRedpacket.userId = u.F01
+              <where>
+                  <if test="startDate != null">
+                      <![CDATA[AND u.F09 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND u.F09 <= #{endDate}]]>
+                  </if>
+                  <if test="minimumMoney != null">
+                      <![CDATA[AND invest.investSum >= #{minimumMoney}]]>
+                  </if>
+                  <if test="maximumMoney != null">
+                      <![CDATA[AND invest.investSum <= #{maximumMoney}]]>
+                  </if>
+                  <choose>
+                      <when test="firstChannelId == null or firstChannelId == ''">
+                          AND channel.parent_id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.parent_id = #{firstChannelId}
+                      </otherwise>
+                  </choose>
+                  <choose>
+                      <when test="secondChannelId == null or secondChannelId == ''">
+                          AND channel.id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.id = #{secondChannelId}
+                      </otherwise>
+                  </choose>
+                  AND u.F06 = 'ZRR'
+              </where>
+            ) total
+    </select>
+
+    <select id="getChannelUserStatisticses" parameterType="java.util.Map" resultType="ChannelUserStatistics">
+        SELECT
+          u.F04 phoneNum,
+          u.F14 nickname,
+          ubase.F02 name,
+          ubase.F06 idCard,
+          ubase.F07 idCardEncrypt,
+          (
+            CASE
+              WHEN ubase.F04 = 'TG'
+              THEN TRUE
+              ELSE FALSE
+            END
+          ) isAuth,
+          (
+              CASE
+                  WHEN EXISTS (SELECT uBankcard.F01 FROM s61.t6114 uBankcard WHERE uBankcard.F02 = u.F01 LIMIT 1)
+              THEN TRUE
+              ELSE FALSE
+              END
+          ) isBindBankcard,
+          IFNULL(recharge.rechargeSum, 0) rechargeSum,
+          IFNULL(invest.investSum, 0) investSum,
+          IFNULL(invest.investCount, 0) investCount,
+          IFNULL(activeRedpacket.activeRedpacketSum, 0) activeRedpacketSum
+        FROM
+          s61.t6110 u
+          INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+          INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+          LEFT JOIN S61.T6141 ubase ON ubase.F01 = u.F01
+          LEFT JOIN (
+              SELECT
+                  u.F01 userId,
+                  SUM(s.F03) rechargeSum
+              FROM
+                  s61.t6110 u
+              INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+              INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+              INNER JOIN s65.t6502 s ON s.F02 = u.F01
+              INNER JOIN s65.t6501 t ON t.F01 = s.F01
+              <where>
+                  <choose>
+                      <when test="firstChannelId == null or firstChannelId == ''">
+                          AND channel.parent_id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.parent_id = #{firstChannelId}
+                      </otherwise>
+                  </choose>
+                  <choose>
+                      <when test="secondChannelId == null or secondChannelId == ''">
+                          AND channel.id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.id = #{secondChannelId}
+                      </otherwise>
+                  </choose>
+                  <if test="startDate != null">
+                      <![CDATA[AND u.F09 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND u.F09 <= #{endDate}]]>
+                  </if>
+                  <if test="startDate != null">
+                      <![CDATA[AND t.F04 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND t.F04 <= #{endDate}]]>
+                  </if>
+                  AND t.F03 = 'CG'
+                  AND u.F06 = 'ZRR'
+              </where>
+              GROUP BY u.F01
+          ) recharge ON recharge.userId = u.F01
+          LEFT JOIN (
+              SELECT
+                  u.F01 userId,
+                  SUM(tender.F04) investSum,
+                  COUNT(1) investCount
+              FROM
+                  s61.t6110 u
+              INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+              INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+              INNER JOIN s62.t6250 tender ON tender.F03 = u.F01
+              INNER JOIN S62.T6230 bid ON bid.F01 = tender.F02
+              <where>
+                  <choose>
+                      <when test="firstChannelId == null or firstChannelId == ''">
+                          AND channel.parent_id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.parent_id = #{firstChannelId}
+                      </otherwise>
+                  </choose>
+                  <choose>
+                      <when test="secondChannelId == null or secondChannelId == ''">
+                          AND channel.id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.id = #{secondChannelId}
+                      </otherwise>
+                  </choose>
+                  <if test="startDate != null">
+                      <![CDATA[AND u.F09 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND u.F09 <= #{endDate}]]>
+                  </if>
+                  <if test="startDate != null">
+                      <![CDATA[AND tender.F06 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND tender.F06 <= #{endDate}]]>
+                  </if>
+                  AND bid.F20 != 'YLB'
+                  AND u.F06 = 'ZRR'
+              </where>
+              GROUP BY u.F01
+          ) invest ON invest.userId = u.F01
+          LEFT JOIN (
+              SELECT
+                  u.F01 userId,
+                  SUM(fundsRecord.F06) activeRedpacketSum
+              FROM
+                  s61.t6110 u
+              INNER JOIN flb.t_user_origin origin ON origin.user_id = u.F01
+              INNER JOIN flb.t_channel channel ON channel.code = origin.channel_code
+              INNER JOIN s61.t6101 account ON account.F02 = u.F01
+              INNER JOIN s61.t6102 fundsRecord ON fundsRecord.F02 = account.F01
+              <where>
+                  <if test="startDate != null">
+                      <![CDATA[AND u.F09 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND u.F09 <= #{endDate}]]>
+                  </if>
+                  <if test="startDate != null">
+                      <![CDATA[AND fundsRecord.F05 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND fundsRecord.F05 <= #{endDate}]]>
+                  </if>
+                  <choose>
+                      <when test="firstChannelId == null or firstChannelId == ''">
+                          AND channel.parent_id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.parent_id = #{firstChannelId}
+                      </otherwise>
+                  </choose>
+                  <choose>
+                      <when test="secondChannelId == null or secondChannelId == ''">
+                          AND channel.id != 0
+                      </when>
+                      <otherwise>
+                          AND channel.id = #{secondChannelId}
+                      </otherwise>
+                  </choose>
+                  AND fundsRecord.F03 = 5116
+                  AND account.F03 = 'WLZH'
+                  AND u.F06 = 'ZRR'
+              </where>
+              GROUP BY u.F01
+          ) activeRedpacket ON activeRedpacket.userId = u.F01
+          <where>
+              <choose>
+                  <when test="firstChannelId == null or firstChannelId == ''">
+                      AND channel.parent_id != 0
+                  </when>
+                  <otherwise>
+                      AND channel.parent_id = #{firstChannelId}
+                  </otherwise>
+              </choose>
+              <choose>
+                  <when test="secondChannelId == null or secondChannelId == ''">
+                      AND channel.id != 0
+                  </when>
+                  <otherwise>
+                      AND channel.id = #{secondChannelId}
+                  </otherwise>
+              </choose>
+              <if test="startDate != null">
+                  <![CDATA[AND u.F09 >= #{startDate}]]>
+              </if>
+              <if test="endDate != null">
+                  <![CDATA[AND u.F09 <= #{endDate}]]>
+              </if>
+              <if test="minimumMoney != null">
+                  <![CDATA[AND invest.investSum >= #{minimumMoney}]]>
+              </if>
+              <if test="maximumMoney != null">
+                  <![CDATA[AND invest.investSum <= #{maximumMoney}]]>
+              </if>
+              AND u.F06 = 'ZRR'
+          </where>
+    </select>
+
+    <select id="getActiveRedpacketTotal" parameterType="java.util.Map" resultType="RedpacketStatistics">
+        SELECT
+            IFNULL(sum.activeRedpacketSum, 0) activeRedpacketSum,
+            IFNULL(count.activeRedpacketCount, 0) activeRedpacketCount
+        FROM
+        (
+            SELECT
+                SUM(fundsRecord.F06) activeRedpacketSum
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN s61.t6101 account ON account.F02 = u.F01
+            INNER JOIN s61.t6102 fundsRecord ON fundsRecord.F02 = account.F01
+            INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND fundsRecord.F05 >= #{startDate}]]>
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND fundsRecord.F05 <= #{endDate}]]>
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                <choose>
+                    <when test="firstChannelId == null or firstChannelId == ''">
+                        AND channel.parent_id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.parent_id = #{firstChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="secondChannelId == null or secondChannelId == ''">
+                        AND channel.id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.id = #{secondChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                        AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                    </when>
+                    <when test="channelName != null and channelName != ''">
+                        AND channel.name like '%${channelName}%'
+                    </when>
+                    <when test="channelCode != null and channelCode != ''">
+                        AND channel.code like '%${channelCode}%'
+                    </when>
+                </choose>
+                AND fundsRecord.F03 = 5116
+                AND account.F03 = 'WLZH'
+                AND u.F06 = 'ZRR'
+            </where>
+        ) sum,
+        (
+            SELECT
+                COUNT(1) activeRedpacketCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+            INNER JOIN (
+              SELECT
+                DISTINCT account.F02
+              FROM
+                s61.t6101 account
+              INNER JOIN s61.t6102 fundsRecord ON fundsRecord.F02 = account.F01
+              <where>
+                  <if test="startDate != null">
+                      <![CDATA[AND fundsRecord.F05 >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND fundsRecord.F05 <= #{endDate}]]>
+                  </if>
+                  AND fundsRecord.F03 = 5116
+                  AND account.F03 = 'WLZH'
+              </where>
+            ) account ON account.F02 = u.F01
+            <where>
+                <choose>
+                    <when test="firstChannelId == null or firstChannelId == ''">
+                        AND channel.parent_id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.parent_id = #{firstChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="secondChannelId == null or secondChannelId == ''">
+                        AND channel.id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.id = #{secondChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                        AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                    </when>
+                    <when test="channelName != null and channelName != ''">
+                        AND channel.name like '%${channelName}%'
+                    </when>
+                    <when test="channelCode != null and channelCode != ''">
+                        AND channel.code like '%${channelCode}%'
+                    </when>
+                </choose>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND u.F06 = 'ZRR'
+            </where>
+        ) count
+    </select>
+
+    <select id="getInvestTotal" parameterType="java.util.Map" resultType="InvestStatistics">
+        SELECT
+            IFNULL(sum.investSum, 0) investSum,
+            IFNULL(count.investCount, 0) investCount
+        FROM
+        (
+            SELECT
+                SUM(tender.F04) investSum
+            FROM
+              flb.t_user_origin t1
+            INNER JOIN s62.t6250 tender ON tender.F03 = t1.user_id
+            INNER JOIN S62.T6230 bid ON bid.F01 = tender.F02
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+            <where>
+                <choose>
+                    <when test="firstChannelId == null or firstChannelId == ''">
+                        AND channel.parent_id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.parent_id = #{firstChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="secondChannelId == null or secondChannelId == ''">
+                        AND channel.id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.id = #{secondChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                        AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                    </when>
+                    <when test="channelName != null and channelName != ''">
+                        AND channel.name like '%${channelName}%'
+                    </when>
+                    <when test="channelCode != null and channelCode != ''">
+                        AND channel.code like '%${channelCode}%'
+                    </when>
+                </choose>
+                <if test="startDate != null">
+                    <![CDATA[AND tender.F06 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND tender.F06 <= #{endDate}]]>
+                </if>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND bid.F20 != 'YLB'
+                AND u.F06 = 'ZRR'
+            </where>
+        ) sum,
+        (
+            SELECT
+                COUNT(1) investCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+            INNER JOIN (
+                SELECT
+                  DISTINCT tender.F03
+                FROM
+                  s62.t6250 tender
+                INNER JOIN S62.T6230 bid ON bid.F01 = tender.F02
+                <where>
+                    <if test="startDate != null">
+                        <![CDATA[AND tender.F06 >= #{startDate}]]>
+                    </if>
+                    <if test="endDate != null">
+                        <![CDATA[AND tender.F06 <= #{endDate}]]>
+                    </if>
+                    AND bid.F20 != 'YLB'
+                </where>
+            ) tender ON tender.F03 = u.F01
+            <where>
+                <choose>
+                    <when test="firstChannelId == null or firstChannelId == ''">
+                        AND channel.parent_id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.parent_id = #{firstChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="secondChannelId == null or secondChannelId == ''">
+                        AND channel.id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.id = #{secondChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                        AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                    </when>
+                    <when test="channelName != null and channelName != ''">
+                        AND channel.name like '%${channelName}%'
+                    </when>
+                    <when test="channelCode != null and channelCode != ''">
+                        AND channel.code like '%${channelCode}%'
+                    </when>
+                </choose>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND u.F06 = 'ZRR'
+            </where>
+        ) count
+    </select>
+
+    <select id="getRechargeTotal" parameterType="java.util.Map" resultType="RechargeStatistics">
+        SELECT
+            IFNULL(sum.rechargeSum, 0) rechargeSum,
+            IFNULL(count.rechargeCount, 0) rechargeCount
+        FROM
+        (
+            SELECT
+                SUM(s.F03) rechargeSum
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s65.t6502 s ON s.F02 = t1.user_id
+            INNER JOIN s65.t6501 t ON s.F01 = t.F01
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+            <where>
+                <choose>
+                    <when test="firstChannelId == null or firstChannelId == ''">
+                        AND channel.parent_id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.parent_id = #{firstChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="secondChannelId == null or secondChannelId == ''">
+                        AND channel.id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.id = #{secondChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                        AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                    </when>
+                    <when test="channelName != null and channelName != ''">
+                        AND channel.name like '%${channelName}%'
+                    </when>
+                    <when test="channelCode != null and channelCode != ''">
+                        AND channel.code like '%${channelCode}%'
+                    </when>
+                </choose>
+                <if test="startDate != null">
+                    <![CDATA[AND t.F04 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND t.F04 <= #{endDate}]]>
+                </if>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND t.F03 = 'CG'
+                AND u.F06 = 'ZRR'
+            </where>
+        ) sum,
+        (
+            SELECT
+                COUNT(1) rechargeCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+            INNER JOIN (
+                SELECT
+                  DISTINCT s.F02
+                FROM
+                  s65.t6502 s
+                INNER JOIN s65.t6501 t ON t.F01 = s.F01
+                <where>
+                    <if test="startDate != null">
+                        <![CDATA[AND t.F04 >= #{startDate}]]>
+                    </if>
+                    <if test="endDate != null">
+                        <![CDATA[AND t.F04 <= #{endDate}]]>
+                    </if>
+                    AND t.F03 = 'CG'
+                </where>
+            ) s ON s.F02 = t1.user_id
+            <where>
+                <choose>
+                    <when test="firstChannelId == null or firstChannelId == ''">
+                        AND channel.parent_id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.parent_id = #{firstChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="secondChannelId == null or secondChannelId == ''">
+                        AND channel.id != 0
+                    </when>
+                    <otherwise>
+                        AND channel.id = #{secondChannelId}
+                    </otherwise>
+                </choose>
+                <choose>
+                    <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                        AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                    </when>
+                    <when test="channelName != null and channelName != ''">
+                        AND channel.name like '%${channelName}%'
+                    </when>
+                    <when test="channelCode != null and channelCode != ''">
+                        AND channel.code like '%${channelCode}%'
+                    </when>
+                </choose>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND u.F06 = 'ZRR'
+            </where>
+        ) count
+    </select>
+
+    <select id="getAuthTotal" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT
+            COUNT(1) authTotal
+        FROM
+            flb.t_user_origin t1
+        INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+        INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+        INNER JOIN s61.t6141 idcard ON idcard.F01 = t1.user_id
+        INNER JOIN (
+           SELECT
+              DISTINCT ll_auth.user_id
+           FROM flb.t_ll_auth ll_auth
+           <where>
+               <if test="startDate != null">
+                   <![CDATA[AND ll_auth.createtime >= #{startDate}]]>
+               </if>
+               <if test="endDate != null">
+                   <![CDATA[AND ll_auth.createtime <= #{endDate}]]>
+               </if>
+               AND ll_auth.status = 1
+           </where>
+        ) ll_auth ON ll_auth.user_id = u.F01
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                    AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                </when>
+                <when test="channelName != null and channelName != ''">
+                    AND channel.name like '%${channelName}%'
+                </when>
+                <when test="channelCode != null and channelCode != ''">
+                    AND channel.code like '%${channelCode}%'
+                </when>
+            </choose>
+            <if test="startDate != null">
+                <![CDATA[AND u.F09 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND u.F09 <= #{endDate}]]>
+            </if>
+            AND idcard.F04 = 'TG'
+            AND u.F06 = 'ZRR'
+        </where>
+
+    </select>
+
+    <select id="getRegisterTotal" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT
+            COUNT(1) registerTotal
+        FROM
+            flb.t_user_origin t1
+        INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+        INNER JOIN flb.t_channel channel ON channel.code = t1.channel_code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="channelName != null and channelName != '' and channelCode != null and channelCode != ''">
+                    AND (channel.name like '%${channelName}%' OR channel.code like '%${channelCode}%')
+                </when>
+                <when test="channelName != null and channelName != ''">
+                    AND channel.name like '%${channelName}%'
+                </when>
+                <when test="channelCode != null and channelCode != ''">
+                    AND channel.code like '%${channelCode}%'
+                </when>
+            </choose>
+            <if test="startDate != null">
+                <![CDATA[AND u.F09 >= #{startDate}]]>
+            </if>
+            <if test="endDate != null">
+                <![CDATA[AND u.F09 <= #{endDate}]]>
+            </if>
+            AND u.F06 = 'ZRR'
+        </where>
+    </select>
+
+    <select id="getActiveRedpacketStatisticses" parameterType="java.util.Map" resultType="RedpacketStatistics">
+        SELECT
+            channel.id channelId,
+            IFNULL(sum.activeRedpacketSum, 0) activeRedpacketSum,
+            IFNULL(count.activeRedpacketCount, 0) activeRedpacketCount
+        FROM
+            flb.t_channel channel
+        LEFT JOIN (
+            SELECT
+                t1.channel_code,
+                SUM(fundsRecord.F06) activeRedpacketSum
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN s61.t6101 account ON account.F02 = u.F01
+            INNER JOIN s61.t6102 fundsRecord ON fundsRecord.F02 = account.F01
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                <if test="startDate != null">
+                    <![CDATA[AND fundsRecord.F05 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND fundsRecord.F05 <= #{endDate}]]>
+                </if>
+                AND account.F03 = 'WLZH'
+                AND fundsRecord.F03 = 5116
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) sum ON sum.channel_code = channel.code
+        LEFT JOIN (
+            SELECT
+                t1.channel_code,
+                COUNT(1) activeRedpacketCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN (
+                SELECT
+                  DISTINCT account.F02
+                FROM
+                  s61.t6101 account
+                INNER JOIN s61.t6102 fundsRecord ON fundsRecord.F02 = account.F01
+                <where>
+                    <if test="startDate != null">
+                        <![CDATA[AND fundsRecord.F05 >= #{startDate}]]>
+                    </if>
+                    <if test="endDate != null">
+                        <![CDATA[AND fundsRecord.F05 <= #{endDate}]]>
+                    </if>
+                    AND account.F03 = 'WLZH'
+                    AND fundsRecord.F03 = 5116
+                </where>
+            ) account ON account.F02 = u.F01
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) count ON count.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <select id="getRechargeStatisticses" parameterType="java.util.Map" resultType="RechargeStatistics">
+        SELECT
+            channel.id channelId,
+            IFNULL(sum.rechargeSum, 0) rechargeSum,
+            IFNULL(count.rechargeCount, 0) rechargeCount
+        FROM
+            flb.t_channel channel
+        LEFT JOIN (
+            SELECT
+                t1.channel_code,
+                SUM(s.F03) rechargeSum
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s65.t6502 s ON s.F02 = t1.user_id
+            INNER JOIN s65.t6501 t ON s.F01 = t.F01
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                <if test="startDate != null">
+                    <![CDATA[AND t.F04 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND t.F04 <= #{endDate}]]>
+                </if>
+                AND t.F03 = 'CG'
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) sum ON sum.channel_code = channel.code
+        LEFT JOIN (
+            SELECT
+                t1.channel_code,
+                COUNT(1) rechargeCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN (
+                SELECT
+                  DISTINCT s.F02
+                FROM
+                  s65.t6502 s
+                INNER JOIN s65.t6501 t ON t.F01 = s.F01
+                <where>
+                    <if test="startDate != null">
+                        <![CDATA[AND t.F04 >= #{startDate}]]>
+                    </if>
+                    <if test="endDate != null">
+                        <![CDATA[AND t.F04 <= #{endDate}]]>
+                    </if>
+                    AND t.F03 = 'CG'
+                </where>
+            ) s ON s.F02 = t1.user_id
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) count ON count.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <select id="getInvestStatisticses" parameterType="java.util.Map" resultType="InvestStatistics">
+        SELECT
+            channel.id channelId,
+            IFNULL(investSum.investSum, 0) investSum,
+            IFNULL(investCount.investCount, 0) investCount
+        FROM
+            flb.t_channel channel
+        LEFT JOIN (
+            SELECT
+              t1.channel_code,
+              SUM(tender.F04) investSum
+            FROM
+              flb.t_user_origin t1
+            INNER JOIN s62.t6250 tender ON tender.F03 = t1.user_id
+            INNER JOIN S62.T6230 bid ON bid.F01 = tender.F02
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                <if test="startDate != null">
+                    <![CDATA[AND tender.F06 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND tender.F06 <= #{endDate}]]>
+                </if>
+                AND bid.F20 != 'YLB'
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) investSum ON investSum.channel_code = channel.code
+        LEFT JOIN (
+            SELECT
+                t1.channel_code,
+                COUNT(1) investCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN (
+                SELECT
+                  DISTINCT tender.F03
+                FROM s62.t6250 tender
+                INNER JOIN S62.T6230 bid ON bid.F01 = tender.F02
+                <where>
+                    <if test="startDate != null">
+                        <![CDATA[AND tender.F06 >= #{startDate}]]>
+                    </if>
+                    <if test="endDate != null">
+                        <![CDATA[AND tender.F06 <= #{endDate}]]>
+                    </if>
+                    AND bid.F20 != 'YLB'
+                </where>
+            ) tender ON tender.F03 = u.F01
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) investCount ON investCount.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <select id="getAuthStatisticses" parameterType="java.util.Map" resultType="AuthStatistics">
+        SELECT
+            channel.id channelId,
+            auth.authCount
+        FROM
+            flb.t_channel channel
+        LEFT JOIN (
+            SELECT
+                t1.channel_code,
+                COUNT(1) authCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            INNER JOIN s61.t6141 idcard ON idcard.F01 = t1.user_id
+            INNER JOIN (
+              SELECT
+                DISTINCT ll_auth.user_id
+              FROM flb.t_ll_auth ll_auth
+              <where>
+                  <if test="startDate != null">
+                      <![CDATA[AND ll_auth.createtime >= #{startDate}]]>
+                  </if>
+                  <if test="endDate != null">
+                      <![CDATA[AND ll_auth.createtime <= #{endDate}]]>
+                  </if>
+                  AND ll_auth.status = 1
+              </where>
+            ) ll_auth ON ll_auth.user_id = u.F01
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND idcard.F04 = 'TG'
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) auth ON auth.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <select id="getRegisterStatisticses" parameterType="java.util.Map" resultType="RegisterStatistics">
+        SELECT
+            channel.id channelId,
+            register.registerCount
+        FROM
+          flb.t_channel channel
+        LEFT JOIN (
+            SELECT
+                t1.channel_code,
+                COUNT(1) registerCount
+            FROM
+                flb.t_user_origin t1
+            INNER JOIN s61.t6110 u ON t1.user_id = u.F01
+            <where>
+                <if test="startDate != null">
+                    <![CDATA[AND u.F09 >= #{startDate}]]>
+                </if>
+                <if test="endDate != null">
+                    <![CDATA[AND u.F09 <= #{endDate}]]>
+                </if>
+                AND u.F06 = 'ZRR'
+            </where>
+            GROUP BY t1.channel_code
+        ) register ON register.channel_code = channel.code
+        <where>
+            <choose>
+                <when test="firstChannelId == null or firstChannelId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{firstChannelId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="secondChannelId == null or secondChannelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{secondChannelId}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+</mapper>

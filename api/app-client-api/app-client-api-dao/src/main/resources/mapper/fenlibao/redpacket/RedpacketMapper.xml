@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="RedpacketMapper">
+    <insert id="addRedpackExceptionLog" parameterType="java.util.Map">
+        INSERT INTO flb.t_redpacket_log
+        SET user_id = #{userId},
+        redpacket_id = #{redPacketId},
+        user_redpacket_id = #{userRedpacketId},
+        bid_id = #{bidId},
+        operation_time = SYSDATE(),
+        message = #{message},
+        red_type = #{redType}
+    </insert>
+
+    <select id="getFeeType" parameterType="int" resultType="FeeType">
+        SELECT
+          F01 AS code,
+          F02 AS name,
+          F03 AS status
+        FROM s51.T5122
+        WHERE F01 = #{code}
+        AND F03 = 'QY'
+    </select>
+    
+    <insert id="addTruninFundsRecord" parameterType="java.util.Map">
+        INSERT INTO S61.T6102
+        SET F02 = #{truninAccountId}, F03 = #{tradeTypeId}, F04 = #{trunoutAccountId}, F05 = SYSDATE(), F06 = #{payinAmount}, F08 = #{balance}, F09 = #{remark}
+    </insert>
+
+    <insert id="addTrunoutFundsRecord" parameterType="java.util.Map">
+        INSERT INTO S61.T6102
+        SET F02 = #{truninAccountId}, F03 = #{tradeTypeId}, F04 = #{trunoutAccountId}, F05 = SYSDATE(), F07 = #{payoutAmount}, F08 = #{balance}, F09 = #{remark}
+    </insert>
+
+    <select id="getAccountId" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT
+            F01
+        FROM
+            s61.t6101
+        WHERE
+            F05 = #{accountName}
+            AND F03 = #{accountType}
+    </select>
+
+    <select id="lockSalaryaccount" parameterType="java.lang.Integer" resultType="UserAccount">
+        SELECT
+          F01 AS accountId,
+          F06 AS balance
+        FROM
+          S61.T6101
+        WHERE
+          F01 = #{accountId}
+        FOR UPDATE
+    </select>
+
+    <select id="lockUserAccount" parameterType="java.util.Map" resultType="UserAccount">
+        SELECT
+          F01 AS accountId,
+          F02 AS userId,
+          F03 AS type,
+          F04 AS account,
+          F05 AS accountName,
+          F06 AS balance,
+          F07 AS lastUpdatetime
+        FROM S61.T6101
+        WHERE F02 = #{userId}
+          AND F03 = #{accountType}
+        FOR UPDATE
+    </select>
+
+    <update id="increaseUserAccountAmount" parameterType="java.util.Map">
+        UPDATE S61.T6101
+        SET F06 = F06 + #{amount},
+        F07 = SYSDATE()
+        WHERE F01 = #{accountId}
+    </update>
+
+    <update id="subtractUserAccountAmount" parameterType="java.util.Map">
+        UPDATE S61.T6101
+        SET F06 = F06 - #{amount},
+        F07 = SYSDATE()
+        WHERE F01 = #{accountId}
+    </update>
+
+    <insert id="addUserRedpacket" parameterType="java.util.Map">
+        INSERT INTO flb.t_user_redpackets
+        SET user_id = #{userId},
+        redpacket_id = #{redPacketId},
+        STATUS = #{status},
+        valid_time = #{validTime},
+        grant_status = #{grantStatus}
+    </insert>
+
+    <select id="getActivityRedBagByType" parameterType="java.util.Map" resultType="UserRedPacketInfo">
+        SELECT
+        id AS hbId,
+        red_money AS hbBalance,
+        red_type AS type,
+        effect_day AS effectDay,
+        invest_money AS conditionBalance
+        FROM
+        flb.t_red_packet
+        <where>
+            AND red_type = #{type}
+            AND #{currentTime} BETWEEN time_start AND time_end
+        </where>
+    </select>
+
+    <!-- 获取我的返现红包相关内容 -->
+    <resultMap id="UserRedPacketInfoMap" type="UserRedPacketInfo" autoMapping="true">
+        <id property="id" column="id"></id>
+        <collection property="BidTypes" ofType="BidTypeVO" autoMapping="true"></collection>
+    </resultMap>
+    <select id="getRedPackets" parameterType="java.util.Map" resultMap="UserRedPacketInfoMap">
+        SELECT
+        u.id id,u.redpacket_id hbId,u.red_type type,u.red_money hbBalance,u.invest_money conditionBalance,
+        u.`status` `status`,u.valid_time `timestamp`,u.invest_deadline investDeadline,
+        bt.F01 typeId, bt.F02 typeName, bt.F05 typeCode
+        FROM
+        (SELECT  ur.update_timestamp,ur.id,ur.`status`,ur.valid_time,ur.redpacket_id,r.red_type,r.red_money,r.invest_money,r.invest_deadline
+            FROM flb.t_user_redpackets ur INNER JOIN flb.t_red_packet r ON ur.redpacket_id = r.id
+            <if test="bidId != null and bidId != ''">
+              INNER JOIN flb.t_red_packet_bid_type t ON ur.redpacket_id = t.redpacket_id INNER JOIN s62.t6230 b ON b.F04 = t.bidType_id
+            </if>
+            <if test="planId != null and planId != ''">
+                INNER JOIN flb.t_red_packet_bid_type t ON ur.redpacket_id = t.redpacket_id LEFT JOIN s62.t6211 bt ON bt.F01 = t.bidType_id
+                <if test="newPlan != 1">
+                    , flb.t_plan t_plan
+                </if>
+                <if test="newPlan == 1">
+                    , flb.t_invest_plan t_plan
+                </if>
+            </if>
+            WHERE ur.user_id = #{userId} AND ur.grant_status = 1
+            <if test="bidId != null and bidId != ''">
+                AND b.F01 = #{bidId}
+                AND <![CDATA[(b.F09 * 30 >= r.invest_deadline
+                    OR b.F32 >= r.invest_deadline OR ISNULL(r.invest_deadline))]]>
+            </if>
+            <if test="planId != null and planId != ''">
+                AND t_plan.id = #{planId}
+                AND (bt.F05 = 'JH' OR NOT EXISTS(SELECT * FROM flb.t_red_packet_bid_type WHERE t_red_packet_bid_type.redpacket_id = r.id))
+                AND <![CDATA[((t_plan.cycle * 30 >= r.invest_deadline AND t_plan.cycle_type = 'm')
+                    OR (t_plan.cycle >= r.invest_deadline AND t_plan.cycle_type = 'd') OR ISNULL(r.invest_deadline))]]>
+            </if>
+            <if test="status == 3">
+                AND ur.status = 1
+                <![CDATA[AND ur.valid_time < now()]]>
+                ORDER BY ur.valid_time
+            </if>
+            <if test="status == 1">
+                AND  ur.status = #{status}
+                <![CDATA[AND ur.valid_time > now()]]>
+                ORDER BY ur.valid_time
+            </if>
+            <if test="status == 2">
+                AND  ur.status = #{status}
+            </if>
+             LIMIT #{offset},#{pagesize}
+        )u
+        LEFT JOIN flb.t_red_packet_bid_type t ON u.redpacket_id = t.redpacket_id
+        LEFT JOIN s62.t6211 bt ON bt.F01 = t.bidType_id
+        <if test="status == 2">
+            ORDER BY u.update_timestamp desc
+        </if>
+    </select>
+
+    <!-- 获取登录账号拥有的红包数量 -->
+    <select id="getRedpacketCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM (
+        SELECT count(1) FROM
+        flb.t_user_redpackets u
+        INNER JOIN flb.t_red_packet r ON u.redpacket_id = r.id
+        <if test="bidId != null and bidId != ''">
+            LEFT JOIN flb.t_red_packet_bid_type t ON r.id = t.redpacket_id
+            LEFT JOIN s62.t6211 bt ON bt.F01 = t.bidType_id
+            LEFT JOIN s62.t6230 b ON b.F04 = t.bidType_id
+        </if>
+        <if test="planId != null and planId != ''">
+            LEFT JOIN flb.t_red_packet_bid_type t ON r.id = t.redpacket_id
+            LEFT JOIN s62.t6211 bt ON bt.F01 = t.bidType_id,
+        <if test="newPlan == 0">
+            flb.t_plan t_plan
+        </if>
+        <if test="newPlan == 1">
+            flb.t_invest_plan t_plan
+        </if>
+        </if>
+        <where>
+            u.user_id = #{userId}
+            <if test="bidId != null and bidId != ''">
+                AND b.F01 = #{bidId} AND <![CDATA[(b.F09 * 30 >= r.invest_deadline OR b.F32 >= r.invest_deadline OR ISNULL(r.invest_deadline))]]>
+            </if>
+            <if test="planId != null and planId != ''">
+                AND t_plan.id = #{planId}
+                AND (bt.F05 = 'JH' OR NOT EXISTS(SELECT * FROM flb.t_red_packet_bid_type WHERE t_red_packet_bid_type.redpacket_id = r.id))
+                AND <![CDATA[((t_plan.cycle * 30 >= r.invest_deadline AND t_plan.cycle_type = 'm')
+                    OR (t_plan.cycle >= r.invest_deadline AND t_plan.cycle_type = 'd') OR ISNULL(r.invest_deadline))]]>
+            </if>
+            AND u.grant_status = 1
+            <if test="status == 3">
+                AND u.status = 1
+                <![CDATA[AND u.valid_time < now()]]>
+            </if>
+            <if test="status == 1">
+                AND  u.status = #{status}
+                <![CDATA[AND u.valid_time > now()]]>
+            </if>
+            <if test="status == 2">
+                AND  u.status = #{status}
+            </if>
+        </where>
+        GROUP BY u.id )d
+    </select>
+
+    <!--获取投标返现的红包-->
+    <select id="getBidRedpacket" parameterType="java.util.Map" resultMap="UserRedPacketInfoMap">
+        SELECT
+            relation.id AS id,
+            red.id AS hbId,
+            red.red_type AS type,
+            red.red_money AS hbBalance,
+            red.invest_money AS conditionBalance,
+            relation.status AS status,
+            relation.valid_time AS TIMESTAMP ,
+
+            relation.user_id AS userId,
+            red.invest_deadline AS investDeadline,
+            bt.F01 typeId,
+            bt.F02 typeName,
+            bt.F05 typeCode
+        FROM
+            flb.t_red_packet AS red
+        LEFT JOIN flb.t_user_redpackets relation ON red.id = relation.redpacket_id
+        LEFT JOIN flb.t_red_packet_bid_type t ON t.redpacket_id = relation.redpacket_id
+        LEFT JOIN s62.t6211 bt ON bt.F01 = t.bidType_id
+        WHERE relation.id in <foreach collection="fxhbIdArr" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+    </select>
+
+    <!-- 更新用户使用红包状态 -->
+    <update id="updateRedpacketsRelation" parameterType="java.util.Map">
+        UPDATE flb.t_user_redpackets
+        SET bid_id = #{bidId},
+        status = #{status},
+        tender_id = #{recordId}
+        WHERE id = #{fxhbId}
+    </update>
+
+    <!-- 更新用户使用红包状态 -->
+    <update id="updateRedpacketsRelationForPlan" parameterType="java.util.Map">
+        UPDATE flb.t_user_redpackets
+        SET
+        status = #{status},
+        invest_type = #{investType}
+        <if test="planId !=  null and planId != ''">
+            ,plan_id = #{planId}
+        </if>
+        <if test="planRecordId !=  null and planRecordId != ''">
+            ,plan_record_id = #{planRecordId}
+        </if>
+        <if test="userPlanId !=  null and userPlanId != ''">
+            ,user_plan_id = #{userPlanId}
+        </if>
+        WHERE id = #{fxhbId}
+    </update>
+
+    <!-- 获取订单详情 -->
+    <select id="getBidOrderDetail" parameterType="java.lang.Integer" resultType="InverstBidTradeInfo">
+        SELECT F01 AS orderId, F02 AS userId, F03 AS bidId, F04 AS money, F05 AS bidRecordId FROM S65.T6504 WHERE T6504.F01 = #{orderId} LIMIT 1
+    </select>
+    
+    <select id="getById" parameterType="java.lang.Integer" resultType="_RedPacketVO">
+        SELECT id,activity_name activityName,time_start activityStartTime,time_end activityEndTime,red_money amount,red_type `type`,effect_day effectDays,
+        activity_code activityCode,invest_money investAmount,invest_deadline investDeadline
+        FROM flb.t_red_packet WHERE id = #{id} LIMIT 1
+    </select>
+
+    <select id="getActivityRedBagBySetting" parameterType="java.util.Map" resultType="UserRedPacketInfo">
+        SELECT
+            a.id AS hbId,
+            a.red_money AS hbBalance,
+            a.red_type AS type,
+            a.effect_day AS effectDay,
+            a.invest_money AS conditionBalance,
+            re.get_times AS times
+        FROM
+        flb.t_red_packet a
+        INNER JOIN flb.t_tender_share_setting_reward re ON re.reward_id = a.id
+        WHERE
+        re.reward_type = 1
+        AND a.red_type = #{type}
+        AND re.setting_id = #{settingId}
+        <if test="isNovice != null and isNovice == 0">
+            AND re.is_novice = #{isNovice}
+        </if>
+    </select>
+
+    <select id="getActivityRedBagList" parameterType="java.util.Map" resultType="UserRedPacketInfo">
+        SELECT
+        a.id AS hbId,
+        a.red_money AS hbBalance,
+        a.red_type AS type,
+        a.effect_day AS effectDay,
+        a.invest_money AS conditionBalance,
+        a.invest_deadline AS investDeadline
+        FROM
+        flb.t_red_packet a
+        WHERE
+        <!--<if test="activityCode != null">
+             a.activity_code = #{activityCode}
+        </if>-->
+        a.remarks='2017双十一'
+        <if test="hbId != null">
+           AND a.id = #{hbId}
+        </if>
+    </select>
+
+    <select id="getUserRedBagByActivity" parameterType="java.util.Map" resultType="UserRedPacketInfo">
+        SELECT
+        r.redpacket_id AS hbId,
+        r.status AS status
+        FROM
+        flb.t_user_redpackets r
+        LEFT JOIN  flb.t_red_packet a ON  r.redpacket_id = a.id
+        WHERE
+        a.remarks = '2017双十一'
+        <if test="userId != null">
+          AND  r.user_id = #{userId}
+        </if>
+         AND
+          to_days(r.create_timestamp) = to_days(now())
+    </select>
+
+</mapper>

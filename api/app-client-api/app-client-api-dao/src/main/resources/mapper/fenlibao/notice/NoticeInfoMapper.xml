@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="NoticeInfoMapper">
+	
+	<select id="getNoticeList" parameterType="java.lang.String" resultType="NoticeInfo">
+		select t.F01 noticeId, t.F02 noticeType, t.F05 noticeTitle,t.F08 createTime ,t.F10 summary
+		from s50.t5015 t 
+		where t.F04 = 'YFB' 
+		<if test="noticeType!=null and noticeType!=''">
+		and t.F02= #{noticeType}
+		</if>
+		order by t.F08 desc
+		LIMIT #{pageNo},#{pagesize}
+	</select>
+	
+	<select id="getNoticeDetail" parameterType="java.lang.Integer" resultType="NoticeInfoDetail">
+		select F01 noticeId, F02 noticeType, F05 noticeTitle, F06 content, F08 createTime 
+		from s50.t5015 t where t.F01 = #{noticeId} and t.F04 = 'YFB'
+	</select>
+	
+	
+	<select id="getArticleList" parameterType="java.util.Map" resultType="Article">
+		SELECT
+			F01 AS articleId,
+			F06 AS articleTitle,
+			F07 AS source,
+			F08 AS introduction,
+			F09 AS imgcode,
+			F12 AS publishTime,
+			F14 AS channel
+		FROM
+			s50.t5011
+		WHERE
+			F02 = #{type} AND
+			F05 = 'YFB'
+		ORDER BY
+			F04 ASC,
+			t5011.F12 DESC
+		LIMIT #{pageNo},#{pagesize}
+	</select>
+	
+	<select id="getArticleDetail" parameterType="java.lang.Integer" resultType="ArticleDetail">
+		SELECT
+			t5011.F01 AS articleId,
+			t5011.F06 AS articleTitle,
+			t5011.F07 AS source,
+			t5011.F08 AS introduction,
+			t5011.F09 AS imgcode,
+			t5011.F12 AS publishTime,
+			t5011_1.F02 AS content,
+			t5011.F14 AS channel
+		FROM
+			s50.t5011
+		INNER JOIN s50.t5011_1 ON s50.t5011.F01 = t5011_1.F01
+		WHERE
+			t5011.F01 = #{articleId} AND
+
+			t5011.F05 = 'YFB'
+	</select>
+
+
+	<select id="getNoticeLastUpdateTime" resultType="java.sql.Timestamp">
+		select max(t.F09) FROM s50.t5015 t
+	</select>
+
+	<select id="checkNoticeNew" parameterType="java.sql.Timestamp" resultType="java.lang.Integer">
+		select (case WHEN max(t.F09)<![CDATA[>]]> #{updateTime} then 1
+				WHEN max(t.F09)<![CDATA[<=]]> #{updateTime} then 0 END)
+		from s50.t5015 t
+	</select>
+
+	<select id="getKnowMoreList" parameterType="java.lang.Integer" resultType="KnowMore">
+		SELECT
+		id AS id,
+		title AS title,
+		url AS source,
+		digest AS introduction,
+		publish_time AS publishTime
+		FROM
+		flb.class_know_more
+		WHERE
+		status= 1
+		ORDER BY
+		sorting ASC
+		LIMIT #{pageNo},#{pagesize}
+	</select>
+
+	<select id="getKnowMoreDetail" parameterType="java.lang.Integer" resultType="KnowMore">
+		SELECT
+		id AS id,
+		title AS title,
+		url AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		content AS content
+		FROM
+		flb.class_know_more
+		WHERE
+		id = #{id}
+	</select>
+
+	<select id="geKnowEarlyList" parameterType="java.lang.Integer" resultType="KnowEarly">
+		SELECT
+		id AS id,
+		title AS title,
+		source AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		CONCAT(pic_server,pic_new_name) AS  imgUrl
+		FROM
+		flb.class_risk_know_early
+		WHERE
+		status= 1
+		ORDER BY
+		sorting ASC
+		LIMIT #{pageNo},#{pagesize}
+	</select>
+
+	<select id="getKnowEarlyDetail" parameterType="java.lang.Integer" resultType="KnowEarly">
+		SELECT
+		id AS id,
+		title AS title,
+		source AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		CONCAT(pic_server,pic_new_name) AS  imgUrl,
+		content AS content
+		FROM
+		flb.class_risk_know_early
+		WHERE
+		id = #{id}
+	</select>
+
+	<select id="getReportList" parameterType="java.lang.Integer" resultType="ReportDeatil">
+		SELECT
+		id AS id,
+		title AS  title,
+		report_url AS url
+		FROM
+		flb.t_company_report
+		<if test="type!=null and type!=''">
+		WHERE report_type = #{type}
+		</if>
+		ORDER BY list_order ASC
+	</select>
+</mapper>

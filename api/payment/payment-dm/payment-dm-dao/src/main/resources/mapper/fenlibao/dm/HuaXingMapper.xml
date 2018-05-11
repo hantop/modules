@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="HuaXingMapper">
+
+    <insert id="saveMessage" parameterType="java.util.Map">
+      INSERT INTO flb.t_hx_callback_message (trade_code,old_flow_num,thirdparty_flow_num,message) VALUES (#{tradeCode}, #{oldFlowNum},#{flowNum}, #{message})
+    </insert>
+    
+    <insert id="createOrder" parameterType="HXOrder" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flb.t_hx_order (user_id,bg_user_id,source,type_code,business_id,create_time,parent_flow_num) VALUES (#{userId},#{bgUserId},#{source},#{typeCode},#{businessId},NOW(),#{parentFlowNum})
+    </insert>
+    
+    <insert id="addOrderAndClientRelation" parameterType="java.util.Map">
+        INSERT INTO flb.t_hx_client_hxorder (hx_order_id,client_type) VALUES (#{orderId}, #{clientType})
+    </insert>
+    
+    <select id="getOrderByFlowNum" parameterType="java.util.Map" resultType="HXOrder">
+        SELECT id,user_id userId,type_code typeCode,flow_num flowNum,thirdparty_flow_num thirdPartyFlowNum,order_status `status`,create_time createTime,complete_time completeTime,business_id businessId,parent_flow_num parentFlowNum
+        FROM flb.t_hx_order WHERE flow_num = #{flowNum} LIMIT 1 FOR UPDATE
+    </select>
+
+    <update id="submitOrder">
+        UPDATE flb.t_hx_order SET order_status = #{status},flow_num = #{flowNum}
+        WHERE id = #{id} LIMIT 1
+    </update>
+
+    <update id="completeOrder">
+        UPDATE flb.t_hx_order SET order_status = #{status},thirdparty_flow_num = #{thirdPartyFlowNum},complete_time = NOW()
+        WHERE id = #{id} LIMIT 1
+    </update>
+
+    <select id="getOrderById" resultType="HXOrder">
+        SELECT id,user_id userId,type_code typeCode,flow_num flowNum,thirdparty_flow_num thirdPartyFlowNum,order_status `status`,create_time createTime,complete_time completeTime,business_id businessId,parent_flow_num parentFlowNum
+        FROM flb.t_hx_order WHERE id = #{orderId} LIMIT 1 FOR UPDATE
+    </select>
+    
+    <select id="getClientType" resultType="java.lang.Integer">
+        SELECT client_type
+        FROM flb.t_hx_client_hxorder WHERE hx_order_id = #{orderId} LIMIT 1 
+    </select>
+
+    <insert id="addRewardsRecord" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO flb.t_hx_rewards (create_time,user_id,amount,remark) VALUES (NOW(),#{user_id},#{amount},#{remark})
+    </insert>
+
+    <insert id="createRepayOrder" parameterType="com.fenlibao.p2p.model.dm.entity.HXRepayOrder" >
+        INSERT INTO flb.t_hx_repay_order (order_id,term,dfflag) VALUES (#{orderId},#{term},#{dfflag})
+    </insert>
+    
+    <select id="getRepayOrderById" resultType="com.fenlibao.p2p.model.dm.entity.HXRepayOrder">
+        SELECT order_id orderId,term,dfflag
+        FROM flb.t_hx_repay_order WHERE order_id = #{orderId} LIMIT 1
+    </select>
+    
+    <select id="getOrder" parameterType="java.util.Map" resultType="HXOrder">
+        SELECT id,user_id userId,type_code typeCode,flow_num flowNum,thirdparty_flow_num thirdPartyFlowNum,order_status `status`,create_time createTime,complete_time completeTime,business_id businessId,parent_flow_num parentFlowNum
+        FROM flb.t_hx_order 
+        <where>
+			<if test="businessId != null">
+				and business_id = #{businessId}
+			</if>
+			<if test="status != null">
+				and order_status = #{status}
+			</if>
+			<if test="typeCode != null">
+				and type_code = #{typeCode}
+			</if>
+		</where>
+        LIMIT 1 
+    </select>
+    
+    <update id="updateRewardsRecord" parameterType="java.util.Map">
+        UPDATE flb.t_hx_rewards SET state = #{state}
+        <if test="result != null and result != ''">
+            ,failure_reasons = #{result}
+        </if>
+        WHERE id = #{id} LIMIT 1
+    </update>
+</mapper>

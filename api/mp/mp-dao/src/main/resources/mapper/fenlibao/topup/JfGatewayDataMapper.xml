@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="JfGatewayDataMapper">	
+	<insert id="addGatewayData" parameterType="MobileTopUpCallbackVO" >
+		INSERT INTO mp.mp_mobile_jf_gateway_data 
+			(R0_biztype,R1_agentcode,R2_mobile,R3_parvalue,R4_trxamount,R5_productcode,R6_requestid,R7_trxid,R8_returncode,R9_extendinfo,R10_trxDate,hmac) 
+		VALUES 
+			(#{R0_biztype},#{R1_agentcode},#{R2_mobile},#{R3_parvalue},#{R4_trxamount},#{R5_productcode},#{R6_requestid},#{R7_trxid},#{R8_returncode},#{R9_extendinfo},#{R10_trxDate},#{hmac})
+	</insert>
+</mapper>

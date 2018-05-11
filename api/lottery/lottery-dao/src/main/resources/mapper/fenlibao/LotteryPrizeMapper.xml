@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="LotteryPrizeMapper">
+
+    <select id="getLotteryPrizeInfos" parameterType="java.util.Map" resultType="LotteryPrizeInfo" >
+		SELECT
+			p.prize_id prizeId,
+			p.prize_name prizeName,
+			p.prize_type prizeType,
+			p.prize_logo prizeLogo,
+			p.probability probability,
+			p.activity_id activityId,
+			p.list_order listOrder
+		FROM
+			lt.lt_lottery_prize p
+		<where>
+			<if test="activityId != null and activityId >0">
+				p.activity_id = #{activityId}
+			</if>
+			<if test="probability != null and probability >0">
+				AND p.probability > 0
+			</if>
+			<if test="quantity != null and quantity >0">
+				AND p.quantity > 0
+			</if>
+		</where>
+	</select>
+
+	<!-- 添加用户中奖记录 -->
+	<insert id="addLotteryDrawRecord" useGeneratedKeys="true" keyProperty="rId" parameterType="java.util.Map" >
+		INSERT INTO lt.lt_user_lottery_record (
+			user_id,
+			cell_tail_number,
+			prize_id,
+			activity_id
+		)
+		VALUES
+			(#{userId}, #{cellTailNumber}, #{prizeId}, #{activityId})
+	</insert>
+
+	<!-- 更新用户 -->
+	<update id="updateUserLotteryAvailTimes" parameterType="java.util.Map" >
+		UPDATE lt.lt_user_lottery_times
+		SET avail_times = avail_times - 1,
+		 used_times = used_times + 1
+		WHERE
+			id = #{recordId}
+	</update>
+
+	<select id="getUserLotteryTimes" parameterType="java.util.Map" resultType="UserLotteryTimes" useCache="false">
+		SELECT
+			t.id recordId,
+			t.user_id userId,
+			t.activity_id activityId,
+			t.avail_times availTimes,
+			t.used_times usedTimes
+		FROM
+			lt.lt_user_lottery_times t
+		<where>
+			<if test="activityId != null and activityId >0">
+				t.activity_id = #{activityId}
+			</if>
+			<if test="userId != null and userId >0">
+				AND t.user_id = #{userId}
+			</if>
+		</where>
+	</select>
+
+	<!-- 锁定用户抽奖次数记录-->
+	<select id="lockUserLotteryTimes" parameterType="java.util.Map" resultType="UserLotteryTimes" useCache="false">
+		SELECT
+			t.id recordId,
+			t.user_id userId,
+			t.activity_id activityId,
+			t.avail_times availTimes,
+			t.used_times usedTimes
+		FROM
+		lt.lt_user_lottery_times t
+		<where>
+			<if test="recordId != null and recordId >0">
+				t.id = #{recordId}
+			</if>
+		</where>
+		FOR UPDATE
+	</select>
+
+	<!-- 获取一条中奖记录-->
+	<select id="getUserLotteryOneRecord" parameterType="java.util.Map" resultType="UserLotteryRecord">
+		SELECT
+			t.id recordId,
+			t.cell_tail_number cellTailNumber,
+			p.prize_name prizeName
+		FROM
+			lt.lt_user_lottery_record t
+		INNER JOIN  lt.lt_lottery_prize p on p.prize_id = t.prize_id
+		<where>
+			<if test="recordId != null and recordId >0">
+				<![CDATA[ t.id < #{recordId} ]]>
+			</if>
+			<if test="activityId != null and activityId >0">
+				AND t.activity_id = #{activityId}
+			</if>
+				<![CDATA[ AND t.is_reality>=0 ]]>
+		</where>
+		ORDER BY t.id DESC
+		LIMIT 1
+	</select>
+
+	<select id="getUserLotteryCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(1)
+		FROM
+			lt.lt_user_lottery_record t
+		WHERE
+			t.activity_id = #{activityId}
+			AND t.user_id = #{userId}
+			<![CDATA[ AND t.is_reality>=0 ]]>
+	</select>
+
+	<select id="getBoardDayRichestList" parameterType="java.util.Map" resultType="UserInvestBoard" >
+		SELECT
+			sum(i.invest_amount) totalInvestAmount,
+			i.cell_tail_number cellTailNumber
+		FROM
+			lt.lt_user_lottery_invest_amount i
+		<where>
+			<if test="currentDate != null">
+				DATE_FORMAT(#{currentDate}, '%Y-%m-%d') = DATE_FORMAT(i.create_timestamp,'%Y-%m-%d')
+			</if>
+			<if test="userId > 0">
+				AND i.user_id = #{userId}
+			</if>
+		</where>
+		GROUP BY
+			i.user_id
+		ORDER BY sum(i.invest_amount) DESC,i.id ASC
+		LIMIT #{limit}
+	</select>
+
+	<select id="getUserDrawPrizes" parameterType="java.util.Map" resultType="UserLotteryDrawPrizeRecord" >
+		select p.prize_name prizeName,
+			r.draw_time drawTime
+		from lt.lt_user_lottery_record r
+		inner join lt.lt_lottery_prize p on p.prize_id = r.prize_id
+		where r.user_id = #{userId}
+		and r.activity_id = #{activityId}
+        and  <![CDATA[ p.prize_type >0 ]]>
+        <if test="drawDate != null ">
+            <![CDATA[ AND r.draw_time < #{drawDate} ]]>
+        </if>
+        order by r.draw_time desc
+        limit 10
+    </select>
+
+	<select id="getUserLatestDrawPrizes" parameterType="java.util.Map" resultType="UserLotteryDrawPrizeRecord" >
+		select p.prize_name prizeName,
+			r.draw_time drawTime,
+			CONCAT(LEFT(u.F04, 3),'****',RIGHT(u.F04, 4)) cellTailNumber
+		from lt.lt_user_lottery_record r
+		inner join lt.lt_lottery_prize p on p.prize_id = r.prize_id
+		left join s61.t6110 u on u.F01 = r.user_id
+		where r.activity_id = #{activityId}
+		order by r.draw_time desc
+		<choose>
+			<when test="size != null and size > 0">
+				limit #{size}
+			</when>
+			<otherwise>
+				limit 10
+			</otherwise>
+		</choose>
+	</select>
+
+	<select id="getUserThisDayDrawPrizes" parameterType="java.util.Map" resultType="UserLotteryDrawPrizeRecord" >
+		SELECT
+			p.prize_name prizeName,
+			r.draw_time drawTime
+		FROM
+			lt.lt_user_lottery_record r
+		INNER JOIN lt.lt_lottery_prize p ON p.prize_id = r.prize_id
+		WHERE r.user_id = #{userId}
+			AND r.activity_id = #{activityId}
+			AND to_days(r.draw_time) = to_days(#{drawDate})
+		ORDER BY r.draw_time DESC
+	</select>
+
+	<!--
+    select p.prize_name prizeName,
+    r.draw_time drawTime,
+    d.valid_time availDate,
+    t.invest_money investAmount
+    from lt.lt_user_lottery_record r
+    inner join lt.lt_lottery_prize p on p.prize_id = r.prize_id
+    inner join lt.lt_lottery_biz b on b.lottery_record_id = r.id
+    inner join flb.t_user_redpackets d on d.id = b.biz_id
+    inner join flb.t_red_packet t on t.id = d.redpacket_id
+    where r.user_id = #{userId}
+    and r.activity_id = #{activityId}
+    <if test="drawDate != null ">
+        <![CDATA[ AND r.draw_time < #{drawDate} ]]>
+    </if>
+    order by r.draw_time desc
+    limit 10
+    -->
+
+	<update id="updatePrizeQuantity" parameterType="java.util.Map">
+		UPDATE lt.`lt_lottery_prize` llp
+		SET llp.`quantity` = llp.`quantity` - #{quantity}
+		WHERE llp.`activity_id` =  #{activityId}
+		AND llp.`prize_id` =  #{prizeId}
+		AND llp.`quantity` >= #{quantity}
+	</update>
+
+	<update id="updatePrizeProbability" parameterType="java.util.Map">
+		UPDATE lt.`lt_lottery_prize` llp
+		SET llp.`probability` = (
+			SELECT * FROM (
+				SELECT (llp2.`probability`*llp2.`quantity`)/(llp2.`quantity`+ #{quantity})
+				FROM lt.`lt_lottery_prize` llp2
+				WHERE llp2.`activity_id` = #{activityId} AND llp2.`prize_id` = #{prizeId}
+			) a
+		)
+		WHERE llp.`activity_id` = #{activityId} AND llp.`prize_id` = #{prizeId}
+	</update>
+</mapper>

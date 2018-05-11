@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="NoticeInfoMapper">
+	
+	<select id="getNoticeList" parameterType="java.util.Map" resultType="NoticeInfo">
+		select t.F01 noticeId,
+				t.F02 noticeType,
+				t.F05 noticeTitle,
+				t.F08 createTime,
+		        IFNULL(t.f11,1) AS forder
+		from s50.t5015 t 
+		where t.F04 = 'YFB'
+		<if test="noticeType!=null and noticeType!=''">
+			and t.F02= #{noticeType}
+		</if>
+	</select>
+	
+	<select id="getNoticeDetail" parameterType="java.util.Map" resultType="NoticeInfoDetail">
+		SELECT
+			F01 noticeId,
+			F02 noticeType,
+			F05 noticeTitle,
+			F06 content,
+			F08 createTime,
+			F10 introduction,
+			F12 keyword,
+			temp2.noticeId AS preNoticeId,
+			temp2.noticeTitle AS preNoticeTitle,
+			temp3.noticeId AS nextNoticeId,
+			temp3.noticeTitle AS nextNoticeTitle
+		FROM s50.t5015
+		LEFT JOIN(
+			SELECT
+				(@i:=@i+1) AS i,
+				F01 noticeId,
+				F02 noticeType,
+				F05 noticeTitle,
+				F08 createTime
+			FROM s50.t5015, (SELECT @i:=0) AS it
+			WHERE F04 = 'YFB'
+			<if test="noticeType!=null and noticeType!=''">
+				AND F02 = #{noticeType}
+			</if>
+			ORDER BY IFNULL(F11,1) ASC,F08 DESC
+		) temp1 ON temp1.noticeId = t5015.F01
+		LEFT JOIN (
+			SELECT
+				(@j:=@j+1) AS j,
+				F01 noticeId,
+				F02 noticeType,
+				F05 noticeTitle,
+				F08 createTime
+			FROM s50.t5015, (SELECT @j:=0) AS it
+			WHERE F04 = 'YFB'
+			<if test="noticeType!=null and noticeType!=''">
+				AND F02= #{noticeType}
+			</if>
+			ORDER BY IFNULL(F11,1) ASC,F08 DESC
+		) temp2 ON temp1.i = temp2.j+1
+		LEFT JOIN (
+			SELECT
+				(@k:=@k+1) AS k,
+				F01 noticeId,
+				F02 noticeType,
+				F05 noticeTitle,
+				F08 createTime
+			FROM s50.t5015, (SELECT @k:=0) AS it
+			WHERE F04 = 'YFB'
+			<if test="noticeType!=null and noticeType!=''">
+				AND F02= #{noticeType}
+			</if>
+			ORDER BY IFNULL(F11,1) ASC,F08 DESC
+		) temp3 ON temp1.i = temp3.k-1
+		WHERE
+		F01 = #{noticeId}
+		AND F04 = 'YFB'
+	</select>
+	
+	<select id="getArticleList" parameterType="java.lang.String" resultType="Article">
+		SELECT
+			F01 AS articleId,
+			F06 AS articleTitle,
+			F07 AS source,
+			F08 AS introduction,
+			F09 AS imgcode,
+			F12 AS publishTime,
+			F14 AS channel
+		FROM
+			s50.t5011
+		WHERE
+			F02 = 'MTBD' AND
+			F05 = 'YFB'
+		ORDER BY
+			F04 ASC,
+			t5011.F12 DESC
+	</select>
+	
+	<select id="getArticleDetail" parameterType="java.lang.Integer" resultType="ArticleDetail">
+		SELECT
+			t5011.F01 AS articleId,
+			t5011.F06 AS articleTitle,
+			t5011.F07 AS source,
+			t5011.F08 AS introduction,
+			t5011.F09 AS imgcode,
+			t5011.F12 AS publishTime,
+			t5011.F14 AS channel,
+			t5011.F15 AS keyword,
+			t5011_1.F02 AS content,
+			temp2.articleId AS preArticleId,
+			temp2.articleTitle AS preArticleTitle,
+			temp3.articleId AS nextArticleId,
+			temp3.articleTitle AS nextArticleTitle
+		FROM
+			s50.t5011
+		INNER JOIN s50.t5011_1 ON s50.t5011.F01 = t5011_1.F01
+		LEFT JOIN(
+			SELECT
+				(@i:=@i+1) AS i,
+				F01 AS articleId,
+				F06 AS articleTitle,
+				F07 AS source,
+				F08 AS introduction,
+				F09 AS imgcode,
+				F12 AS publishTime,
+				F14 AS channel
+			FROM s50.t5011, (SELECT @i:=0) AS it
+			WHERE F02 = 'MTBD' AND F05 = 'YFB'
+			ORDER BY F04 ASC, t5011.F12 DESC
+		) temp1 ON temp1.articleId = t5011.F01
+		LEFT JOIN (
+			SELECT
+				(@j:=@j+1) AS j,
+				F01 AS articleId,
+				F06 AS articleTitle,
+				F07 AS source,
+				F08 AS introduction,
+				F09 AS imgcode,
+				F12 AS publishTime,
+				F14 AS channel
+			FROM s50.t5011, (SELECT @j:=0) AS it
+			WHERE F02 = 'MTBD' AND F05 = 'YFB'
+			ORDER BY F04 ASC, t5011.F12 DESC
+		) temp2 ON temp1.i = temp2.j+1
+		LEFT JOIN (
+			SELECT
+				(@k:=@k+1) AS k,
+				F01 AS articleId,
+				F06 AS articleTitle,
+				F07 AS source,
+				F08 AS introduction,
+				F09 AS imgcode,
+				F12 AS publishTime,
+				F14 AS channel
+			FROM s50.t5011, (SELECT @k:=0) AS it
+			WHERE F02 = 'MTBD' AND F05 = 'YFB'
+			ORDER BY F04 ASC, t5011.F12 DESC
+		) temp3 ON temp1.i = temp3.k-1
+		WHERE
+			t5011.F01 = #{articleId} AND
+			t5011.F02 = 'MTBD'  	AND
+			t5011.F05 = 'YFB'
+	</select>
+
+	<select id="getFriendLink"  resultType="FriendLink">
+		SELECT
+		t5014.F01 AS fkId,
+		t5014.F04 AS name,
+		t5014.F05 AS url,
+		t5014.F07 AS createTime
+		FROM
+		s50.t5014
+
+	</select>
+
+	<select id="getInformationList" parameterType="java.lang.String" resultType="Information">
+		SELECT
+		F01 AS informationId,
+		F06 AS informationTitle,
+		F07 AS source,
+		F08 AS introduction,
+		F09 AS imgcode,
+		F12 AS publishTime,
+		F14 AS channel
+		FROM
+		s50.t5011
+		WHERE
+		F05 = 'YFB' AND F02 = #{informationType}
+
+		ORDER BY
+		F04 ASC,
+		t5011.F12 DESC
+	</select>
+
+	<select id="getInformationDetail" parameterType="java.util.Map" resultType="InformationDetail">
+		SELECT
+			t5011.F01 AS informationId,
+			t5011.F06 AS informationTitle,
+			t5011.F07 AS source,
+			t5011.F08 AS introduction,
+			t5011.F09 AS imgcode,
+			t5011.F12 AS publishTime,
+			t5011.F14 AS channel,
+			t5011.F15 AS keyword,
+			t5011_1.F02 AS content,
+			temp2.informationId AS preInformationId,
+			temp2.informationTitle AS preInformationTitle,
+			temp3.informationId AS nextInformationId,
+			temp3.informationTitle AS nextInformationTitle
+		FROM
+		s50.t5011
+		INNER JOIN s50.t5011_1 ON s50.t5011.F01 = t5011_1.F01
+		LEFT JOIN(
+			SELECT
+				(@i:=@i+1) AS i,
+				F01 AS informationId,
+				F06 AS informationTitle,
+				F07 AS source,
+				F08 AS introduction,
+				F09 AS imgcode,
+				F12 AS publishTime,
+				F14 AS channel
+			FROM s50.t5011, (SELECT @i:=0) AS it
+			WHERE F05 = 'YFB' AND F02 = #{informationType}
+			ORDER BY F04 ASC, t5011.F12 DESC
+		) temp1 ON temp1.informationId = t5011.F01
+		LEFT JOIN (
+			SELECT
+				(@j:=@j+1) AS j,
+				F01 AS informationId,
+				F06 AS informationTitle,
+				F07 AS source,
+				F08 AS introduction,
+				F09 AS imgcode,
+				F12 AS publishTime,
+				F14 AS channel
+			FROM s50.t5011, (SELECT @j:=0) AS it
+			WHERE F05 = 'YFB' AND F02 = #{informationType}
+			ORDER BY F04 ASC, t5011.F12 DESC
+		) temp2 ON temp1.i = temp2.j+1
+		LEFT JOIN (
+			SELECT
+				(@k:=@k+1) AS k,
+				F01 AS informationId,
+				F06 AS informationTitle,
+				F07 AS source,
+				F08 AS introduction,
+				F09 AS imgcode,
+				F12 AS publishTime,
+				F14 AS channel
+			FROM s50.t5011, (SELECT @k:=0) AS it
+			WHERE F05 = 'YFB' AND F02 = #{informationType}
+			ORDER BY F04 ASC, t5011.F12 DESC
+		) temp3 ON temp1.i = temp3.k-1
+		WHERE
+		t5011.F01 = #{informationId}
+		AND t5011.F02 = #{informationType}
+		AND t5011.F05 = 'YFB'
+	</select>
+
+	<select id="getKnowMoreList" parameterType="java.lang.Integer" resultType="KnowMore">
+		SELECT
+		id AS id,
+		title AS title,
+		url AS source,
+		digest AS introduction,
+		publish_time AS publishTime
+		FROM
+		flb.class_know_more
+		WHERE
+		status= 1
+		ORDER BY
+		sorting ASC
+	</select>
+
+
+
+	<select id="geKnowEarlyList" parameterType="java.lang.Integer" resultType="KnowEarly">
+		SELECT
+		id AS id,
+		title AS title,
+		source AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		CONCAT(pic_server,pic_new_name) AS  imgUrl
+		FROM
+		flb.class_risk_know_early
+		WHERE
+		status= 1
+		ORDER BY
+		sorting ASC
+	</select>
+
+
+	<select id="getKnowMoreDetail" parameterType="java.lang.Integer" resultType="KnowMore">
+		SELECT
+		class_know_more.id AS id,
+		class_know_more.title AS title,
+		class_know_more.digest AS introduction,
+		class_know_more.publish_time AS publishTime,
+		class_know_more.content AS content,
+		class_know_more.keyword AS  keyword,
+		class_know_more.url AS  url,
+		temp2.id AS preId,
+		temp2.title AS preTitle,
+		temp3.Id AS nextId,
+		temp3.title AS nextTitle
+		FROM
+		flb.class_know_more
+		LEFT JOIN(
+		SELECT
+		(@i:=@i+1) AS i,
+		id AS id,
+		title AS title,
+		url AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		content AS content,
+		keyword AS  keyword
+		FROM flb.class_know_more, (SELECT @i:=0) AS it
+		WHERE status = 1
+		ORDER BY sorting ASC
+		) temp1 ON temp1.id = class_know_more.id
+		LEFT JOIN (
+		SELECT
+		(@j:=@j+1) AS j,
+		id AS id,
+		title AS title,
+		url AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		content AS content,
+		keyword AS  keyword
+		FROM flb.class_know_more, (SELECT @j:=0) AS it
+		WHERE status = 1
+		ORDER BY sorting ASC
+		) temp2 ON temp1.i = temp2.j+1
+		LEFT JOIN (
+		SELECT
+		(@k:=@k+1) AS k,
+		id AS id,
+		title AS title,
+		url AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		content AS content,
+		keyword AS  keyword
+		FROM flb.class_know_more, (SELECT @k:=0) AS it
+		WHERE status = 1
+		ORDER BY sorting ASC
+		) temp3 ON temp1.i = temp3.k-1
+		WHERE
+		class_know_more.id = #{id}
+	</select>
+
+	<select id="getKnowEarlyDetail" parameterType="java.lang.Integer" resultType="KnowEarly">
+		SELECT
+		class_risk_know_early.id AS id,
+		class_risk_know_early.title AS title,
+		class_risk_know_early.source AS source,
+		class_risk_know_early.digest AS introduction,
+		class_risk_know_early.publish_time AS publishTime,
+		CONCAT(class_risk_know_early.pic_server,class_risk_know_early.pic_new_name) AS  imgUrl,
+		class_risk_know_early.content AS content,
+		class_risk_know_early.keyword AS  keyword,
+		class_risk_know_early.url AS url,
+		temp2.id AS preId,
+		temp2.title AS preTitle,
+		temp3.Id AS nextId,
+		temp3.title AS nextTitle
+		FROM
+		flb.class_risk_know_early
+		LEFT JOIN(
+		SELECT
+		(@i:=@i+1) AS i,
+		id AS id,
+		title AS title,
+		source AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		CONCAT(pic_server,pic_new_name) AS  imgUrl,
+		content AS content,
+		keyword AS  keyword
+		FROM flb.class_risk_know_early, (SELECT @i:=0) AS it
+		WHERE status = 1
+		ORDER BY sorting ASC
+		) temp1 ON temp1.id = class_risk_know_early.id
+		LEFT JOIN (
+		SELECT
+		(@j:=@j+1) AS j,
+		id AS id,
+		title AS title,
+		source AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		CONCAT(pic_server,pic_new_name) AS  imgUrl,
+		content AS content,
+		keyword AS  keyword
+		FROM flb.class_risk_know_early, (SELECT @j:=0) AS it
+		WHERE status = 1
+		ORDER BY sorting ASC
+		) temp2 ON temp1.i = temp2.j+1
+		LEFT JOIN (
+		SELECT
+		(@k:=@k+1) AS k,
+		id AS id,
+		title AS title,
+		source AS source,
+		digest AS introduction,
+		publish_time AS publishTime,
+		CONCAT(pic_server,pic_new_name) AS  imgUrl,
+		content AS content,
+		keyword AS  keyword
+		FROM flb.class_risk_know_early, (SELECT @k:=0) AS it
+		WHERE status = 1
+		ORDER BY sorting ASC
+		) temp3 ON temp1.i = temp3.k-1
+		WHERE
+		class_risk_know_early.id = #{id}
+	</select>
+</mapper>

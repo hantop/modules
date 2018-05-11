@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.platform.dao.member.MessageMapper">
+	<insert id="saveSMSContent" useGeneratedKeys="true" keyProperty="id">
+    	INSERT INTO S10._1040(F02,F03,F04,F05) VALUES (#{type}, #{content}, SYSDATE(), 'W')
+    </insert>
+    <insert id="saveSMSPhoneNum">
+    	INSERT INTO S10._1041(F01,F02) VALUES (#{SMSId}, #{phoneNum})
+    </insert>
+</mapper>

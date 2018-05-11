@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.fenlibao.app-client-api</groupId>
+    <artifactId>app-client-api-model</artifactId>
+
+    <parent>
+        <artifactId>app-client-api</artifactId>
+        <groupId>com.fenlibao.app-client-api</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fenlibao.api</groupId>
+            <artifactId>common-api-model</artifactId>
+            <version>${depedency.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+             <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.dimeng.p2p.gz-xayy</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
+    </dependencies>
+</project>

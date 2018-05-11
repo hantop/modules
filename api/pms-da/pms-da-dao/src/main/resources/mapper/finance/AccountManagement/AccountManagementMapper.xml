@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.finance.accountManagement.AccountManagementMapper">
+
+    <select id="findList" resultType="com.fenlibao.model.pms.da.finance.T6101Extend">
+		SELECT
+		  t.*,
+          account.user_role userRole,
+		  CASE
+          WHEN account.bankcard_no IS NULL THEN 0
+          ELSE 1
+          END isBindBank
+	  	FROM
+			s61.t6101 t
+		LEFT JOIN
+			flb.t_xw_account account
+		ON
+			account.user_id = t.F02
+		WHERE
+			account.user_role LIKE 'PLATFORM_%'
+		AND
+			t.F03 LIKE 'XW_%'
+		AND
+			account.user_role = substring(substring_index(t.F03, '_WLZH', 1),4)
+    </select>
+
+    <select id="findTradeHistory" resultType="Transaction">
+		SELECT
+		funds_flow.F05 AS tradeTime,
+		funds_flow.F03 AS tradeTypeCode,
+		convert(funds_flow.F06, decimal(20, 2)) - convert(funds_flow.F07, decimal(20, 2)) AS tradeAmount
+		FROM
+		S61.T6102 AS funds_flow
+		WHERE
+		funds_flow.F02 = #{flowId}
+		AND (funds_flow.F06 - funds_flow.F07) <![CDATA[<>]]> 0
+		<if test="startDate!=null">
+			<![CDATA[AND funds_flow.F05 >= #{startDate}]]>
+		</if>
+		<if test="endDate!=null ">
+			<![CDATA[AND funds_flow.F05 <= date_add(#{endDate}, INTERVAL 1 day)]]>
+		</if>
+		order by funds_flow.F01 desc
+    </select>
+
+
+	<select id="getFlowId" resultType="int">
+		SELECT F01 FROM s61.t6101 where F02 = #{userId} AND F03 = #{accountType}
+	</select>
+
+	<resultMap id="tradeTypeMap" type="java.util.Map">
+		<result property="tradeTypeCode" column="tradeTypeCode"/>
+		<result property="tradeTypeName" column="tradeTypeName"/>
+	</resultMap>
+
+	<select id="getTradeTypeMap" resultMap="tradeTypeMap">
+		SELECT F01 tradeTypeCode, F02 tradeTypeName FROM s51.t5122
+	</select>
+</mapper>

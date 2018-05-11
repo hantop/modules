@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWAccountMapper">
+
+    <insert id="createXWAccount" parameterType="com.fenlibao.p2p.model.xinwang.entity.account.XinwangAccount" >
+        INSERT flb.t_xw_account (platform_user_no,user_id,user_role,audit_status,user_type,bankcard_no,bankcode,mobile,import_user_activate,authlist) VALUES (#{platformUserNo}, #{userId}, #{userRole},#{auditStatus},#{userType},#{bankcardNo},#{bankcode},#{mobile},#{importUserActivate},#{authlist})
+    </insert>
+
+    <insert id="createPTAssetAccount" parameterType="java.util.Map" >
+        INSERT s61.t6101 (F02,F03,F04,F05) select #{userId},#{ptAssetAccountType},#{ptAssetAccountName},F02 from s61.t6110 WHERE F01 = #{userId}
+    </insert>
+
+    <select id="getIdentityAuthState" parameterType="java.lang.Integer" resultType="java.lang.Boolean" >
+        select case F02 when 'TG' then true else false end from s61.t6118 where F01= #{userId}
+    </select>
+
+    <update id="updatePTAccountIdentityState" parameterType="java.lang.Integer" >
+        update s61.t6118 set F02='TG' where F01= #{userId}
+    </update>
+
+    <update id="updatePTAccountInfo" parameterType="java.util.Map" >
+        update s61.t6141
+        <set>
+            <if test="realName!=null">
+                F02=#{realName},
+            </if>
+            <if test="authState!=null">
+                F04=#{authState},
+            </if>
+            <if test="idcardStar!=null">
+                F06=#{idcardStar},
+            </if>
+            <if test="idcardEncrypt!=null">
+                F07=#{idcardEncrypt},
+            </if>
+            <if test="birthday!=null">
+                F08=#{birthday},
+            </if>
+        </set>
+        where F01=#{userId}
+    </update>
+
+    <select id="getPlatformAccountInfoByPlatformUserNo" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.account.PlatformAccount" >
+        select a.F01 userId,a.F02 userName,a.F04 mobile,a.F06 userType,a.F07 userStatus from s61.t6110 a INNER JOIN (select * from flb.t_xw_account where platform_user_no= #{platformUserNo}) b ON a.F01=b.user_id
+    </select>
+
+    <select id="getPlatformAccountInfoByUserId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.account.PlatformAccount">
+        select a.F01 userId,a.F02 userName,a.F04 mobile,a.F06 userType,a.F07 userStatus from s61.t6110 a where F01=#{userId}
+    </select>
+
+    <select id="getFundAccount" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.xinwang.entity.account.XWFundAccount">
+        SELECT F01 id,F02 userId,F03 fundAccountType,F04 fundAccountCode,F05 userName,F06 amount,F07 updateTime FROM s61.t6101 WHERE F02 = #{userId} AND F03 = #{type} LIMIT 1 FOR UPDATE
+    </select>
+
+    <select id="getXinwangAccount" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.account.XinwangAccount">
+        SELECT
+            account.id,
+            account.platform_user_no platformUserNo,
+            account.user_id userId,
+            account.user_role userRole,
+            account.audit_status auditStatus,
+            account.user_type userType,
+            account.active_status activeStatus,
+            account.bankcard_no bankcardNo,
+            account.bankcode bankcode,
+            account.mobile mobile,
+            account.authlist authlist,
+            account.import_user_activate importUserActivate,
+            bank.F01 bankId
+        FROM
+            flb.`t_xw_account` account
+            LEFT JOIN s50.t5020 bank ON bank.F07 = account.bankcode
+        WHERE
+            platform_user_no = #{platformUserNo}
+    </select>
+
+    <update id="updatePlatformMarketingAccount" parameterType="java.util.Map" >
+        UPDATE s61.t6101 SET F06 = F06 - #{amount} WHERE F02 = #{fenlibaoPlatformUserId} AND F03 = #{platformMarkingAccount};
+    </update>
+
+    <update id="updatePTAccountWLZH" parameterType="java.util.Map" >
+        UPDATE s61.t6101 SET F06 = F06 + #{amount} WHERE F02 = #{userId} AND F03 = #{businessType};
+    </update>
+
+    <select id="getPlatformMarketingAccount" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT F06 FROM  s61.t6101 WHERE F02 = #{fenlibaoPlatformUserId} AND F03 = #{platformMarkingAccount};
+    </select>
+
+    <select id="getPTAccountWLZH" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT F06 FROM  s61.t6101 WHERE F02 = #{userId} AND F03 = #{userAccount};
+    </select>
+
+    <update id="updateFundAccount" parameterType="java.util.Map">
+        UPDATE s61.t6101 set F06 = #{amount}
+        <where>
+            <if test="id != null">
+                and F01 = #{id}
+            </if>
+            <if test="userId != null">
+                and F02 = #{userId}
+            </if>
+            <if test="type != null">
+                and F03 = #{type}
+            </if>
+        </where>
+    </update>
+
+    <update id="updateXWAccount" parameterType="java.util.Map">
+        UPDATE flb.t_xw_account
+        <set>
+            <if test="bankcardNo!=null">
+                bankcard_no = #{bankcardNo},
+            </if>
+            <if test="bankcode!=null">
+                bankcode = #{bankcode},
+            </if>
+            <if test="mobile!=null">
+                mobile = #{mobile},
+            </if>
+            <if test="auditStatus!=null">
+                audit_status = #{auditStatus},
+            </if>
+            <if test="authList != null">
+                authlist = #{authList},
+            </if>
+            <if test="importUserActivate!=null">
+                import_user_activate = #{importUserActivate},
+            </if>
+            <if test="authlist != null">
+                authlist = #{authlist},
+            </if>
+        </set>
+        WHERE platform_user_no = #{platformUserNo};
+    </update>
+    
+    <select id="countOverdue" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM S62.T6252 WHERE F03 = #{userId} AND F08 <![CDATA[ < ]]> CURDATE() AND F09 = 'WH' LIMIT 1
+    </select>
+
+    <select id="getPMSAudit" resultType="java.lang.Integer" parameterType="java.util.Map">
+        SELECT unbind_bankcard_id FROM pms.da_unbind_bankcard_audit WHERE audit_status = 1 AND user_id = #{userId} AND user_role = #{userRole} ORDER BY id DESC LIMIT 1
+    </select>
+
+    <update id="updatePMSAuditStatus" parameterType="java.lang.Integer">
+        UPDATE pms.da_unbind_bankcard SET unbind_status = 1 WHERE id = #{id}
+    </update>
+
+    <select id="getXWRoleAccount" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.xinwang.entity.account.XinwangAccount">
+        SELECT
+        account.id,
+        account.platform_user_no platformUserNo,
+        account.user_id userId,
+        account.user_role userRole,
+        account.audit_status auditStatus,
+        account.user_type userType,
+        account.active_status activeStatus,
+        account.bankcard_no bankcardNo,
+        account.bankcode bankcode,
+        account.mobile mobile,
+        account.authlist authlist,
+        account.import_user_activate importUserActivate,
+        bank.F01 bankId
+        FROM
+        flb.`t_xw_account` account
+        LEFT JOIN s50.t5020 bank ON bank.F07 = account.bankcode
+        WHERE
+        user_id = #{userId}
+        AND
+        user_role = #{userRole}
+    </select>
+
+    <select id="getAccountIdByUserId" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT F01 FROM s61.t6101 WHERE F02 = #{userId} AND F03 = #{businessType};
+    </select>
+
+    <select id="getAccountIdByAccountNameAndaAccountType" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT
+          F01
+        FROM
+          s61.t6101
+        WHERE
+            F02 = #{accountName}
+            AND F03 = #{accountType}
+    </select>
+
+    <select id="getUserIdByAccountNameAndaAccountType" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT
+          F02
+        FROM
+          s61.t6101
+        WHERE
+            F02 = #{accountName}
+            AND F03 = #{accountType}
+    </select>
+
+    <update id="clearBankInfo" parameterType="java.lang.String">
+        UPDATE flb.t_xw_account SET bankcard_no = NULL ,bankcode = NULL WHERE platform_user_no = #{platformUserNo}
+    </update>
+
+    <update id="updateAuditStatusToT6161" parameterType="java.util.Map">
+        UPDATE s61.t6161 SET audit_status = #{auditStatus} WHERE F01 = #{userId};
+    </update>
+
+    <update id="updateAuditStatus" parameterType="java.util.Map">
+        UPDATE flb.t_xw_account SET audit_status = #{auditStatus} WHERE platform_user_no = #{platformUserNo};
+    </update>
+
+    <select id="countXWAccount" parameterType="java.lang.String" resultType="java.lang.Integer">
+        SELECT count(1) FROM flb.t_xw_account WHERE platform_user_no = #{platformUserNo}
+    </select>
+
+    <update id="updateXWAccountAuditStatus" parameterType="com.fenlibao.p2p.model.xinwang.entity.account.XinwangAccount">
+      UPDATE flb.t_xw_account SET audit_status = #{auditStatus} WHERE platform_user_no = #{platformUserNo};
+    </update>
+
+    <update id="updateFundAccountPlus" parameterType="java.util.Map">
+        UPDATE s61.t6101 set F06 = F06+#{amount}
+        <where>
+            <if test="id != null">
+                and F01 = #{id}
+            </if>
+            <if test="userId != null">
+                and F02 = #{userId}
+            </if>
+            <if test="type != null">
+                and F03 = #{type}
+            </if>
+        </where>
+    </update>
+
+    <update id="updateFundAccountMinus" parameterType="java.util.Map">
+        UPDATE s61.t6101 set F06 = F06-#{amount}
+        <where>
+            <if test="id != null">
+                and F01 = #{id}
+            </if>
+            <if test="userId != null">
+                and F02 = #{userId}
+            </if>
+            <if test="type != null">
+                and F03 = #{type}
+            </if>
+        </where>
+    </update>
+</mapper>

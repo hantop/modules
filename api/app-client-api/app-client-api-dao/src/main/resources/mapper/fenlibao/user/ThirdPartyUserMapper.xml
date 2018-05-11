@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ThirdPartyUserMapper">
+	<!-- 四方合同-->
+	<select id="getUnSignBidList" resultType="ConsumeBid" parameterType="java.util.Map">
+		SELECT
+			a.id,
+			a.bid AS bid,
+			a.agreement_sign_id AS signid,
+			a.flb_page_num AS flbPageNum,
+			a.flb_sign_x AS flbSignX,
+			a.flb_sign_y AS flbSignY,
+			a.investor_page_num AS investorPageNum,
+			a.investor_sign_x AS investorSignX,
+			a.investor_sign_y AS investorSignY
+		FROM
+			flb.t_consume_bidinfo AS a
+		INNER JOIN s62.t6230 ON a.bid = s62.t6230.F01
+		AND t6230.F20 IN ('HKZ', 'YJQ')
+		WHERE
+			a.agreement_sign_status = 'WQM'
+		limit 1000
+	</select>
+
+	<select id="lockConsumeBid" parameterType="java.util.Map" resultType="ConsumeBid">
+		SELECT
+			a.id,
+			a.bid AS bid,
+			a.agreement_sign_id AS signid,
+			a.flb_page_num AS flbPageNum,
+			a.flb_sign_x AS flbSignX,
+			a.flb_sign_y AS flbSignY,
+			a.investor_page_num AS investorPageNum,
+			a.investor_sign_x AS investorSignX,
+			a.investor_sign_y AS investorSignY
+		FROM
+			flb.t_consume_bidinfo AS a
+		WHERE a.bid = #{bid}
+		  and a.agreement_sign_status = 'WQM'
+		FOR UPDATE
+	</select>
+
+	<update id="updateUnSignBidInfo" parameterType="java.util.Map">
+		update flb.t_consume_bidinfo a
+		set a.agreement_sign_status =  #{signStatus},a.update_time = now()
+		where a.bid = #{bid}
+	</update>
+
+	<select id="getInvestRecords" resultType="InvestRecords" parameterType="java.util.Map">
+		SELECT
+			s62.t6250.F01 AS recordId,
+			s61.t6110.F01 AS userId,
+			s61.t6110.F04 AS phone,
+			s61.t6141.F02 AS userName,
+			flb.t_consume_bidinfo.agreement_sign_id as signid
+		FROM
+			s62.t6250
+		INNER JOIN s61.t6110 ON s62.t6250.F03 = s61.t6110.F01
+		INNER JOIN s61.t6141 ON s61.t6110.F01 = s61.t6141.F01 AND s61.t6141.F07 is not NULL
+		INNER JOIN flb.t_consume_bidinfo ON s62.t6250.F02 = flb.t_consume_bidinfo.bid
+		WHERE
+			t6250.f02 = #{bidId}
+		GROUP BY userId
+		ORDER BY
+			t6250.F01 ASC
+	</select>
+
+
+	<select id="getUnRegUsers" resultType="UnRegUser" parameterType="java.util.Map">
+		SELECT
+			s62.t6250.F01 AS recordId,
+			s61.t6110.F01 AS userId,
+			s61.t6110.F04 AS phone,
+			s61.t6141.F07 AS idNum,
+			s61.t6141.F02 AS userName
+		FROM
+			s62.t6250
+		INNER JOIN s61.t6110 ON s62.t6250.F03 = s61.t6110.F01
+		INNER JOIN s61.t6141 ON s61.t6110.F01 = s61.t6141.F01
+		AND t6141.F07 IS NOT NULL
+		WHERE
+			t6250.f02 = #{bidId}
+		AND NOT EXISTS (
+			SELECT id FROM flb.t_user_reg_records WHERE t6110.F04 = t_user_reg_records.phone
+			 AND t_user_reg_records.pf='SSQ'
+		)
+		GROUP BY userId
+		ORDER BY
+			t6250.F01 ASC
+	</select>
+
+	<update id="updateRegUser" parameterType="java.util.Map">
+		update flb.t_user_reg_records a
+		set a.pf_user_id =  #{pfUid}
+		<if test="caResult!=null">
+			,a.ca_result =  #{caResult}
+		</if>
+		<if test="caResult!=null">
+			,a.pwd =  #{pwd}
+		</if>
+		where a.user_id = #{uid}
+		and a.pf = #{pf}
+	</update>
+	
+	<delete id="delRegUser" parameterType="java.util.Map" >
+		DELETE
+		FROM  flb.t_user_reg_records
+		where user_id = #{uid}
+		and   pf = #{pf}
+	</delete>
+
+	<insert id="addRegUser" parameterType="java.util.Map">
+		INSERT INTO flb.t_user_reg_records
+		(user_id,phone,pf)
+		VALUES (#{uid},#{phone},#{pf});
+	</insert>
+
+	<insert id="recordError" parameterType="java.util.Map">
+		INSERT INTO flb.t_shangshangqian_error_record
+		(user_id,record_Id,signx,signy,openflag,phone,page_num)
+		VALUES (#{uid},#{recordId},#{signx},#{signy},#{openflag},#{phone},#{pagenum});
+	</insert>
+
+	<!-- 四方合同 备灾-->
+	<select id="getSignFailConsumeBids" resultType="ConsumeBid" parameterType="java.util.Map">
+		SELECT
+		a.id,
+		a.bid AS bid,
+		a.agreement_sign_id AS signid,
+		a.flb_page_num AS flbPageNum,
+		a.flb_sign_x AS flbSignX,
+		a.flb_sign_y AS flbSignY,
+		a.investor_page_num AS investorPageNum,
+		a.investor_sign_x AS investorSignX,
+		a.investor_sign_y AS investorSignY,
+		a.agreement_sign_status AS signStatus
+		FROM
+		flb.t_consume_bidinfo AS a
+		INNER JOIN s62.t6230 ON a.bid = s62.t6230.F01
+		<![CDATA[
+		WHERE
+			a.agreement_sign_status = 'QMSB'
+		OR (agreement_sign_status = 'QMZ' AND DATE_ADD(a.update_time,INTERVAL 1 HOUR) <= NOW())
+		]]>
+		order by a.update_time desc
+		limit 500
+	</select>
+
+	<select id="getSignFailConsumeBid" parameterType="java.util.Map" resultType="ConsumeBid">
+		SELECT
+		a.id,
+		a.bid AS bid,
+		a.agreement_sign_id AS signid,
+		a.flb_page_num AS flbPageNum,
+		a.flb_sign_x AS flbSignX,
+		a.flb_sign_y AS flbSignY,
+		a.investor_page_num AS investorPageNum,
+		a.investor_sign_x AS investorSignX,
+		a.investor_sign_y AS investorSignY
+		FROM
+		flb.t_consume_bidinfo AS a
+		<![CDATA[
+		WHERE a.bid = #{bid}
+		and (a.agreement_sign_status = 'QMSB'
+		OR (agreement_sign_status = 'QMZ' AND DATE_ADD(a.update_time,INTERVAL 1 HOUR) <= NOW()))
+		]]>
+		FOR UPDATE
+	</select>
+
+
+	<!-- 三方合同-->
+	<select id="getUnSignTripleagreements" resultType="Tripleagreement" parameterType="java.util.Map">
+		SELECT
+			b.id,
+			b.agreement_sign_id AS signid,
+			b.flb_page_num AS flbPageNum,
+			b.flb_sign_x AS flbSignX,
+			b.flb_sign_y AS flbSignY
+		FROM
+		flb.t_consume_bidinfo AS a
+		INNER JOIN s62.t6230 ON a.bid = s62.t6230.F01 AND s62.t6230.F20  in('HKZ', 'YJQ')
+		INNER JOIN flb.t_consume_tripleagreementinfo b ON a.serial_num = b.serial_num
+		WHERE
+			b.agreement_sign_status = 'WQM'
+		limit 1000
+	</select>
+
+	<select id="getUnSignTripleagreement" resultType="Tripleagreement" parameterType="java.util.Map">
+		SELECT
+			b.id,
+			b.agreement_sign_id AS signid,
+			b.flb_page_num AS flbPageNum,
+			b.flb_sign_x AS flbSignX,
+			b.flb_sign_y AS flbSignY
+		FROM
+			flb.t_consume_bidinfo AS a
+		INNER JOIN s62.t6230 ON a.bid = s62.t6230.F01 AND s62.t6230.F20  in('HKZ', 'YJQ')
+		INNER JOIN flb.t_consume_tripleagreementinfo b ON a.serial_num = b.serial_num
+		WHERE
+			b.agreement_sign_status = #{signStatus}
+		and b.id = #{id}
+		limit 1
+	</select>
+
+	<update id="updateTripleagreement" parameterType="java.util.Map">
+		update flb.t_consume_tripleagreementinfo a
+		set a.agreement_sign_status =  #{signStatus},a.update_time = now()
+		where a.id = #{id}
+	</update>
+
+	<!-- 三方合同 备灾-->
+	<select id="getSignFailTripleagreements" resultType="Tripleagreement" parameterType="java.util.Map">
+		SELECT
+			b.id,
+			b.agreement_sign_id AS signid,
+			b.flb_page_num AS flbPageNum,
+			b.flb_sign_x AS flbSignX,
+			b.flb_sign_y AS flbSignY
+		FROM
+			flb.t_consume_bidinfo AS a
+		INNER JOIN s62.t6230 ON a.bid = s62.t6230.F01 AND s62.t6230.F20  in('HKZ', 'YJQ')
+		INNER JOIN flb.t_consume_tripleagreementinfo b ON a.serial_num = b.serial_num
+		<![CDATA[
+		WHERE
+			b.agreement_sign_status = 'QMSB'
+		OR (b.agreement_sign_status = 'QMZ' AND DATE_ADD(b.update_time,INTERVAL 1 HOUR) <= NOW())
+		]]>
+		order by b.update_time desc
+		limit 500
+	</select>
+
+	<select id="getSignFailTripleagreement" resultType="Tripleagreement" parameterType="java.util.Map">
+		SELECT
+			b.id,
+			b.agreement_sign_id AS signid,
+			b.flb_page_num AS flbPageNum,
+			b.flb_sign_x AS flbSignX,
+			b.flb_sign_y AS flbSignY
+		FROM
+			flb.t_consume_bidinfo AS a
+		INNER JOIN s62.t6230 ON a.bid = s62.t6230.F01 AND s62.t6230.F20  in('HKZ', 'YJQ')
+		INNER JOIN flb.t_consume_tripleagreementinfo b ON a.serial_num = b.serial_num
+		<![CDATA[
+		WHERE
+			b.agreement_sign_status = 'QMSB'
+		OR (b.agreement_sign_status = 'QMZ' AND DATE_ADD(b.update_time,INTERVAL 1 HOUR) <= NOW())
+		]]>
+		and b.id = #{id}
+		limit 1
+	</select>
+
+	<select id="countRegisterThirdParty" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(1) FROM flb.t_user_third_reg_records WHERE email = #{email} AND platform = #{platform};
+	</select>
+
+	<select id="getInvestorUserIdList" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT F03 FROM s62.t6250 WHERE F02 = #{bidId} GROUP BY F03;
+	</select>
+
+	<insert id="addSSQRegUser" parameterType="java.util.Map">
+		INSERT INTO flb.t_user_third_reg_records
+		(user_id,phone,email,platform,platform_user_id)
+		VALUES (#{userId},#{phone},#{email},#{platform},#{platformUserId});
+	</insert>
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SmsTaskMapper">
+	<select id="getTaskListByType" parameterType="java.util.Map" resultType="SmsTaskVO">
+		SELECT
+		 M.F01 AS id,
+		 M.F02 AS type,
+		 M.F03 AS content,
+		 GROUP_CONCAT(N.F02) AS receivers
+		FROM s10._1040 M,s10._1041 N
+		WHERE
+		M.F01 = N.F01
+		AND M.F05= 'W'
+		AND M.F02 = #{messageType}
+		GROUP BY M.F01
+		ORDER BY M.F04 ASC LIMIT 0,#{maxCount}
+	</select>
+
+	<update id="updateTaskStatusById" parameterType="java.util.Map">
+		UPDATE s10._1040 M
+			SET M.F05=#{status}
+		  WHERE M.F01=#{id}
+			AND
+			NOT EXISTS (
+				SELECT
+					N.F01
+				FROM
+					s10._1042 N
+				WHERE N.F01= M.F01
+						)
+	</update>
+
+	<insert id="insertSmsRecord" parameterType="java.util.Map">
+		INSERT INTO
+			s10._1042(F01,F02,F03,F04,F05,F06)
+			SELECT
+			F01,F02,F03,F04,#{status},#{code}
+			FROM s10._1040
+			WHERE F01=#{id}
+	</insert>
+
+</mapper>

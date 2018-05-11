@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.statistics.integrate.IntegrateMapper">
+
+	<resultMap type="com.fenlibao.model.pms.da.statistics.integrate.Integrate" id="BaseResultMap">
+        <result column="productCode" property="productCode" />
+        <result column="typeName" property="typeName" jdbcType="VARCHAR"/>
+        <result column="restStock" property="restStock" />
+        <result column="saleAmount" property="saleAmount" />
+        <result column="purchaseNumber" property="purchaseNumber" />
+        <result column="integrateCost" property="integrateCost" />
+        <result column="totalAmount" property="totalAmount" />
+	</resultMap>
+
+	 <select id="query" resultMap="BaseResultMap">
+	 	SELECT * FROM(
+		SELECT 
+		IFNULL(mt.type_name,'兑换现金') typeName, 
+		COUNT(mi.t_id) saleAmount,
+		COUNT(DISTINCT mi.user_id) purchaseNumber,
+    	SUM(mi.numbers) integrateCost, 
+    	0 totalAmount
+		FROM mp.mp_points_type mt INNER JOIN mp.mp_member_points_use_info mi on mt.id = mi.t_id
+		<where>
+			(mt.id=3 OR mt.parent_id = 3) AND mi.exchange_status=2
+			<if test="startDate!=null">
+				<![CDATA[AND mi.end_time >= #{startDate}]]>
+			</if>
+			<if test="endDate!=null">
+                <![CDATA[AND mi.end_time <= #{endDate}]]>
+            </if>    
+		</where> 
+		UNION ALL
+		SELECT 
+		IFNULL(mt.type_name,'手机充值') typeName, 
+		COUNT(mo.id) saleAmount, 
+		COUNT(DISTINCT mo.user_id) purchaseNumber,
+		SUM(mo.integral_qty) integrateCost,
+		IFNULL(SUM(user_pay_amount),0) totalAmount
+		FROM mp.mp_points_type mt INNER JOIN mp.mp_mobile_topup_order mo 
+		<where>
+			(mt.id=4 OR mt.parent_id = 4) AND mo._status=2
+			<if test="startDate!=null">
+				<![CDATA[AND mo.end_time >= #{startDate}]]>
+			</if>
+			<if test="endDate!=null">
+                <![CDATA[AND mo.end_time <= #{endDate}]]>
+            </if>    
+		</where> 
+		) qo
+		<where>
+             <if test="productCode != null">
+            	AND  qo.productCode = trim(#{productCode})
+            </if> 
+            <if test="typeName != null">
+            	AND qo.typeName LIKE concat('%',trim(#{typeName}),'%')
+            </if>
+		</where>
+		ORDER BY integrateCost
+		<if test="cmd != null">
+			${cmd}
+		</if>
+	</select> 
+</mapper>

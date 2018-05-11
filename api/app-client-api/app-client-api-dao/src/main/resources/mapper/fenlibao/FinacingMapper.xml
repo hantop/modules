@@ -1,0 +1,832 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="FinacingMapper">
+
+	<!-- 
+	<select id="getFinacingList" parameterType="java.util.Map" resultType="Finacing">
+		select T6230.F03 AS name,T6251.F05 AS money,T6231.F02 AS period, T6230.F06 AS rate,T6251.F01 AS id,T6251.f09 AS createTime,T6251.F08 as isTransfer,T6230.F20 AS bidStatus
+		from S62.T6251 inner join S62.T6230 ON T6251.F03 = T6230.F01 INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01 INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		INNER JOIN S62.T6252 ON T6252.F11 = T6251.F01
+		where T6251.F04 = #{userId} and T6211.F05=#{proType}
+		 <if test="bidStatus">
+		   and T6230.F20 in <foreach collection="bidStatus" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		 </if>
+		<if test="time == null">
+			order by t6251.F09 desc limit 10
+		</if>
+		<if test="time != null">
+			<![CDATA[AND t6251.F09 < #{time}]]>  order by t6251.F09 desc limit 10
+		</if>
+	</select>
+	 -->
+
+	<!-- 获取用户投资债权列表 -->
+	<select id="getInvestRecord" parameterType="java.util.Map" resultType="Finacing">
+	   	SELECT * FROM (
+	    SELECT
+			T6230.F03 AS NAME,
+			T6250.F05 AS money,
+			T6230.F09 AS MONTH,
+			T6230.F06 AS rate,
+			T6230.F28 AS isNoviceBid,
+			T6230.F32 AS loanDays,
+			t6251.F01 AS id,
+			T6250.f06 AS createTime,
+			IFNULL(t6251.F08, 'F') AS isTransfer,
+			T6230.F20 AS bidStatus,
+			T6230.F10 AS paymentType
+		FROM
+			S62.t6250
+		INNER JOIN S62.T6230 ON t6250.F02 = T6230.F01
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+	  	LEFT JOIN s62.t6251 on t6251.F11 = t6250.F01
+		where t6250.F03 = #{userId} and t6251.F01 is NULL
+		<if test="bidStatus">
+		   and T6230.F20 in <foreach collection="bidStatus" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		 </if>
+		UNION
+		SELECT
+			T6230.F03 AS NAME,
+			T6250.F05 AS money,
+			T6230.F09 AS MONTH,
+			T6230.F06 AS rate,
+			T6230.F28 AS isNoviceBid,
+			T6230.F32 AS loanDays,
+			t6251.F01 AS id,
+			T6250.F06 AS createTime,
+			IFNULL(t6251.F08, 'F') AS isTransfer,
+			T6230.F20 AS bidStatus,
+			T6230.F10 AS repaymentMethod
+		FROM
+			S62.t6250
+		INNER JOIN S62.T6230 ON t6250.F02 = T6230.F01
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+	  	INNER JOIN s62.t6251 on t6251.F11 = t6250.F01
+	  	INNER JOIN s62.t6252 on t6252.F11 = t6251.F01
+		where t6250.F03 = #{userId}  and t6251.F12= 0 and t6252.F05=7002
+		<if test="bidStatus">
+		   and T6230.F20 in <foreach collection="bidStatus" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		 </if>
+		 ) A
+		where 1=1
+		<if test="time != null">
+			<![CDATA[AND A.createTime < #{time}]]>
+		</if>
+		 order by A.createTime desc limit 10
+	</select>
+
+	<!-- 获取用户投资债权详情 -->
+	<select id="getFinacingDetail" parameterType="java.util.Map" resultType="Finacing">
+		select  T6251.F01 AS id,
+				T6230.F03 AS name,
+				T6230.F28 AS isNoviceBid,
+				T6230.F32 AS loanDays,
+				T6251.F05 AS money,
+				T6230.F06 AS rate,
+				T6230.F09 AS period,
+				T6230.F20 AS bidStatus,
+				T6231.F09 AS remark,
+				T6251.F08 AS isTransfer,
+				T6251.F03 AS bidId,
+				T6251.F06 AS originalMoney,
+				 (SELECT
+			 		sum(t6252.F07)
+			 		FROM s62.t6252 where  F05=7002 and F11=T6251.F01
+			 		) AS zqEarning,
+				T6250.F06 AS buyTimestamp,
+				T6251.F10 AS interestTimestamp,
+				<!-- DATE_ADD(T6251.F10, INTERVAL T6230.F09 MONTH) AS endTimestamp, -->
+				(SELECT
+			 		F08
+			 		FROM s62.t6252 where  F05=7001 and F11=T6251.F01
+			 		) AS endTimestamp,
+				T6251.F09 AS createTime
+		FROM S62.T6251
+		INNER JOIN S62.T6230 ON T6251.F03=T6230.F01
+		INNER JOIN S62.T6231 ON T6251.F03=T6231.F01
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		left JOIN s62.T6250 ON T6250.F01 = T6251.F11
+		where (T6251.F08 = 'S' or (T6251.F08 = 'F' AND T6230.F20 in ('TBZ','DFK','HKZ','YJQ','YDF'))) AND T6251.F01 = #{zqId} AND T6251.F04 = #{userId}
+	</select>
+
+	<!-- 获取用户投资债权列表  1.4.0 以上接口适用 -->
+	<select id="getUserInvestList" parameterType="java.util.Map" resultType="InvestInfo">
+		SELECT
+		T6230.F01 AS bidId,
+		T6230.F03 AS bidTitle,
+		IFNULL(T6230.F29, 'F') AS isNoviceBid,
+		T6251.F01 AS creditId,
+		T6250.F05 AS investAmount,
+		T6230.F09 AS loanMonths,
+		T6230.F32 AS loanDays,
+		T6230.F06 AS yearYield,
+		T6230.F10 AS repaymentMode,
+		T6230.F20 AS bidStatus,
+		T6230.F39 AS anytimeQuit,
+		T6238.F09 AS bidInterestRise,
+		T6231.F19 AS isYq,
+		T6231.F06 AS nextRepaymentDate,
+		T6250.F06 AS purchaseTime,
+		IFNULL(t6251.F08, 'F') AS isTransfer,
+		IFNULL(T6262.F01, 0) AS transferOrderId,
+		IFNULL((select sum(T6252.F07) FROM s62.T6252
+		WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7002,7004,7005,7022)),0) AS expectedProfit,
+		tab6260.applyTime,
+		s62.t6262.F07 AS successTime,
+		tab6252.actualRepaymentDate,
+		flb.t_coupon.scope interestRise
+		FROM
+		S62.T6250
+		INNER JOIN S62.T6230 ON T6230.F01 = T6250.F02
+		INNER JOIN S62.T6231 ON T6231.F01 = T6250.F02
+		LEFT  JOIN s62.T6251 ON T6251.F11 = T6250.F01
+		LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+		LEFT JOIN S62.T6238 ON T6251.F03 = T6238.F01
+		LEFT JOIN (SELECT F02,applyTime FROM (SELECT s62.t6260.F02,s62.t6260.F05 AS applyTime  FROM s62.t6260 ORDER BY s62.t6260.F05 DESC)tt6260 GROUP BY tt6260.F02) tab6260 ON s62.t6251.F01 = tab6260.F02
+		LEFT JOIN (SELECT F11,actualRepaymentDate FROM (SELECT s62.t6252.F11,s62.t6252.F10 AS actualRepaymentDate FROM s62.t6252  ORDER BY s62.t6252.F10 DESC) tt6252 GROUP BY tt6252.F11) tab6252 ON s62.t6251.F01 = tab6252.F11
+		left JOIN flb.t_user_coupon ON s62.t6250.F01 = flb.t_user_coupon.tender_id
+		left JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+		WHERE t6250.F03 = #{userId} AND T6251.F12=0
+		<if test="bidStatus !=null ">
+			and T6230.F20 in <foreach collection="bidStatus" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		</if>
+		    and T6250.F02 not in (SELECT pb.bid_id from flb.t_plan_bid pb)
+		<if test="isUp == 1">
+			<if test="time != null"  >
+				<![CDATA[AND T6250.F06 > #{time}]]>
+			</if>
+			ORDER BY T6250.F06 ASC limit 10
+		</if>
+		<if test="isUp == null or isUp == 0">
+			<if test="time != null"  >
+				<![CDATA[AND T6250.F06 < #{time}]]>
+			</if>
+			ORDER BY T6250.F06 DESC limit 10
+		</if>
+	</select>
+
+	<!-- 获取用户投资债权详情 1.4.0 以上接口适用-->
+	<select id="getUserInvestDetail" parameterType="java.util.Map" resultType="InvestInfoDetail">
+		SELECT
+			T6230.F01 AS bidId,
+			T6230.F03 AS bidTitle,
+			IFNULL(T6230.F29, 'F') AS isNoviceBid,
+			T6251.F01 AS creditId,
+			T6250.F05 AS investAmount,
+			T6230.F09 AS loanMonths,
+			T6230.F32 AS loanDays,
+			T6230.F06 AS yearYield,
+			T6230.F10 AS repaymentMode,
+			T6230.F20 AS bidStatus,
+			T6230.F38 AS cgNum,
+			T6230.F39 AS anytimeQuit,
+		    T6238.F09 AS bidInterestRise,
+			T6230.F17 AS interestPaymentType,
+			T6230.F36 AS bidOrigin,
+			T6231.F09 AS remark,
+			T6231.F17 AS interestTime,
+			T6231.F18 AS expireTime,
+			T6231.F19 AS isYq,
+			T6231.F06 AS nextRepaymentDate,
+			T6250.F06 AS purchaseTime,
+			IFNULL(T6251.F08, 'F') AS isTransfer,
+			IFNULL(T6262.F01, 0) AS transferOrderId,
+			IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7002,7004,7005)),0) AS expectedProfit,
+			T6251.F09 AS investTime,
+			tab6260.applyTime,
+			s62.t6262.F07 AS successTime,
+			tab6252.actualRepaymentDate,
+			flb.t_coupon.scope interestRise,
+			IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7022,7023)),0) AS interestRiseAmount
+		FROM
+			S62.T6250
+		INNER JOIN S62.T6230 ON T6230.F01 = T6250.F02
+		INNER JOIN S62.T6231 ON T6231.F01 = T6250.F02
+		INNER JOIN S62.t6251 ON t6251.F11 = t6250.F01
+		LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+		LEFT JOIN S62.T6238 ON T6251.F03 = T6238.F01
+		LEFT JOIN (SELECT F02,applyTime FROM (SELECT s62.t6260.F02,s62.t6260.F05 AS applyTime  FROM s62.t6260 WHERE t6260.F02 = #{creditId}  ORDER BY s62.t6260.F05 DESC)tt6260 GROUP BY tt6260.F02) tab6260 ON s62.t6251.F01 = tab6260.F02
+		LEFT JOIN (SELECT F11,actualRepaymentDate FROM (SELECT s62.t6252.F11,s62.t6252.F10 AS actualRepaymentDate FROM s62.t6252 WHERE t6252.F11 = #{creditId} ORDER BY s62.t6252.F10 DESC) tt6252 GROUP BY tt6252.F11) tab6252 ON s62.t6251.F01 = tab6252.F11
+		left JOIN flb.t_user_coupon ON s62.t6250.F01 = flb.t_user_coupon.tender_id
+		left JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+		WHERE t6251.F04 = #{userId} and t6251.F01 = #{creditId} AND T6251.F12=0
+		LIMIT 1
+	</select>
+
+    <select id="getMaySettleFinacing" parameterType="java.util.Map" resultType="Finacing">
+		SELECT T6230.F03 AS name,T6251.F05 AS money, T6231.F02 AS period, T6230.F06 AS rate,T6251.F01 AS id,T6251.f09 AS createTime FROM S62.T6251, S62.T6231, S62.T6230 
+        WHERE T6251.F03 = T6230.F01 AND T6251.F03 = T6231.F01 AND T6251.F04 = #{userId} AND T6230.F20 = #{status} AND T6251.F08 = 'F' AND T6231.F19 = 'F' 
+        <![CDATA[AND DATE_ADD( NOW(), INTERVAL 3 DAY ) < T6231.F06 AND T6251.F07 AND T6251.F09 <= DATE_ADD(NOW(), INTERVAL #{days} DAY )]]>
+	</select>
+
+	<select id="getFinacingByBid" parameterType="java.util.Map" resultType="Finacing">
+		SELECT
+			T6230.F03 AS name,
+			T6251.F05 AS money,
+			T6230.F06 + IFNULL(flb.t_coupon.scope,0)+IFNULL(T6238.F09, 0) AS rate,
+			T6230.F09 AS month,
+		    T6230.F32 AS loanDays,
+			T6230.F28 AS isNoviceBid,
+			T6230.F10 AS repaymentMethod,
+			T6230.F39 AS anytimeQuit,
+			T6251.F01 AS id,
+			T6251.F09 AS createTime,
+			T6251.F08 as isTransfer,
+			T6230.F20 AS bidStatus,
+			T6251.F06 AS originalMoney,
+			T6231.F17 AS beginTimestamp,
+			T6231.F18 AS endTimestamp,
+			T6231.F06 AS nextRepaymentTime
+		FROM
+			S62.T6251
+		INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+		INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+		LEFT JOIN S62.T6238 ON T6251.F03 = T6238.F01
+		LEFT JOIN flb.t_user_coupon ON t6251.F11 = t_user_coupon.tender_id
+		LEFT JOIN flb.t_coupon ON t_coupon.id = t_user_coupon.coupon_id
+
+		<where>
+		<if test="userId != null">
+			and T6251.F04 = #{userId}
+		</if>
+		<if test="bidId != null">
+			and T6251.F03 = #{bidId}
+		</if>
+		<if test="creditId != null">
+			and T6251.F01 = #{creditId}
+		</if>
+		</where>
+	</select>
+
+	<!-- 获取用户投资债权的待收本息-->
+	<select id="getUserCollectInterest" parameterType="java.util.Map" resultType="double">
+		SELECT
+			IFNULL(SUM(F07), 0.00)
+		FROM
+			s62.T6252
+		WHERE 1=1
+		<if test="userId != null">
+			AND T6252.F04 = #{userId}
+		</if>
+		<if test="creditId != null">
+			AND T6252.F11 = #{creditId}
+		</if>
+		<if test="repaymentStatus !=null ">
+			and T6252.F09 in <foreach collection="repaymentStatus" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		</if>
+	</select>
+
+	<select id="getUserCreditInfo" parameterType="java.util.Map" resultType="CreditInfo">
+		SELECT
+			T6251.F01 creditId,
+			T6251.F02 creditCode,
+			T6251.F03 bidId,
+			T6251.F04 userId,
+			T6251.F05 purchaseAmount,
+			T6251.F06 originalAmount,
+			T6251.F07 holdAmount,
+			T6251.F08 isTransfer,
+			T6251.F09 investDate,
+			T6251.F10 interestDate
+		FROM
+			S62.T6251
+		WHERE
+			T6251.F01 = #{creditId}
+	</select>
+
+	<!-- 获取债权的还款计划记录-->
+	<select id="getUserRepaymentItem" parameterType="java.util.Map" resultType="RepaymentInfo">
+		SELECT
+			T6252.F02 bidId,
+			T6252.F03 paymentUserId,
+			T6252.F04 receiveUserId,
+			T6252.F05 tradeType,
+			T6252.F06 period,
+			T6252.F07 repaymentAmount,
+			T6252.F08 expectedRepaymentDate,
+			T6252.F09 repaymentStatus,
+			T6252.F10 actualRepaymentDate,
+			T6252.F11 creditId,
+			T5122.F02 tradeTypeName
+		FROM
+			S62.T6252
+		LEFT JOIN S51.T5122 ON T5122.F01 = T6252.F05
+		WHERE T6252.F04 =#{userId}
+		AND T6252.F11 = #{creditId}
+		<if test="tradeTypes !=null ">
+			and T6252.F05 in <foreach collection="tradeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		</if>
+		ORDER BY T6252.F06 ASC ,T6252.F05 ASC
+	</select>
+
+
+	<!-- 获取最近一次未还债权的还款计划记录-->
+	<select id="getNextRepaymentItem" parameterType="java.util.Map" resultType="RepaymentInfo">
+		SELECT
+		T6252.F02 bidId,
+		T6252.F03 paymentUserId,
+		T6252.F04 receiveUserId,
+		T6252.F05 tradeType,
+		T6252.F06 period,
+		T6252.F07 repaymentAmount,
+		T6252.F08 expectedRepaymentDate,
+		T6252.F09 repaymentStatus,
+		T6252.F10 actualRepaymentDate,
+		T6252.F11 creditId,
+		T5122.F02 tradeTypeName
+		FROM
+		S62.T6252
+		LEFT JOIN S51.T5122 ON T5122.F01 = T6252.F05
+		WHERE T6252.F04 =#{userId}
+		AND T6252.F11 = #{creditId}
+		<if test="tradeTypes !=null ">
+			and T6252.F05 in <foreach collection="tradeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		</if>
+		and T6252.F09='WH'
+		ORDER BY T6252.F06 ASC
+		LIMIT 1
+	</select>
+
+	<!-- 获取最近一次未还债权的还款计划记录-->
+	<select id="getNextRepaymentItemProfit" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+		SUM(T6252.F07) as profitRepaymentAmount
+		FROM
+		S62.T6252
+		LEFT JOIN S51.T5122 ON T5122.F01 = T6252.F05
+		WHERE T6252.F04 = #{userId}
+		AND T6252.F11 = #{creditId}
+		and T6252.F05 not in(7001)
+		and T6252.F09='WH'
+		GROUP BY T6252.F06
+		ORDER BY T6252.F06 ASC
+		LIMIT 1
+	</select>
+
+	<!-- 这里应获取还款计划的金额 -->
+	<select id="getZqzrAssets" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(h.F07),0) FROM s62.t6251 r INNER JOIN s62.t6252 h ON r.F01 = h.F11 WHERE H.F09 = 'WH' AND r.F12 <![CDATA[ > ]]> 0 AND h.F05 = 7001 AND h.F04 = #{userId}
+	</select>
+
+	<!-- 获取所有的还款计划记录-->
+	<select id="getAllUserRepaymentItem" parameterType="java.util.Map" resultType="RepaymentInfoExt">
+		SELECT
+			g.id,
+			g.bidId,
+			g.state,
+			p.principal,
+			g.gains,
+			g.bidTitle,
+			g.creditCode,
+			g.expectedRepaymentDate,
+			g.actualRepaymentDate,
+			g.creditOrderId,
+			g.number,
+			c.periods,
+			t6251.F01 AS creditId
+		FROM
+			(
+				SELECT
+					t6252.F07 AS principal,
+					t6251.F02 AS creditCode,
+					t6251.F01 AS creditId,
+					t6252.F06 AS number
+				FROM
+					s62.t6252
+				LEFT JOIN s62.t6251 ON s62.t6252.F11 = s62.t6251.F01
+				WHERE
+					T6252.F04 = #{userId}
+				AND T6252.F05 IN (7001)
+				<if test="type ==1 ">
+					AND (t6252.F09 = 'WH' OR t6252.F09 = 'HKZ')
+				</if>
+				<if test="type ==2 ">
+					and (t6252.F09='YH' or t6252.F09 = 'TQH'  or t6252.F09 = 'DF')
+				</if>
+			) p
+		RIGHT  JOIN (
+			SELECT
+					t6252.F01 as id,
+					SUM(t6252.F07) AS gains,
+					s62.t6251.F02 AS creditCode,
+					t6252.F02 AS bidId,
+					t6252.F09 AS state,
+					t6252.F08 AS expectedRepaymentDate,
+					t6252.F10 AS actualRepaymentDate,
+					t6230.F03 AS bidTitle,
+					t6251.F12 AS creditOrderId,
+					t6252.F06 AS number
+			FROM
+				s62.t6252
+			LEFT JOIN s62.t6251 ON s62.t6252.F11 = s62.t6251.F01
+		    LEFT JOIN s62.t6230 ON s62.t6252.F02 = s62.t6230.F01
+			WHERE
+				T6252.F04 = #{userId}
+			AND T6252.F05 IN (7002, 7004, 7005, 7022, 7023, 7028)
+			<if test="type ==1 ">
+				AND (t6252.F09 = 'WH' OR t6252.F09 = 'HKZ')
+				GROUP BY s62.t6251.F02,t6252.F06
+				ORDER BY expectedRepaymentDate ASC
+			</if>
+			<if test="type ==2 ">
+				and (t6252.F09='YH' or t6252.F09 = 'TQH'  or t6252.F09 = 'DF')
+				GROUP BY s62.t6251.F02,t6252.F06
+				ORDER BY actualRepaymentDate DESC
+			</if>
+
+		) g ON p.creditCode = g.creditCode  and p.number=g.number
+		LEFT   JOIN (
+			SELECT
+				count(t6251.F02) AS periods,
+				s62.t6251.F02 AS creditCode
+			FROM
+				s62.t6252
+			LEFT JOIN s62.t6251 ON s62.t6252.F11 = s62.t6251.F01
+			WHERE
+				T6252.F04 = #{userId}
+			AND T6252.F05 IN (7002)
+
+			GROUP BY
+				s62.t6251.F02
+		) c ON g.creditCode = c.creditCode
+		LEFT JOIN s62.t6251 ON t6251.F02 = g.creditCode
+		WHERE NOT EXISTS( SELECT 1 FROM flb.`t_user_plan_product` tupp WHERE tupp.`product_id` = t6251.F01)
+
+		UNION
+
+		SELECT
+			temp.id,
+			temp.bidId,
+			temp.state,
+			temp.principal,
+			temp.gains,
+			temp.bidTitle,
+			temp.creditCode,
+			temp.expectedRepaymentDate,
+			temp.actualRepaymentDate,
+			temp.creditOrderId,
+			temp.number,
+			periodsTemp.periods,
+			temp.creditId
+		FROM (
+			SELECT
+				tupr.id AS id,
+				tip.id AS bidId,
+				tupr.state AS state,
+				SUM(IF(tupr.transaction_type = 7001, IFNULL(expect_amount, 0), 0)) AS principal,
+				SUM(IF(tupr.transaction_type IN (7002, 7004, 7005, 7022, 7023, 7028),
+				IFNULL(expect_amount, 0), 0)) AS gains,
+				CONCAT(tip.name,tip.number) AS bidTitle,
+				0 AS creditCode,
+				tupr.expect_repay_date AS expectedRepaymentDate,
+				tupr.actual_repay_time AS actualRepaymentDate,
+				0 AS creditOrderId,
+				tupr.term AS number,
+				0 AS creditId,
+				tupr.user_plan_id AS user_plan_id
+			FROM flb.`t_user_plan_repay` tupr
+			LEFT JOIN flb.`t_invest_plan` tip ON tupr.plan_id = tip.id
+			WHERE tupr.user_id = #{userId}
+			<if test="type ==1 ">
+				AND tupr.state IN ('WH')
+			</if>
+			<if test="type ==2 ">
+				AND tupr.state IN ('YH','TQH')
+			</if>
+			GROUP BY tupr.user_plan_id,tupr.term
+		) temp
+		LEFT JOIN
+		(
+			SELECT
+				COUNT(1) AS periods,
+				tupr.user_plan_id AS user_plan_id
+			FROM flb.`t_user_plan_repay` tupr
+			LEFT JOIN flb.`t_invest_plan` tip ON tupr.plan_id = tip.id
+			WHERE tupr.user_id = #{userId}
+			AND tupr.transaction_type IN (7002)
+			GROUP BY tupr.user_plan_id
+		) periodsTemp ON temp.user_plan_id = periodsTemp.user_plan_id
+
+		<if test="type ==1 ">
+			ORDER BY expectedRepaymentDate ASC
+		</if>
+		<if test="type ==2 ">
+			ORDER BY actualRepaymentDate DESC
+		</if>
+
+		LIMIT #{pageNo},#{pagesize}
+	</select>
+
+	<!-- 获取所有的还款计划记录-->
+	<select id="getNewAllUserRepaymentItem" parameterType="java.util.Map" resultType="RepaymentInfoExt">
+		SELECT *
+		FROM
+		(
+			SELECT
+				g.id,
+				g.bidId,
+				g.gains,
+				g.state,
+				g.actualRepaymentDate,
+				p.principal,
+				g.bidTitle,
+				g.creditCode,
+				g.expectedRepaymentDate,
+				g.creditOrderId,
+				g.number,
+				c.periods,
+				t6251.F01 AS creditId,
+				g.repayment,
+				0 AS itemType,
+				0 AS planRecordId
+			FROM
+				(
+					SELECT
+						t6252.F07 AS principal,
+						t6251.F02 AS creditCode,
+						t6251.F01 AS creditId,
+						t6252.F06 AS number
+					FROM
+						s62.t6252
+					LEFT JOIN s62.t6251 ON s62.t6252.F11 = s62.t6251.F01
+					WHERE
+						T6252.F04 = #{userId}
+					AND T6252.F05 IN (7001)
+					<if test="type ==1 ">
+						AND (t6252.F09 = 'WH' OR t6252.F09 = 'HKZ')
+					</if>
+					<if test="type ==2 ">
+						and (t6252.F09='YH' or t6252.F09 = 'TQH'  or t6252.F09 = 'DF')
+					</if>
+				) p
+			RIGHT  JOIN (
+				SELECT
+						t6252.F01 as id,
+						SUM(t6252.F07) AS gains,
+						s62.t6251.F02 AS creditCode,
+						t6252.F02 AS bidId,
+						t6252.F09 AS state,
+						t6252.F08 AS expectedRepaymentDate,
+						t6252.F10 AS actualRepaymentDate,
+						t6230.F03 AS bidTitle,
+						t6251.F12 AS creditOrderId,
+						t6252.F06 AS number,
+						t6230.F10 AS repayment
+				FROM
+					s62.t6252
+				LEFT JOIN s62.t6251 ON s62.t6252.F11 = s62.t6251.F01
+				LEFT JOIN s62.t6230 ON s62.t6252.F02 = s62.t6230.F01
+				WHERE
+					T6252.F04 = #{userId}
+				AND T6230.F38 = #{versionType}
+				AND T6252.F05 IN (7002, 7004, 7005, 7022, 7023, 7028)
+				<if test="type ==1 ">
+					AND (t6252.F09 = 'WH' OR t6252.F09 = 'HKZ')
+					GROUP BY s62.t6251.F02,t6252.F06
+					ORDER BY expectedRepaymentDate ASC
+				</if>
+				<if test="type ==2 ">
+					and (t6252.F09='YH' or t6252.F09 = 'TQH'  or t6252.F09 = 'DF')
+					GROUP BY s62.t6251.F02,t6252.F06
+					ORDER BY actualRepaymentDate DESC
+				</if>
+
+			) g ON p.creditCode = g.creditCode  and p.number=g.number
+			LEFT   JOIN (
+				SELECT
+					count(t6251.F02) AS periods,
+					s62.t6251.F02 AS creditCode
+				FROM
+					s62.t6252
+				LEFT JOIN s62.t6251 ON s62.t6252.F11 = s62.t6251.F01
+				WHERE
+					T6252.F04 = #{userId}
+				AND T6252.F05 IN (7002)
+
+				GROUP BY
+					s62.t6251.F02
+			) c ON g.creditCode = c.creditCode
+			LEFT JOIN s62.t6251 ON t6251.F02 = g.creditCode
+			WHERE NOT EXISTS( SELECT 1 FROM flb.`t_user_plan_product` tupp WHERE tupp.`product_id` = t6251.F01)
+
+			UNION
+
+			SELECT
+				temp.id,
+				temp.bidId,
+
+				0 AS gains,
+				<if test="type ==1 ">
+					'WH' AS state,
+					temp.actualRepaymentDate AS actualRepaymentDate,
+					temp.principal+temp.gains-IFNULL(tempYH.amount,0) AS principal,
+				</if>
+				<if test="type ==2 ">
+					'YH' AS state,
+					tempYH.actualRepaymentDate AS actualRepaymentDate,
+					IFNULL(tempYH.amount,0) AS principal,
+				</if>
+
+				temp.bidTitle,
+				temp.creditCode,
+				temp.expectedRepaymentDate,
+
+				temp.creditOrderId,
+				temp.number,
+				periodsTemp.periods,
+				temp.creditId,
+				temp.repayment,
+				1 AS itemType,
+				temp.planRecordId AS planRecordId
+			FROM (
+				SELECT
+					SUM(IF(tupr.state IN ('WH','HKZ'), 1, 0)) AS WHNum,
+					tupr.id AS id,
+					tip.id AS bidId,
+					tupr.state AS state,
+					SUM(IF(tupr.transaction_type = 7001, IFNULL(expect_amount, 0), 0)) AS principal,
+					SUM(IF(tupr.transaction_type IN (7002, 7004, 7005, 7022, 7023, 7028),
+					IFNULL(expect_amount, 0), 0)) AS gains,
+					CONCAT(tip.name,tip.number) AS bidTitle,
+					0 AS creditCode,
+					tupr.expect_repay_date AS expectedRepaymentDate,
+					tupr.actual_repay_time AS actualRepaymentDate,
+					0 AS creditOrderId,
+					tupr.term AS number,
+					0 AS creditId,
+					tupr.user_plan_id AS user_plan_id,
+					tip.repay_mode AS repayment,
+					tupr.user_plan_id AS planRecordId
+				FROM flb.`t_user_plan_repay` tupr
+				LEFT JOIN flb.`t_invest_plan` tip ON tupr.plan_id = tip.id
+				WHERE tupr.user_id = #{userId}
+				AND tip.is_cg = #{versionType}
+				GROUP BY tupr.user_plan_id,tupr.term
+			) temp
+			LEFT JOIN
+			(
+				SELECT
+					COUNT(1) AS periods,
+					tupr.user_plan_id AS user_plan_id
+				FROM flb.`t_user_plan_repay` tupr
+				LEFT JOIN flb.`t_invest_plan` tip ON tupr.plan_id = tip.id
+				WHERE tupr.user_id = #{userId}
+				AND tip.is_cg = #{versionType}
+				AND tupr.transaction_type IN (7002)
+				GROUP BY tupr.user_plan_id
+			) periodsTemp ON temp.user_plan_id = periodsTemp.user_plan_id
+
+			<if test="type ==1 ">
+				LEFT JOIN
+				(
+					SELECT
+						tupsr.user_plan_id,
+						tup.`user_id`,
+				        (CASE
+				         WHEN pd.id is not null THEN SUM(t6102.F06)
+				         ELSE SUM(t6102.F06 - t6102.F07)
+				         END
+				         ) AS amount
+					FROM flb.`t_user_plan_settlement_record` tupsr
+					LEFT JOIN s61.t6102 t6102 ON tupsr.`t6102_f01` = t6102.F01
+					LEFT JOIN flb.t_user_plan tup ON tupsr.user_plan_id = tup.id
+					LEFT JOIN flb.`t_invest_plan` tip ON tup.plan_id = tip.id
+				    LEFT JOIN errorlog.tmp_plan_detail pd ON pd.userPlanId = tupsr.user_plan_id
+					WHERE tup.`user_id` = #{userId}
+					AND tip.is_cg = #{versionType}
+					GROUP BY tupsr.user_plan_id
+				) tempYH ON temp.user_plan_id = tempYH.user_plan_id
+				WHERE temp.WHNum > 0
+			</if>
+			<if test="type ==2 ">
+				RIGHT JOIN
+				(
+					SELECT
+						tupsr.user_plan_id,
+						tupsr.create_date AS actualRepaymentDate,
+						tup.`user_id`,
+				       (CASE
+				        WHEN pd.id is not null THEN SUM(t6102.F06)
+				        ELSE SUM(t6102.F06 - t6102.F07)
+				        END
+				        ) AS amount
+					FROM flb.`t_user_plan_settlement_record` tupsr
+					LEFT JOIN s61.t6102 t6102 ON tupsr.`t6102_f01` = t6102.F01
+					LEFT JOIN flb.t_user_plan tup ON tupsr.user_plan_id = tup.id
+					LEFT JOIN flb.`t_invest_plan` tip ON tup.plan_id = tip.id
+
+				    LEFT JOIN errorlog.tmp_plan_detail pd ON pd.id = t6102.f09
+					WHERE tup.user_id = #{userId}
+					AND tip.is_cg = #{versionType}
+					GROUP BY tupsr.user_plan_id
+				) tempYH ON temp.user_plan_id = tempYH.user_plan_id
+			</if>
+
+			<if test="type ==1 ">
+				ORDER BY expectedRepaymentDate ASC
+			</if>
+			<if test="type ==2 ">
+				ORDER BY actualRepaymentDate DESC
+			</if>
+		) temp
+
+		<if test="type == 1">
+			<if test="mode == 1">
+				<if test="timestamp != null">
+					WHERE expectedRepaymentDate > #{timestamp}
+				</if>
+				LIMIT 0,30
+			</if>
+			<if test="mode == 2">
+				WHERE TO_DAYS(#{timestamp}) = TO_DAYS(temp.expectedRepaymentDate)
+			</if>
+		</if>
+		<if test="type ==2 ">
+			<if test="mode == 1">
+				<if test="timestamp != null">
+					WHERE actualRepaymentDate <![CDATA[<]]> #{timestamp}
+				</if>
+				LIMIT 0,30
+			</if>
+			<if test="mode == 2">
+				WHERE TO_DAYS(#{timestamp}) = TO_DAYS(temp.actualRepaymentDate)
+			</if>
+		</if>
+	</select>
+
+	<!-- 回款总额-->
+	<select id="userRepaymentAmout" parameterType="java.util.Map" resultType="UserRepaymentAmout">
+		SELECT SUM(IFNULL(temp.sum, 0)) AS SUM,
+			temp.state
+		FROM (
+			SELECT SUM(t6252.F07) AS SUM,
+				s62.t6252.F09 AS state
+			FROM s62.t6252
+			LEFT JOIN s62.t6251 ON s62.t6252.F11 = s62.t6251.F01
+			LEFT JOIN s62.t6230 ON s62.t6252.F02 = s62.t6230.F01
+			WHERE T6252.F04 = #{userId}
+			AND T6252.F05 IN (7001, 7002, 7004, 7005, 7022, 7023)
+			AND NOT EXISTS( SELECT 1 FROM flb.`t_user_plan_product` tupp WHERE tupp.`product_id` = t6251.F01)
+			<if test="isCg != null ">
+				AND t6230.F38 = #{isCg}
+			</if>
+			GROUP BY s62.t6252.F09
+
+			UNION ALL
+			SELECT SUM(IFNULL(tupr.expect_amount, 0)) AS SUM,
+				tupr.state AS state
+			FROM flb.`t_user_plan_repay` tupr
+			INNER JOIN flb.t_user_plan ON tupr.user_plan_id = flb.t_user_plan.id
+			INNER JOIN flb.t_invest_plan ON flb.t_user_plan.plan_id = flb.t_invest_plan.id
+			WHERE tupr.user_id = #{userId}
+			<if test="isCg != null ">
+				AND t_invest_plan.is_cg = #{isCg}
+			</if>
+			GROUP BY tupr.state
+		) temp GROUP BY temp.state
+	</select>
+
+	<!-- 获取上一期还款计划记录-->
+	<select id="getLastRepaymentItem" parameterType="java.util.Map" resultType="RepaymentInfo">
+		SELECT
+			T6252.F02 bidId,
+			T6252.F03 paymentUserId,
+			T6252.F04 receiveUserId,
+			T6252.F05 tradeType,
+			T6252.F06 period,
+			T6252.F07 repaymentAmount,
+			T6252.F08 expectedRepaymentDate,
+			T6252.F09 repaymentStatus,
+			T6252.F10 actualRepaymentDate,
+			T6252.F11 creditId,
+			T5122.F02 tradeTypeName
+		FROM
+			S62.T6252
+		LEFT JOIN S51.T5122 ON T5122.F01 = T6252.F05
+		WHERE
+			<if test="userId != 0">
+				T6252.F04 =#{userId} AND
+			</if>
+			T6252.F11 = #{creditId}
+			<if test="tradeTypes !=null ">
+				AND T6252.F05 in <foreach collection="tradeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+			</if>
+			AND T6252.F09='YH'
+		ORDER BY T6252.F06 DESC
+		LIMIT 1
+	</select>
+
+	<!-- 计划回款详情 -->
+	<select id="getPlanRepaymentDetail" parameterType="java.util.Map" resultType="PlanRepaymentDetail">
+		SELECT
+			s61.t6102.F06 AS amount,
+			s61.t6102.F05 AS time,
+			(CASE WHEN flb.t_user_exit_plan.user_plan_id is null THEN '组合到期回款'
+				ELSE '组合提前回款' end) as detailName
+		FROM
+			flb.t_user_plan_settlement_record
+		INNER JOIN s61.t6102 ON flb.t_user_plan_settlement_record.t6102_f01 = s61.t6102.F01
+		LEFT JOIN flb.t_user_exit_plan ON flb.t_user_plan_settlement_record.user_plan_id = flb.t_user_exit_plan.user_plan_id
+		WHERE flb.t_user_plan_settlement_record.user_plan_id = #{planRecordId}
+	</select>
+</mapper>

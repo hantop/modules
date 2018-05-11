@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserAutoMatchBidMapper">
+    <!--查询用户设置列表 -->
+    <!--<select id="getSuitableUserPlanInfoList" parameterType="java.util.Map" resultType="UserPlanInfo">-->
+    <!--SELECT-->
+    <!--temp.id,-->
+    <!--temp.user_id AS userId,-->
+    <!--temp.plan_id AS planId,-->
+    <!--temp.invest_amount AS investAmount,-->
+    <!--temp.beinvest_amount AS beinvestAmount,-->
+    <!--temp.status AS `status`,-->
+    <!--temp.exit_time AS exitTime,-->
+    <!--temp.create_time AS createTime,-->
+    <!--temp.update_time AS updateTime,-->
+    <!--temp.invest_amount + IFNULL(SUM(investedAmount),0) - IFNULL(SUM(investibleAmount),0)  AS beinvestAmount-->
+    <!--FROM-->
+    <!--(-->
+    <!--SELECT-->
+    <!--tup.*,-->
+    <!--CASE-->
+    <!--WHEN t6230.F20 NOT IN ('YJQ','YDF') THEN IFNULL((SELECT SUM(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 IN (7001)),0)-->
+    <!--ELSE 0-->
+    <!--END AS investedAmount,-->
+    <!--CASE-->
+    <!--WHEN t6230.F20 IN ('YJQ','YDF') THEN IFNULL((SELECT SUM(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 IN (7001,7002,7004,7005,7022,7023)),0)-->
+    <!--ELSE 0-->
+    <!--END AS investibleAmount-->
+    <!--FROM flb.`t_user_plan` tup-->
+    <!--LEFT JOIN flb.`t_user_plan_product` tupp ON tup.`id` = tupp.`user_plan_id`-->
+    <!--LEFT JOIN s62.`t6251` t6251 ON tupp.`product_id` = t6251.F01-->
+    <!--LEFT JOIN s62.`t6250` t6250 ON t6251.`F11` = t6250.`F01`-->
+    <!--LEFT JOIN s62.`t6230` t6230 ON t6230.`F01` = t6250.`F02`-->
+    <!--LEFT JOIN s62.`t6252` t6252 ON t6251.`F01` = t6252.`F11`-->
+
+    <!--WHERE-->
+    <!--tup.`status` = 1-->
+    <!--AND-->
+    <!--(-->
+    <!--(-->
+    <!--#标-->
+    <!--(T6251.F12=0 OR T6251.F12 IS NULL)-->
+    <!--AND NOT EXISTS (-->
+    <!--SELECT 1 FROM s62.T6260-->
+    <!--INNER JOIN s62.T6262 ON T6262.F02 = T6260.F01-->
+    <!--WHERE T6260.F02 = T6251.F01-->
+    <!--)-->
+    <!--#and t6250.F03 = #{userId}-->
+    <!--)-->
+    <!--OR-->
+    <!--(-->
+    <!--#债权-->
+    <!--t6251.F12 > 0-->
+    <!--AND t6252.F05 = 7001-->
+    <!--#AND t6252.F04 = #{userId}-->
+    <!--)-->
+    <!--)-->
+    <!--GROUP BY T6251.F01-->
+    <!--) temp GROUP BY temp.id-->
+    <!--ORDER BY temp.create_time DESC-->
+    <!--</select>-->
+
+    <select id="getSuitableUserPlanInfo" parameterType="java.util.Map" resultType="UserPlanInfo">
+        SELECT
+			tup.id,
+			tup.user_id AS userId,
+			tup.plan_id AS planId,
+			tup.invest_amount AS investAmount,
+			tup.status AS `status`,
+			tup.exit_time AS exitTime,
+			tup.create_time AS createTime,
+			tup.update_time AS updateTime,
+			tup.invest_amount + IFNULL(SUM(tupp.return_amount), 0) - IFNULL(SUM(tupp.amount), 0) AS
+			beinvestAmount,
+			tip.expire_time AS expireTime,
+			tip.status AS planStatus,
+			IFNULL(DATEDIFF(tip.expire_time, NOW()), 0) AS expireDateDiff,
+			tip.is_cg AS cgMode,
+			tip.cycle AS cycle,
+			tip.cycle_type AS cycleType,
+			tup.invest_amount - IFNULL(SUM(tupp.amount), 0) AS firstBeinvestAmount,
+			IFNULL(SUM(tupp.return_amount), 0) AS reBackAmount
+			
+			
+			FROM
+			flb.`t_user_plan` tup
+			LEFT JOIN flb.`t_user_plan_product` tupp
+			ON tup.id = tupp.user_plan_id
+			LEFT JOIN flb.`t_invest_plan` tip
+			ON tup.plan_id = tip.id
+
+			where
+			tup.status=1
+			and tip.status IN (4, 5)	
+		<![CDATA[   	and tup.create_time <= #{dbTime} ]]>
+		<if test="lastCreateTime != null">
+			AND tup.create_time > #{lastCreateTime}
+		</if>
+		and tip.is_cg = #{versionType}
+		and (tip.expire_time is null or DATEDIFF(tip.expire_time, NOW())>0)
+		
+		GROUP BY tup.id
+		having 
+		(tup.invest_amount + IFNULL(SUM(tupp.return_amount), 0)	-IFNULL(SUM(tupp.amount), 0)) >5
+		<if test="versionType == 2">
+			AND (tup.invest_amount - IFNULL(SUM(tupp.amount), 0)) > 5
+
+		</if>
+        AND (IFNULL(SUM(tupp.return_amount), 0)) = 0
+		
+		ORDER BY tup.create_time ASC
+		LIMIT 1
+    </select>
+
+    <select id="lockUserPlan" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT tup.id FROM flb.`t_user_plan` tup WHERE tup.id = #{userPlanId} FOR UPDATE
+    </select>
+
+    <select id="getSuitableUserPlanInfoById" parameterType="java.util.Map" resultType="UserPlanInfo">
+        SELECT
+            tup.id,
+            tup.user_id AS userId,
+            tup.plan_id AS planId,
+            tup.invest_amount AS investAmount,
+            tup.status AS `status`,
+            tup.exit_time AS exitTime,
+            tup.create_time AS createTime,
+            tup.update_time AS updateTime,
+            tup.invest_amount + IFNULL(SUM(tupp.return_amount),0) - IFNULL(SUM(tupp.amount),0) AS beinvestAmount,
+            tip.expire_time AS expireTime,
+            tip.status AS planStatus,
+            IFNULL(DATEDIFF(tip.expire_time, NOW()),0) AS expireDateDiff
+        FROM flb.`t_user_plan` tup
+        LEFT JOIN flb.`t_user_plan_product` tupp ON tup.id = tupp.user_plan_id
+        LEFT JOIN flb.`t_invest_plan` tip ON tup.plan_id = tip.id
+        WHERE tup.id = #{userPlanId}
+    </select>
+
+    <select id="getPlanCreditList" parameterType="java.util.Map" resultType="UserCreditInfoForPlan">
+        SELECT
+            T6260.F01 applyforId,
+            T6251.F11 AS recordId,
+            T6251.F02 creditCode,
+            T6230.F06 yearYield,
+            T6260.F03 transferOutPrice,
+            T6260.F05 transferApplyforTime,
+            T6230.F10 AS repaymentMode,
+            T6260.F09 discountRate
+        FROM
+            S62.T6260
+        INNER JOIN S62.T6251 ON T6260.F02 = T6251.F01
+        INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+        INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+        WHERE T6260.F07 = 'ZRZ'
+        AND T6251.F08 = 'S'
+        AND T6230.F20 = 'HKZ'
+        AND DATEDIFF(T6231.F18,SYSDATE()) > 0
+        <if test="type == 'plan'">
+            AND EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+        </if>
+        <if test="type == 'whitOutPlan'">
+            AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+        </if>
+        AND T6251.`F04` != #{userId}
+        AND T6230.`F02` != #{userId}
+        ORDER BY T6260.F03 DESC
+    </select>
+
+    <select id="getNewCreditId" parameterType="java.util.Map" resultType="UserNewCreditInfoForPlan">
+		SELECT
+			t6262.`F12` AS newCreditId,
+			t6262.`F05` AS amount,
+			t6230.`F20` AS `status`,
+			t6251.`F11` AS bidRecordId
+		FROM s62.`t6262` t6262
+		LEFT JOIN s62.`t6251` t6251 ON t6262.`F12` = t6251.`F01`
+		LEFT JOIN s62.`t6230` t6230 ON t6230.`F01` = t6251.`F03`
+		WHERE t6262.`F02` = #{applyforId}
+	</select>
+
+    <insert id="insertUserPlanProduct" parameterType="java.util.Map">
+		INSERT INTO flb.`t_user_plan_product`
+		SET
+		user_plan_id = #{userPlanId},
+		product_type = #{productType},
+		product_id = #{productId},
+		amount = #{amount},
+		tender_id = #{tenderId}
+	</insert>
+
+    <select id="getPlanBidList" parameterType="java.util.Map" resultType="UserBidInfoForPlan">
+        SELECT
+            t6230.F01 AS id,
+            t6230.F03 AS NAME,
+            t6230.F06 AS rate,
+            t6230.F05 AS loanAmount,
+            t6230.F07 AS voteAmount,
+            T6230.F09 AS month,
+            T6230.F32 AS loanDays,
+            T6230.F10 AS repaymentMode,
+            T6230.F28 AS isNoviceBid
+        FROM flb.`t_plan_product_lib` tppl
+        LEFT JOIN s62.`t6230` t6230 ON tppl.`product_id` = t6230.`F01`
+        LEFT JOIN s62.`t6238` t6238 ON t6238.`F01` = t6230.`F01`
+        INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+        WHERE tppl.`product_type` = 1
+        AND t6230.F20 = 'TBZ'
+        AND T6230.F07 >= 100
+        AND (T6230.F35 IS NULL OR T6230.F35 >= NOW())
+        <if test="type == 'xfxd'">
+            AND T6211.F05 = 'XFXD'
+        </if>
+        <if test="type == 'nxfxd'">
+            AND T6211.F05 != 'XFXD'
+        </if>
+        <if test="cycle != null and cycleType != null">
+            AND ((T6230.F09 = #{cycle} AND 'm' = #{cycleType}) OR (T6230.F32 = #{cycle} AND 'd' = #{cycleType}))
+        </if>
+        AND T6230.`F02` != #{userId}
+        AND T6230.`F38` = #{cgMode}
+        <if test="cgMode == 1">
+            ORDER BY (t6230.`F06`+t6238.`F09`) DESC
+        </if>
+        <if test="cgMode == 2">
+            ORDER BY t6230.F24 ASC
+        </if>
+    </select>
+
+</mapper>

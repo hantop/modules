@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition name="ancestor" template="/WEB-INF/page/index.jsp">
+        <put-attribute name="title" value="分利宝产品管理系统"/>
+        <put-attribute name="header" value="/WEB-INF/page/template/header.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu.jsp"/>
+    </definition>
+
+    <definition name="paginator" template="/WEB-INF/page/template/paginator.jsp" />
+    
+    <definition name="login" template="/WEB-INF/page/login.jsp"/>
+
+    <definition name="404" template="/WEB-INF/page/404.jsp"/>
+
+    <definition name="500" template="/WEB-INF/page/500.jsp"/>
+
+    <definition name="unauthorized" template="/WEB-INF/page/unauthorized.jsp"/>
+    
+    <definition extends="ancestor" name="index">
+        <put-attribute name="body" value="/WEB-INF/page/template/body.jsp"/>
+    </definition>
+</tiles-definitions>

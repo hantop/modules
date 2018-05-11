@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ConsumptionMapper">
+	<insert id="addOrder" parameterType="ConsumptionOrderEntity" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.consumption_order (user_id,amount,type_code) VALUES (#{userId},#{amount},#{typeCode})
+	</insert>
+	
+	<update id="updateOrder" parameterType="ConsumptionOrderEntity">
+		UPDATE flb.consumption_order 
+		<set>
+			<if test="submitTime != null">
+				submit_time = #{submitTime},
+			</if>
+			<if test="finishedTime != null">
+				finished_time = #{finishedTime},
+			</if>
+			<if test="paymentOrderId != null">
+				payment_order_id = #{paymentOrderId},
+			</if>
+		</set>
+		 WHERE id = #{id} LIMIT 1
+	</update>
+	
+	<select id="getConsumptionOrderById" parameterType="java.lang.Integer" resultType="ConsumptionOrderEntity">
+		SELECT
+			flb.consumption_order.id,
+			flb.consumption_order.create_time,
+			flb.consumption_order.submit_time,
+			flb.consumption_order.finished_time,
+			flb.consumption_order.user_id,
+			flb.consumption_order.amount,
+			flb.consumption_order.type_code,
+			flb.consumption_order.payment_order_id
+		FROM
+			flb.consumption_order
+		WHERE
+			flb.consumption_order.id = #{id} LIMIT 1
+	</select>
+	
+	<select id="getOrderByPaymentId" parameterType="java.lang.Integer" resultType="ConsumptionOrderEntity">
+		SELECT id,create_time createTime,user_id userId,amount,type_code typeCode FROM flb.consumption_order WHERE payment_order_id = #{paymentOrderId} LIMIT 1
+	</select>
+</mapper>

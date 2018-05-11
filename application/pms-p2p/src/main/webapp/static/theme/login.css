@@ -1,0 +1,191 @@
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+    background: url(../image/login-bg.jpg) no-repeat;
+    background-size: cover;
+    width: 100%;
+}
+
+::selection {
+    background: #333;
+    color: white;
+    text-shadow: none;
+}
+
+::-moz-selection {
+    background: #333;
+    color: white;
+    text-shadow: none;
+}
+
+::-webkit-selection {
+    background: #333;
+    color: white;
+    text-shadow: none;
+}
+
+.col-md-4 {
+    padding-top: 13%;
+}
+
+.footer {
+    font-family: "Microsoft Yahei";
+    position: absolute;
+    bottom: 1%;
+    width: 100%;
+}
+
+.copyright {
+    margin: 23px 0 13px;
+}
+
+.navbar-header {
+    float: none;
+}
+
+.navbar-default {
+    background-color: transparent;
+    border: none;
+}
+
+.navbar-brand {
+    float: none;
+    width: 100%;
+    display: block;
+    margin: auto;
+    height: auto;
+    padding: 0;
+    font-family: "Microsoft Yahei";
+    font-size: 16px;
+    letter-spacing: 11px;
+}
+
+.login-logo {
+    margin: auto;
+    width: 200px;
+    padding-top: 100px;
+    padding-left: 35px;
+}
+
+.navbar-brand b {
+    display: block;
+    font-weight: normal;
+    color: #fff;
+    padding-top: 15px;
+}
+
+.navbar > .container .navbar-brand, .navbar > .container-fluid .navbar-brand {
+    margin-left: 0;
+}
+
+.col-md-4 {
+    background: url(../image/login-box-bg.png) no-repeat;
+    height: 360px;
+    width: 420px;
+    padding: 80px 40px 98px;
+    margin-top: 10%;
+}
+
+.form-control {
+    height: 46px;
+    font-family: "Microsoft Yahei";
+}
+
+.form-group {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.btn {
+    width: 100%;
+    background: #ffcc99;
+    color: #fff;
+    font-family: "Microsoft Yahei";
+    font-size: 16px;
+}
+
+.btn-default {
+    background: #ff9900;
+    border-color: #ff9900;
+}
+
+.btn-default:hover {
+    background: #ff8900;
+    border-color: #ff8900;
+    color: #fff;
+}
+
+.container1 {
+    margin: auto;
+    width: 480px;
+    padding-left: 60px;
+}
+
+.z-index {
+    display: none;
+    position: absolute;
+    z-index: 222;
+    left: 0;
+    top: 0;
+}
+
+.login-logo b {
+    margin-left: 5px;
+    width: 165px;
+}
+
+.btn-default.focus, .btn-default:focus, .btn-default:visited {
+    background: #ff8900;
+    border-color: #ff8900;
+    color: #fff;
+}
+
+.btn-default.active, .btn-default:active, .open > .dropdown-toggle.btn-default {
+    background: #ff8900;
+    border-color: #ff8900;
+    color: #fff;
+}
+
+.btn-default.active.focus, .btn-default.active:focus, .btn-default.active:hover, .btn-default:active.focus, .btn-default:active:focus, .btn-default:active:hover, .open > .dropdown-toggle.btn-default.focus, .open > .dropdown-toggle.btn-default:focus, .open > .dropdown-toggle.btn-default:hover {
+    background: #ff8900;
+    border-color: #ff8900;
+    color: #fff;
+}
+
+.form-group input {
+    color: green;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.kaptcha {
+    width: 95%;
+    display: inline-block;
+    border-radius: 7px;
+    float: right;
+}
+
+.kaptcha-div {
+    width: 50%;
+    display: inline-block;
+}
+
+.captcha {
+    width: 95%;
+    display: inline-block;
+}
+
+.captcha-div {
+    width: 50%;
+    display: inline-block;
+    float: left;
+}
+
+.copyright {
+    color: #fff;
+    padding-left: 15px;
+}

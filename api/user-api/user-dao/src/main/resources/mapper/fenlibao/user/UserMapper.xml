@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserMapper">
+
+	<select id="get" parameterType="java.util.Map" resultType="UserInfoEntity">
+		SELECT
+		    a.F01 as userId,
+			a.F02 as username,
+			a.F03 AS password,
+			a.F04 as phone,
+			a.F14 AS nickName,
+			b.F02 AS fullName,
+			b.F05 as userUrl,
+			b.F07 as idCardEncrypt,
+			b.F04 as authStatus,
+			a.F12 AS isFirstLogin,
+			a.F09 AS registerTime,
+			a.F07 AS userStatus
+		FROM s61.t6110 as a left join s61.t6141 as b on a.F01=b.F01
+		<where>
+			<if test="userId != null">
+				a.F01 = #{userId}
+			</if>
+			<if test="phoneNum != null">
+				and a.F04 = #{phoneNum}
+			</if>
+		</where>
+		and  a.F06='ZRR'
+	</select>
+
+	<insert id="addBankCard" parameterType="UserBankCardVO">
+		INSERT INTO s61.t6114 (F02,F03,F06,F07,F08,F09,F10,F11,F12,reserved_phone) VALUES (#{userId},#{bankId},#{cardNo},#{cardNoEncrypt},#{QYStatus},NOW(),#{realNameAuthStatus},#{acName},#{acType},#{reservedPhone})
+	</insert>
+
+	<select id="getBankCard" parameterType="java.util.Map" resultType="UserBankCardVO">
+		SELECT c.F01 cardId,c.F02 userId,c.F03 bankId,c.F06 cardNo,c.F07 cardNoEncrypt,c.F08 QYStatus,c.F10 realNameAuthStatus,c.F11 acName,c.F12 acType,c.F13 authStatus,b.F04 bankCode,b.F02 bankName,c.reserved_phone reservedPhone
+		FROM s61.t6114 c LEFT JOIN s50.t5020 b ON c.F03 = b.F01
+		WHERE c.F02 = #{userId} LIMIT 1
+	</select>
+	
+	<update id="updateBankCard" parameterType="UserBankCardVO">
+	    UPDATE s61.t6114 
+    	<set>
+    		<if test="null != bankId &amp;&amp; bankId != 0">
+    			F03 = #{bankId},
+    		</if>
+    		<if test="null != cardNo">
+    			F06 = #{cardNo},
+    		</if>
+    		<if test="null != cardNoEncrypt">
+    			F07 = #{cardNoEncrypt},
+    		</if>
+    		<if test="null != QYStatus">
+    			F08 = #{QYStatus},
+    		</if>
+    		<if test="null != acName">
+    			F11 = #{acName},
+    		</if>
+    		<if test="null != authStatus">
+    			F13 = #{authStatus},
+    		</if>
+    		<if test="null != reservedPhone">
+    			reserved_phone = #{reservedPhone},
+    		</if>
+    	</set>
+		WHERE F02 = #{userId} limit 1
+	</update>
+	
+	<update id="updateAccount" parameterType="java.util.Map">
+	    UPDATE S61.T6101 SET F06 = #{amount} WHERE F01 = #{id}
+	</update>
+
+	<insert id="initFundAccount" parameterType="java.util.List">
+		  INSERT INTO s61.t6101 (F02,F03,F04,F05) VALUES
+		  <foreach collection="list" item="item" index="index" separator=",">
+			  (#{item.F02},#{item.F03},#{item.F04},#{item.F05})
+		  </foreach>
+	</insert>
+
+	<select id="getFundAccount" parameterType="java.util.Map" resultType="AssetAccount">
+		SELECT F01,F02,F03,F04,F05,F06,F07 FROM s61.t6101 WHERE F02 = #{userId} AND F03 = #{type} LIMIT 1 FOR UPDATE
+	</select>
+
+	<select id="getFundAccountByF04" resultType="AssetAccount">
+		SELECT F01,F02,F03,F04,F05,F06,F07 FROM s61.t6101 WHERE F04 = #{account} LIMIT 1 FOR UPDATE
+	</select>
+
+	<select id="countOverdue" resultType="int">
+		SELECT COUNT(1) FROM S62.T6252 WHERE F03 = #{userId} AND F08 <![CDATA[ < ]]> CURDATE() AND F09 = 'WH' LIMIT 1
+	</select>
+	
+    <select id="getAuthInfo" resultType="com.fenlibao.p2p.model.user.entity.T6118">
+		SELECT F01,F02,F03,F04,F05,F06,F07,F08 FROM s61.t6118 WHERE F01 = #{userId} LIMIT 1
+	</select>
+	
+	<select id="getBank" parameterType="com.fenlibao.p2p.model.user.entity.T5020" resultType="com.fenlibao.p2p.model.user.entity.T5020">
+    	SELECT F01,F02,F04,F06 FROM s50.t5020 
+    	<where>
+    	    F03='QY' 
+    		<if test="F01 != null">
+				and F01 = #{F01}
+			</if>
+			<if test="F04 != null">
+				and F04 = #{F04}
+			</if>
+			<if test="F06 != null">
+				and F06 = #{F06}
+			</if>
+    	</where> 
+    	LIMIT 1
+    </select>
+    
+    <select id="getPlatformFundAccount" parameterType="java.util.Map" resultType="AssetAccount">
+		SELECT F01,F02,F03,F04,F05,F06,F07 FROM s61.t6101 WHERE F02 = (SELECT F01 FROM S71.T7101 LIMIT 1) AND F03 = #{type} LIMIT 1 FOR UPDATE
+	</select>
+	
+	<select id="getTradePwdWrongCount" parameterType="int" resultType="int">
+		SELECT F11 FROM s61.t6110 WHERE F01 = #{userId} LIMIT 1
+	</select>
+    <update id="updateTradePwdWrongCount" parameterType="java.util.Map">
+        UPDATE s61.t6110 SET F11 =
+        <if test="isReset == true">
+            0
+        </if>
+        <if test="isReset == false">
+            F11+1
+        </if>
+        WHERE F01 = #{userId} LIMIT 1
+    </update>
+</mapper>

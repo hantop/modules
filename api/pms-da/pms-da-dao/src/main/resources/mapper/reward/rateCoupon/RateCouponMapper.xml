@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.reward.rateCoupon.RateCouponMapper">
+    <insert id="insertBidTypes">
+        INSERT INTO flb.t_coupon_bid_type(coupon_id, bid_type_id, create_time)
+        VALUES
+        <foreach collection="bidTypeIds" item="bidTypeId" separator=",">
+        (
+        #{couponId},
+        #{bidTypeId},
+        SYSDATE()
+        )
+        </foreach>
+    </insert>
+
+    <delete id="deleteBidTypes" parameterType="int">
+        DELETE FROM flb.t_coupon_bid_type
+        WHERE coupon_id = #{couponId}
+    </delete>
+
+    <select id="getBidTypeIdsByRateCouponId" parameterType="int" resultType="int">
+        SELECT
+          bid_type_id
+        FROM
+          flb.t_coupon_bid_type
+        WHERE
+          coupon_id = #{couponId}
+    </select>
+
+    <insert id="insertRateCoupon" parameterType="rateCouponEditForm" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO `flb`.`t_coupon`
+            (`coupon_code`,
+             `coupon_type_id`,
+             `effect_day`,
+             `max_invest_money`,
+             `min_invest_money`,
+             `max_invest_day`,
+             `min_invest_day`,
+             `scope`,
+             `create_time`,
+             `update_time`
+             )
+        VALUES (#{couponCode},
+                1,
+                #{effectDay},
+                #{maxInvestMoney},
+                #{minInvestMoney},
+                #{maxInvestDay},
+                #{minInvestDay},
+                #{scope},
+                SYSDATE(),
+                SYSDATE())
+    </insert>
+
+    <update id="updateRateCoupon" parameterType="rateCouponEditForm">
+        UPDATE flb.t_coupon
+        SET `coupon_code` = #{couponCode},
+            `effect_day` = #{effectDay},
+            `max_invest_money` = #{maxInvestMoney},
+            `min_invest_money` = #{minInvestMoney},
+            `max_invest_day` = #{maxInvestDay},
+            `min_invest_day` = #{minInvestDay},
+            `scope` = #{scope},
+            `update_time` = SYSDATE()
+        WHERE id = #{id}
+    </update>
+
+    <select id="getRateCouponByCode" parameterType="String" resultType="RateCoupon">
+        <include refid="queryRateCoupon"/>
+        <where>
+            coupon_type_id = 1
+            AND coupon_code = #{code}
+        </where>
+    </select>
+
+    <select id="getRateCouponById" parameterType="int" resultType="RateCoupon">
+        <include refid="queryRateCoupon"/>
+        <where>
+            coupon_type_id = 1
+            AND id = #{id}
+        </where>
+    </select>
+
+    <delete id="deleteRateCouponBidTypes" parameterType="List">
+        DELETE FROM flb.t_coupon_bid_type where coupon_id in
+        <foreach collection="list" item="item" open="(" separator=","
+                 close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <delete id="deleteRateCoupon" parameterType="List">
+        DELETE FROM flb.t_coupon where id in
+        <foreach collection="list" item="item" open="(" separator=","
+                 close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <sql id="queryRateCoupon">
+        SELECT
+        id,
+        coupon_code,
+        coupon_type_id,
+        effect_day,
+        max_invest_money,
+        min_invest_money,
+        max_invest_day,
+        min_invest_day,
+        scope,
+        create_time,
+        update_time
+        FROM
+        flb.t_coupon
+    </sql>
+
+    <select id="findRateCoupons" parameterType="RateCouponForm" resultType="RateCoupon">
+        <include refid="queryRateCoupon"/>
+        <where>
+            coupon_type_id = 1
+            <if test="couponCode != null and couponCode != ''">
+                AND coupon_code  like concat('%',trim(#{couponCode}),'%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+</mapper>

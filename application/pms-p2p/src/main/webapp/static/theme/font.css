@@ -1,0 +1,121 @@
+@font-face {
+    font-family: 'icomoon';
+    src:    url('/static/theme/fonts/icomoon.eot?mc0s0c');
+    src:    url('/static/theme/fonts/icomoon.eot?mc0s0c#iefix') format('embedded-opentype'),
+    url('/static/theme/fonts/icomoon.ttf?mc0s0c') format('truetype'),
+    url('/static/theme/fonts/icomoon.woff?mc0s0c') format('woff'),
+    url('/static/theme/fonts/icomoon.svg?mc0s0c#icomoon') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+[class^="icon-"], [class*=" icon-"] {
+    /* use !important to prevent issues with browser extensions that change fonts */
+    font-family: 'icomoon' !important;
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+
+    /* Better Font Rendering =========== */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-user:before {
+    content: "\f007";
+}
+.icon-power-off:before {
+    content: "\f011";
+}
+.icon-cog:before {
+    content: "\f013";
+}
+.icon-gear:before {
+    content: "\f013";
+}
+.icon-home:before {
+    content: "\f015";
+}
+.icon-pencil:before {
+    content: "\f040";
+}
+.icon-eye:before {
+    content: "\f06e";
+}
+.icon-bar-chart:before {
+    content: "\f080";
+}
+.icon-bar-chart-o:before {
+    content: "\f080";
+}
+.icon-wrench:before {
+    content: "\f0ad";
+}
+.icon-group:before {
+    content: "\f0c0";
+}
+.icon-users:before {
+    content: "\f0c0";
+}
+.icon-money:before {
+    content: "\f0d6";
+}
+.icon-caret-down:before {
+    content: "\f0d7";
+}
+.icon-gavel:before {
+    content: "\f0e3";
+}
+.icon-legal:before {
+    content: "\f0e3";
+}
+.icon-dashboard:before {
+    content: "\f0e4";
+}
+.icon-tachometer:before {
+    content: "\f0e4";
+}
+.icon-angle-right:before {
+    content: "\f105";
+}
+.icon-flag-checkered:before {
+    content: "\f11e";
+}
+.icon-chain-broken:before {
+    content: "\f127";
+}
+.icon-unlink:before {
+    content: "\f127";
+}
+.icon-cny:before {
+    content: "\f157";
+}
+.icon-jpy:before {
+    content: "\f157";
+}
+.icon-rmb:before {
+    content: "\f157";
+}
+.icon-yen:before {
+    content: "\f157";
+}
+.icon-stack-overflow:before {
+    content: "\f16c";
+}
+.icon-slack:before {
+    content: "\f198";
+}
+.icon-envelope-square:before {
+    content: "\f199";
+}
+.icon-paint-brush:before {
+    content: "\f1fc";
+}
+
+
+
+
+

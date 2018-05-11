@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="WebAccessMapper">
+	<insert id="insertAccessToken" parameterType="java.util.Map">
+		INSERT into flb.t_web_access(user_id,client_type,target_client_type,access_token,create_time,expire_time)
+		VALUES (#{userId},#{clientType},#{targetClientType},#{accessToken,jdbcType=VARCHAR},#{createDatetime},#{expireDatetime})
+	</insert>
+	
+	<select id="getAccessToken" parameterType="java.util.Map" resultType="AccessToken">
+		SELECT
+			t.id recordId,
+			t.user_id userId,
+			t.target_client_type targetClientType,
+			t.is_verified isVerified,
+			t.access_token accessToken,
+			t.create_time createTime,
+			t.expire_time expireTime
+		FROM
+			flb.t_web_access t
+		WHERE t.access_token = #{accessToken}
+	</select>
+
+	<update id="updateVaildAccessToken" parameterType="java.util.Map">
+		UPDATE flb.t_web_access
+		SET t_web_access.is_verified = #{isVerified},
+			t_web_access.verify_time = #{nowDatetime}
+		WHERE
+		t_web_access.id = #{recordId};
+	</update>
+	 
+</mapper>

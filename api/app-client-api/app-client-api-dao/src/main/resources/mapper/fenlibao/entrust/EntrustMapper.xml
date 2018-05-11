@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="EntrustMapper">
+    <!-- 未签名委托协议书-->
+    <select id="getUnSignAgreementList" resultType="com.fenlibao.p2p.model.vo.entrust.EntrustAgreementVo" parameterType="java.util.Map">
+        SELECT
+        tba.id,
+        tba.user_id as userId,
+        tba.business_id AS businessId,
+        tba.agreement_sign_id AS signId,
+        tba.flb_page_num AS flbPageNum,
+        tba.flb_sign_x AS flbSignX,
+        tba.flb_sign_y AS flbSignY,
+        tba.loan_page_num AS loanPageNum,
+        tba.loan_sign_x AS loanSignX,
+        tba.loan_sign_y AS loanSignY
+        FROM
+        flb.t_business_agreement AS tba
+        LEFT JOIN flb.t_xw_account xw ON tba.user_id = xw.user_id
+        WHERE
+        tba.agreement_sign_status = 'WQM'
+        AND tba.agreement_type = 1
+        AND xw.user_role = 'ENTRUST_BORROWERS'
+        limit 1000
+    </select>
+
+    <select id="lockAgreement" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.vo.entrust.EntrustAgreementVo">
+        SELECT
+        tba.id,
+        tba.user_id AS userId,
+        tba.business_id AS businessId,
+        tba.agreement_sign_id AS signId,
+        tba.flb_page_num AS flbPageNum,
+        tba.flb_sign_x AS flbSignX,
+        tba.flb_sign_y AS flbSignY,
+        tba.loan_page_num AS loanPageNum,
+        tba.loan_sign_x AS loanSignX,
+        tba.loan_sign_y AS loanSignY
+        FROM
+        flb.t_business_agreement AS tba
+        WHERE
+        tba.agreement_sign_status = 'WQM'
+        AND tba.agreement_type = 1
+        AND tba.id = #{id}
+        FOR UPDATE
+    </select>
+
+    <update id="updateUnSignAgreementById" parameterType="java.util.Map">
+        update flb.t_business_agreement tba
+        set tba.agreement_sign_status =  #{signStatus}, tba.update_time = now()
+        where tba.id = #{id}
+    </update>
+
+    <select id="getEntruetUserInfoByUserId" resultType="com.fenlibao.p2p.model.vo.entrust.EntrustUserInfoVo" parameterType="java.util.Map">
+        SELECT
+        t6110.F01 AS userId,
+        t6141.F07 AS userNo,
+        t6141.F02 AS userName,
+        t6110.F04 AS userPhone
+        FROM
+         s61.t6110 t6110 LEFT JOIN s61.t6141 t6141 ON t6110.F01 = t6141.F01
+        WHERE
+          t6110.F01 = #{userId}
+    </select>
+
+    <select id="getUnRegUser" resultType="UnRegUser" parameterType="java.util.Map">
+        SELECT
+        t6110.F01 AS userId,
+        t6110.F04 AS phone,
+        t6141.F07 AS idNum,
+        t6141.F02 AS userName
+        FROM
+         s61.t6110 t6110 LEFT JOIN s61.t6141 t6141 ON t6110.F01 = t6141.F01
+        WHERE
+          t6110.F01 = #{userId}
+        AND NOT EXISTS (
+        SELECT id FROM flb.t_user_reg_records WHERE t6110.F04 = t_user_reg_records.phone
+        AND t_user_reg_records.pf='SSQ'
+        )
+    </select>
+
+    <!-- 委托开户签名 备灾-->
+    <select id="getSignFailAgreementList" resultType="com.fenlibao.p2p.model.vo.entrust.EntrustAgreementVo" parameterType="java.util.Map">
+        SELECT
+        tba.id,
+        tba.user_id AS userId,
+        tba.business_id AS businessId,
+        tba.agreement_sign_id AS signId,
+        tba.flb_page_num AS flbPageNum,
+        tba.flb_sign_x AS flbSignX,
+        tba.flb_sign_y AS flbSignY,
+        tba.loan_page_num AS loanPageNum,
+        tba.loan_sign_x AS loanSignX,
+        tba.loan_sign_y AS loanSignY
+        FROM
+        flb.t_business_agreement AS tba
+        WHERE
+          tba.agreement_type = 1
+        AND
+        <![CDATA[
+        (tba.agreement_sign_status = 'QMSB'
+          OR (tba.agreement_sign_status = 'QMZ' AND DATE_ADD(tba.update_time,INTERVAL 1 HOUR) <= NOW()))
+        ]]>
+
+        limit 500
+    </select>
+
+    <select id="lockSignFailAgreement" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.vo.entrust.EntrustAgreementVo">
+       SELECT
+        tba.id,
+        tba.user_id AS userId,
+        tba.business_id AS businessId,
+        tba.agreement_sign_id AS signId,
+        tba.flb_page_num AS flbPageNum,
+        tba.flb_sign_x AS flbSignX,
+        tba.flb_sign_y AS flbSignY,
+        tba.loan_page_num AS loanPageNum,
+        tba.loan_sign_x AS loanSignX,
+        tba.loan_sign_y AS loanSignY
+        FROM
+        flb.t_business_agreement AS tba
+        WHERE
+          tba.agreement_type = 1
+        AND tba.id = #{id}
+        AND
+        <![CDATA[
+		 (tba.agreement_sign_status = 'QMSB'
+		OR (tba.agreement_sign_status = 'QMZ' AND DATE_ADD(tba.update_time,INTERVAL 1 HOUR) <= NOW()))
+		]]>
+        FOR UPDATE
+    </select>
+
+</mapper>

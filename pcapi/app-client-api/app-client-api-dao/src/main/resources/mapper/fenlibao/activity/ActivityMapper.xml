@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ActivityMapper">
+	<insert id="insertActivity" parameterType="java.util.Map">
+	  insert into flb.t_join_activity_record (activity_code, phone, join_time,regist_type)
+      values (#{activityCode,jdbcType=VARCHAR},#{phone,jdbcType=VARCHAR},#{joinTime,jdbcType=TIMESTAMP},#{registType,jdbcType=INTEGER})
+	</insert>
+	
+	<select id="validRegistActivity" parameterType="java.util.Map" resultType="java.lang.Integer">
+		select t.id FROM flb.t_join_activity_record t
+		WHERE t.activity_code = #{activityCode} and t.phone = #{phone} 
+		order by t.id limit 1
+	</select>
+
+	<!--判断是否在活动时间范围-->
+	<select id="isActivityTime" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.*
+		FROM
+			flb.t_activity a
+		WHERE
+			a.`code` = #{activityCode}
+			and  NOW() between a.time_start and a.time_end
+	</select>
+
+	<!--1周年活动投资记录-->
+	<select id="anniversaryInvestRecords" parameterType="java.util.Map" resultType="AnniversaryInvestRecord">
+		select a1.sumAmout,a1.phone from (
+		SELECT
+		a.user_id,a.phone,SUM(a.invest_amount) sumAmout,a.create_time
+		FROM
+		(
+		SELECT
+		r.invest_amount,
+		r.phone,
+		r.user_id,
+		r.create_time
+		FROM
+		flb.t_user_activity_anniversary_invest_record r
+		ORDER BY
+		r.create_time desc
+		)a
+		GROUP BY a.user_id
+		ORDER BY sumAmout desc,create_time asc ) a1
+		LIMIT 15
+	</select>
+
+	<!--1周年活动-我的冲榜信息接口-->
+	<select id="myAnniversaryInvestInfo" parameterType="java.util.Map" resultType="java.util.Map">
+		select IFNULL(e.mySumAmout,0) as total,COUNT(1) as rank from(
+		select * from (
+		SELECT
+		a.user_id,a.phone,SUM(a.invest_amount) sumAmout,a.create_time
+		FROM (
+		SELECT
+		r.invest_amount,
+		r.phone,
+		r.user_id,
+		r.create_time
+		FROM
+		flb.t_user_activity_anniversary_invest_record r
+		ORDER BY
+		r.create_time desc
+		)a GROUP BY a.user_id
+		) a1
+		, (
+		SELECT
+		SUM(b.invest_amount) as mySumAmout,b.create_time as mytime
+		from
+		(
+		SELECT
+		r.invest_amount,
+		r.phone,
+		r.user_id,
+		r.create_time
+		FROM
+		flb.t_user_activity_anniversary_invest_record r
+		WHERE
+		r.user_id = #{userId}
+		ORDER BY
+		r.create_time desc
+		) b
+		GROUP BY
+		b.user_id) d
+
+		) e
+		WHERE e.sumAmout <![CDATA[>]]> e.mySumAmout
+		or (e.sumAmout=e.mySumAmout AND e.create_time <![CDATA[<=]]> e.mytime)
+	</select>
+
+	<select id="getRedPacketList" parameterType="java.util.Map" resultType="RedPacketActivityVO">
+		SELECT
+		r.id id,
+		FLOOR(r.red_money) amount,
+		FLOOR(r.invest_money) investAmount,
+		r.invest_deadline investDeadline,
+		r.time_start startTime,
+		r.time_end endTime
+		<if test="userId != null">
+			,IFNULL(u.`status`,0) isReceive
+		</if>
+		FROM
+		flb.t_red_packet r
+		<if test="userId != null">
+			LEFT JOIN
+			(SELECT redpacket_id,`status` FROM flb.t_user_redpackets WHERE user_id = #{userId} AND DATE(DATE_ADD(create_timestamp,INTERVAL 1 DAY)) <![CDATA[ >= ]]> CURDATE() ORDER BY create_timestamp DESC)u ON r.id = u.redpacket_id
+		</if>
+		WHERE
+		r.activity_code = #{activityCode}
+		GROUP BY r.id ORDER BY r.invest_deadline,r.red_money ASC
+	</select>
+
+	<select id="getCurdateUnusedRedPacket" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT r.id FROM flb.t_user_redpackets u
+		INNER JOIN flb.t_red_packet r ON u.redpacket_id = r.id
+		WHERE u.user_id = #{userId}
+		AND r.activity_code = #{activityCode}
+		AND DATE(DATE_ADD(u.create_timestamp,INTERVAL 1 DAY)) <![CDATA[ >= ]]> CURDATE()
+		AND u.`status` = 1 LIMIT 1
+	</select>
+
+	<select id="getPhoneStatus" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(*) FROM flb.t_activity_user_phone u
+		WHERE u.user_id = #{userId}
+		AND u.`code` = 'cgkh' LIMIT 1
+	</select>
+
+	<insert id="addActivityUserPhone" parameterType="java.util.Map">
+		insert into flb.t_activity_user_phone (user_id, phone, code,create_time)
+		values (#{userId},#{phone},#{code},now())
+	</insert>
+</mapper>

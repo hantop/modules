@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SignNormalBidMapper">
+
+    <resultMap id="signNormalBidInfoResultMap" type="com.fenlibao.p2p.model.xinwang.entity.sign.SignNormalBidInfo">
+        <id column="bid" property="bid"></id>
+        <result column="no_sensitive_agreement" property="noSensitiveAgreement"></result>
+        <result column="sensitive_agreement" property="sensitiveAgreement"></result>
+        <result column="sensitive_sign_id" property="sensitiveSignId"></result>
+        <result column="sensitive_doc_id" property="sensitiveDocId"></result>
+        <result column="sensitive_is_upload" property="sensitiveIsUpload"></result>
+        <result column="sensitive_sign_status" property="sensitiveSignStatus"></result>
+        <result column="no_sensitive_sign_id" property="noSensitiveSignId"></result>
+        <result column="no_sensitive_doc_id" property="noSensitiveDocId"></result>
+        <result column="no_sensitive_is_upload" property="noSensitiveIsUpload"></result>
+        <result column="no_sensitive_sign_status" property="noSensitiveSignStatus"></result>
+        <result column="sensitive_document" property="sensitiveDocument"></result>
+        <result column="sensitive_is_download" property="sensitiveIsDownload"></result>
+        <result column="no_sensitive_document" property="noSensitiveDocument"></result>
+        <result column="no_sensitive_is_download" property="noSensitiveIsDownload"></result>
+        <result column="investors_pdf" property="investorsPdf"></result>
+        <result column="investors_pdf_md5" property="investorsPdfMd5"></result>
+        <result column="sensitive_investor_suc" property="sensitiveInvestorSuc"></result>
+        <result column="no_sensitive_investor_suc" property="noSensitiveInvestorSuc"></result>
+        <result column="operate_status" property="operateStatus"></result>
+        <result column="no_sensitive_is_close" property="noSensitiveIsClose"></result>
+        <result column="sensitive_is_close" property="sensitiveIsClose"></result>
+        <result column="create_time" property="createTime"></result>
+        <result column="update_time" property="updateTime"></result>
+    </resultMap>
+
+    <select id="getSignBidsByStatus" resultMap="signNormalBidInfoResultMap" parameterType="java.util.Map">
+        SELECT
+        saom.*, es.no_sensitive_agreement, es.sensitive_agreement
+        FROM
+          s62.sign_agreement_operate_msg saom INNER JOIN s62.electronic_signature es ON es.bid = saom.bid
+        WHERE
+          saom.operate_status = #{status}
+    </select>
+
+    <select id="lockSignBidInfoById" resultMap="signNormalBidInfoResultMap" parameterType="int">
+      SELECT saom.* FROM s62.sign_agreement_operate_msg saom WHERE saom.bid = #{bid} FOR UPDATE
+    </select>
+
+    <select id="getInvestorsByBid" resultType="com.fenlibao.p2p.model.xinwang.entity.sign.Investors" parameterType="int">
+      SELECT DISTINCT
+        t6141.F01 AS userId,
+        t6141.F02 AS name,
+        -- t6141.F07 AS idCard,
+        AES_DECRYPT(FROM_BASE64(t6141.F07), '80e36e39f34e678c') idCard,
+        t6110.F04 AS phone
+      FROM s62.t6250 t6250
+      INNER JOIN s61.t6110 t6110 ON t6250.F03 = t6110.F01
+      INNER JOIN s61.t6141 t6141 ON t6250.F03 = t6141.F01
+      WHERE
+        t6250.F02 = #{bid}
+      ORDER BY t6250.F06 ASC
+    </select>
+
+    <select id="getNotRegInvestorsByBid" resultType="com.fenlibao.p2p.model.xinwang.entity.sign.SignRegUserRecord" parameterType="int">
+        SELECT DISTINCT
+        t6141.F01 AS userId,
+        t6141.F02 AS mark,
+        t6141.F07 AS email,
+        t6110.F04 AS phone,
+        tutrr.ca_result AS caResult
+        FROM s62.t6250 t6250
+        INNER JOIN s61.t6110 t6110 ON t6250.F03 = t6110.F01
+        INNER JOIN s61.t6141 t6141 ON t6250.F03 = t6141.F01
+        LEFT JOIN flb.t_user_third_reg_records tutrr ON tutrr.user_id = t6141.F01
+        WHERE
+        t6250.F02 = #{bid}
+        ORDER BY t6250.F06 ASC
+    </select>
+
+    <select id="getSignUserInfoByBid" resultType="com.fenlibao.p2p.model.xinwang.entity.sign.SignUserInfo" parameterType="int">
+      SELECT
+        es.id AS id,
+        t6230.F02 AS userId,
+        es.bid AS bid,
+        es.liability_user_type AS liabilityUserType,
+        es.liability_user_name AS liabilityUserName,
+        es.liability_address AS liabilityAddress,
+        es.liability_phone AS liabilityPhone,
+        es.liability_id_card_no AS liabilityIdCardNo,
+        es.liability_unified_code AS liabilityUnifiedCode,
+        es.liability_juridical_person AS liabilityJuridicalPerson,
+        es.liability_official_seal_code AS liabilityOfficialSealCode,
+        es.liability_status AS liabilityStatus,
+        es.normal_user_name AS normalUserName,
+        es.normal_address AS normalAddress,
+        es.normal_phone AS normalPhone,
+        es.normal_juridical_person AS normalJuridicalPerson,
+        es.normal_unified_code AS normalUnidiedCode,
+        CASE WHEN t6110.F06 = 'ZRR' THEN 1 ELSE 0 END AS borrowerISPerson,
+        CASE WHEN t6110.F06 = 'ZRR' THEN t6110.F04 ELSE IFNULL(t6164.F04, t6164.F06) END AS enterprisePhone,
+        CASE WHEN t6110.F06 = 'ZRR' THEN t6141.F02 ELSE t6161.F04 END AS enterpriseUserName,
+        CASE WHEN t6110.F06 = 'ZRR' THEN t6141.F07 ELSE IFNULL(t6161.unified_code, t6161.F03) END AS borrowerIdCard,
+        CASE WHEN t6110.F06 = 'FZRR' THEN t6161.F13 ELSE NULL END AS borrowerLinkManIdCard,
+        CASE WHEN t6110.F06 = 'FZRR' THEN t6161.F11 ELSE NULL END AS borrowerLinkMan,
+        es.enterprise_official_seal_code AS enterpriseOfficialSealCode,
+        es.enterprise_status AS enterpriseStatus,
+        es.no_sensitive_agreement AS noSensitiveAgreement,
+        es.sensitive_agreement AS sensitiveAgreement,
+        es.liability_address_code AS liabilityAddressCode
+      FROM s62.electronic_signature es
+      INNER JOIN s62.t6230 t6230 ON t6230.F01 = es.bid
+      INNER JOIN s61.t6110 t6110 ON t6110.F01 = t6230.F02
+      LEFT JOIN s61.t6141 t6141 ON t6141.F01 = t6110.F01
+      LEFT JOIN s61.t6161 t6161 ON t6161.F01 = t6110.F01
+      LEFT JOIN s61.t6164 t6164 ON t6164.F01 = t6161.F01
+      WHERE
+        es.bid = #{bid}
+    </select>
+
+    <select id="getXFXDBids" resultType="com.fenlibao.p2p.model.xinwang.entity.sign.SignXFXDBid">
+        SELECT
+        tcb.bid AS bid,
+        tcb.agreement_sign_id AS signId,
+        tcb.agreement_sign_status AS signStatus
+        FROM flb.t_consume_bidinfo tcb
+        WHERE tcb.id <![CDATA[ > ]]> 2625200
+        AND
+        NOT EXISTS (SELECT * FROM s62.sign_agreement_download sad WHERE sad.bid = tcb.bid)
+        LIMIT 2000
+    </select>
+
+    <select id="getYqmXFXDBids" resultType="com.fenlibao.p2p.model.xinwang.entity.sign.SignXFXDBid">
+        SELECT
+        sad.bid AS bid,
+        tcb.agreement_sign_id AS signId,
+        sad.is_sign AS sign,
+        sad.no_sensitive_agreement AS noSensitiveAgreement,
+        sad.sensitive_agreement AS sensitiveAgreement,
+        tcb.agreement_sign_status AS signStatus
+        FROM s62.sign_agreement_download sad INNER JOIN flb.t_consume_bidinfo tcb ON sad.bid = tcb.bid
+        WHERE
+          sad.is_sign = 0 AND tcb.agreement_sign_status = 'YQM'
+        LIMIT 2000
+    </select>
+
+    <select id="getRegUserByEmail" resultType="com.fenlibao.p2p.model.xinwang.entity.sign.SignRegUserRecord" parameterType="java.util.Map">
+        SELECT
+          utrr.id AS id,
+          utrr.user_id AS userId,
+          utrr.phone AS phone,
+          utrr.email AS email,
+          utrr.platform AS platform,
+          utrr.platform_user_id AS platformUserId,
+          utrr.pwd AS pwd,
+          utrr.ca_result AS caResult,
+          utrr.mark AS mark,
+          utrr.create_time AS createTime,
+          utrr.update_time AS updateTime
+        FROM
+          flb.t_user_third_reg_records utrr
+        WHERE
+          utrr.email = #{email} AND
+          utrr.platform = #{platform}
+        LIMIT 1
+    </select>
+
+    <insert id="saveSignAgreementDownload" useGeneratedKeys="true" keyProperty="id">
+      INSERT INTO s62.sign_agreement_download SET
+       bid = #{bid},
+       is_sign = #{sign},
+       sign_id = #{signId},
+       no_sensitive_agreement = #{noSensitiveAgreement},
+       sensitive_agreement = #{sensitiveAgreement},
+       create_time = NOW()
+    </insert>
+
+    <insert id="saveSignAgreementDownloads" parameterType="java.util.List">
+        INSERT INTO s62.sign_agreement_download (bid, is_sign, sign_id, no_sensitive_agreement, sensitive_agreement, create_time)
+        VALUES
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.bid}, #{item.sign}, #{item.signId}, #{item.noSensitiveAgreement}, #{item.sensitiveAgreement}, NOW())
+        </foreach>
+    </insert>
+
+    <insert id="saveRegThirdPartUser" parameterType="java.util.Map">
+      INSERT INTO
+        flb.t_user_third_reg_records(user_id, phone, email, platform, platform_user_id, create_time)
+      VALUES
+        (#{userId}, #{phone}, #{email}, 1, #{platformUserId}, NOW())
+    </insert>
+
+    <update id="updateCaResult" parameterType="java.util.Map">
+        UPDATE flb.t_user_third_reg_records SET pwd = #{pwd}, ca_result = #{caResult} WHERE email = #{email}
+    </update>
+
+    <update id="updateSignAgreementDownloads" parameterType="java.util.List">
+        UPDATE s62.sign_agreement_download SET
+        is_sign = 1
+        WHERE bid IN (
+        <foreach collection="list" item="item" index="index" separator="," >
+            #{item.bid}
+        </foreach>
+        )
+    </update>
+
+    <update id="updateSignAgreementDownload">
+      UPDATE s62.sign_agreement_download SET
+          is_sign = #{sign}
+      WHERE bid = #{bid}
+    </update>
+
+    <update id="updateSignBidInfo" parameterType="com.fenlibao.p2p.model.xinwang.entity.sign.SignNormalBidInfo">
+        UPDATE s62.sign_agreement_operate_msg saom SET
+         sensitive_sign_id = #{sensitiveSignId},
+         sensitive_doc_id = #{sensitiveDocId},
+         sensitive_is_upload = #{sensitiveIsUpload},
+         sensitive_sign_status = #{sensitiveSignStatus},
+         no_sensitive_sign_id = #{noSensitiveSignId},
+         no_sensitive_doc_id = #{noSensitiveDocId},
+         no_sensitive_is_upload = #{noSensitiveIsUpload},
+         no_sensitive_sign_status = #{noSensitiveSignStatus},
+         sensitive_document = #{sensitiveDocument},
+         sensitive_is_download = #{sensitiveIsDownload},
+         no_sensitive_document = #{noSensitiveDocument},
+         no_sensitive_is_download = #{noSensitiveIsDownload},
+         investors_pdf = #{investorsPdf},
+         investors_pdf_md5 = #{investorsPdfMd5},
+         sensitive_investor_suc = #{sensitiveInvestorSuc},
+         no_sensitive_investor_suc = #{noSensitiveInvestorSuc},
+         operate_status = #{operateStatus},
+         update_time = NOW()
+        WHERE
+         saom.bid = #{bid}
+    </update>
+
+    <update id="updateSignBidInfoByMap" parameterType="java.util.Map">
+        UPDATE s62.sign_agreement_operate_msg saom SET
+        <if test="sensitiveSignId != null and sensitiveSignId !=''">
+            sensitive_sign_id = #{sensitiveSignId},
+        </if>
+        <if test="sensitiveDocId != null and sensitiveDocId !=''">
+            sensitive_doc_id = #{sensitiveDocId},
+        </if>
+        <if test="sensitiveIsUpload != null and sensitiveIsUpload !=''">
+            sensitive_is_upload = #{sensitiveIsUpload},
+        </if>
+        <if test="sensitiveSignStatus != null and sensitiveSignStatus !=''">
+            sensitive_sign_status = #{sensitiveSignStatus},
+        </if>
+        <if test="noSensitiveSignId != null and noSensitiveSignId !=''">
+            no_sensitive_sign_id = #{noSensitiveSignId},
+        </if>
+        <if test="noSensitiveDocId != null and noSensitiveDocId !=''">
+            no_sensitive_doc_id = #{noSensitiveDocId},
+        </if>
+        <if test="noSensitiveIsUpload != null and noSensitiveIsUpload !=''">
+            no_sensitive_is_upload = #{noSensitiveIsUpload},
+        </if>
+        <if test="noSensitiveSignStatus != null and noSensitiveSignStatus !=''">
+            no_sensitive_sign_status = #{noSensitiveSignStatus},
+        </if>
+        <if test="sensitiveDocument != null and sensitiveDocument !=''">
+            sensitive_document = #{sensitiveDocument},
+        </if>
+        <if test="sensitiveIsDownload != null and sensitiveIsDownload !=''">
+            sensitive_is_download = #{sensitiveIsDownload},
+        </if>
+        <if test="noSensitiveDocument != null and noSensitiveDocument !=''">
+            no_sensitive_document = #{noSensitiveDocument},
+        </if>
+        <if test="noSensitiveIsDownload != null and noSensitiveIsDownload !=''">
+            no_sensitive_is_download = #{noSensitiveIsDownload},
+        </if>
+        <if test="investorsPdf != null and investorsPdf !=''">
+            investors_pdf = #{investorsPdf},
+        </if>
+        <if test="investorsPdfMd5 != null and investorsPdfMd5 !=''">
+            investors_pdf_md5 = #{investorsPdfMd5},
+        </if>
+        <if test="sensitiveInvestorSuc != null and sensitiveInvestorSuc !=''">
+            sensitive_investor_suc = #{sensitiveInvestorSuc},
+        </if>
+        <if test="noSensitiveInvestorSuc != null and noSensitiveInvestorSuc !=''">
+            no_sensitive_investor_suc = #{noSensitiveInvestorSuc},
+        </if>
+        <if test="operateStatus != null and operateStatus !=''">
+            operate_status = #{operateStatus},
+        </if>
+        <if test="noSensitiveIsClose != null and noSensitiveIsClose !=''">
+            no_sensitive_is_close = #{noSensitiveIsClose},
+        </if>
+        <if test="sensitiveIsClose != null and sensitiveIsClose !=''">
+            sensitive_is_close = #{sensitiveIsClose},
+        </if>
+        update_time = NOW()
+        WHERE
+        saom.bid = #{bid}
+    </update>
+
+    <insert id="addSignBid" parameterType="java.lang.Integer">
+        INSERT INTO s62.sign_agreement_operate_msg(bid) values(#{bid})
+    </insert>
+</mapper>

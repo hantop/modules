@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <!-- 缓存管理 -->
+    <definition extends="ancestor" name="system/cache/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/cache/index.jsp"/>
+    </definition>
+</tiles-definitions>

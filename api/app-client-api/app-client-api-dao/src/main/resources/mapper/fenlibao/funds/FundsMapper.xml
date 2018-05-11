@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="FundsMapper">
+	<select id="lockAccount" parameterType="java.util.Map" resultType="UserAccount">
+		SELECT
+          F01 AS accountId,
+          F02 AS userId,
+          F03 AS type,
+          F04 AS account,
+          F05 AS accountName,
+          F06 AS balance,
+          F07 AS lastUpdatetime
+        FROM S61.T6101
+        WHERE F02 = #{userId}
+          AND F03 = #{accountType} LIMIT 1
+        FOR UPDATE 
+	</select>
+	<select id="getAccountId" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+            F01
+        FROM
+            s61.t6101
+        WHERE
+            F05 = #{account}
+            AND F03 = #{accountType}  LIMIT 1
+	</select>
+	<select id="lockAccountById" parameterType="java.lang.Integer" resultType="UserAccount">
+		SELECT
+          F01 AS accountId,
+          F06 AS balance
+        FROM
+          S61.T6101
+        WHERE
+          F01 = #{accountId}  LIMIT 1
+        FOR UPDATE
+	</select>
+	<insert id="insertFundsflowRecord"  useGeneratedKeys="true" keyProperty="id"  parameterType="java.util.Map">
+		INSERT INTO S61.T6102
+        SET F02 = #{fundsAccountId}, F03 = #{tradeTypeId}, F04 = #{relativelyAccountId}, 
+        	F05 = SYSDATE(), F06 = #{income}, F07 = #{expenditure}, F08 = #{balance}, F09 = #{remark}
+	</insert>
+	<update id="increaseOrSubtractAccountBalance" parameterType="java.util.Map">
+		UPDATE S61.T6101
+        SET F06 = F06 + #{amount},
+        F07 = SYSDATE()
+        WHERE F01 = #{accountId} LIMIT 1
+	</update>
+
+    <insert id="insertFundsflowRecord2" parameterType="FundsFlowEntity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO S61.T6102
+        SET F02 = #{fundsAccountId}, F03 = #{tradeTypeId}, F04 = #{userId},
+        F05 = SYSDATE(), F06 = #{income}, F08 = #{balance}, F09 = #{remark}
+    </insert>
+
+    <select id="getPlatformAccountId" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+            t6101.F01 AS accountId,
+            t6101.F06 AS balance
+        FROM
+            s61.t6101
+        INNER JOIN s71.t7101 ON t6101.F02 = t7101.F01
+        AND t6101.F03 = #{accountType}
+        LIMIT 1
+    </select>
+</mapper>

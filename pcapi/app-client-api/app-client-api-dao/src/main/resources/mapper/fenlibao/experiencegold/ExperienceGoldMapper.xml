@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ExperienceGoldMapper">
+	<select id="getTotalEarnings" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(amount),0) total FROM flb.t_experience_earnings WHERE earnings_date <![CDATA[ < ]]> CURDATE() AND user_id = #{userId}
+	</select>
+	<select id="getEarningsList" parameterType="java.util.Map" resultType="ExperienceGoldEarningsForm">
+		SELECT 
+		 earnings_date date,SUM(amount) amount FROM flb.t_experience_earnings
+		WHERE user_id = #{userId} AND earnings_date <![CDATA[ < ]]> CURDATE() 
+		<if test="timestamp != null">
+			AND earnings_date <![CDATA[ < ]]> #{timestamp} 
+		</if>
+		GROUP BY  earnings_date 
+		 order by earnings_date DESC limit 20
+	</select>
+	<select id="getEarningsYesterday" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(amount),0) FROM flb.t_experience_earnings WHERE earnings_date = DATE_SUB(CURDATE(),INTERVAL 1 DAY) AND user_id = #{userId}
+	</select>
+	<insert id="insertDayEarnings" parameterType="ExperienceGoldEarningsEntity">
+		INSERT INTO 
+			flb.t_experience_earnings (user_id,exp_id,amount,create_time,earnings_date,arrival_status) 
+	    VALUES 
+	    	(#{userId},#{expId},#{amount},#{createTime},#{earningsDate},#{arrivalStatus})
+	</insert>
+	<select id="getUserExperienceGoldList" resultType="UserExperienceGoldForm">
+		SELECT 
+			u.user_id userId,u.id expId,u.year_yield yield,g.experience_gold amount,g.effect_day validDate,u.start_time beginTime  
+		FROM 
+			flb.t_user_experience u INNER JOIN flb.t_experience_gold g ON u.gold_id = g.id WHERE u.yield_status = 'WJX' AND u.`status` = 2 
+		 AND DATE_FORMAT(u.start_time,'%Y-%m-%d') <![CDATA[ < ]]> CURDATE()
+	</select>
+	<update id="updateUserExperience" parameterType="java.util.Map">
+		UPDATE flb.t_user_experience SET 
+		<if test="status != null">
+			status = #{status}, 
+		</if>
+		yield_status = #{yieldStatus} WHERE id = #{id} LIMIT 1
+	</update>
+	<update id="updateExperienceEarningsStatus" parameterType="java.util.Map">
+		UPDATE 
+			flb.t_experience_earnings 
+		SET 
+			arrival_status = 'S' WHERE exp_id = #{expId} AND user_id = #{userId}
+	</update>
+	<update id="updateUserExperienceYieldStatus">
+		UPDATE flb.t_user_experience SET yield_status = #{yieldStatus} WHERE id = #{id}
+	</update>
+	<select id="getExpireUserExperienceGold" resultType="UserExperienceGoldForm">
+		SELECT 
+			u.user_id userId,u.id expId,u.year_yield yield,g.experience_gold amount,g.effect_day validDate  
+		FROM 
+			flb.t_user_experience u INNER JOIN flb.t_experience_gold g ON u.gold_id = g.id WHERE u.yield_status = 'JXZ' AND u.`status` = 2 
+		 AND DATE_FORMAT(u.end_time,'%Y-%m-%d') <![CDATA[ < ]]> CURDATE()
+	</select>
+	
+    <select id="getActivityByType" parameterType="java.util.Map" resultType="ExperienceGoldInfo">
+        SELECT
+        id AS expId,
+        year_yield AS yearYield,
+        experience_gold AS experienceGold,
+        experience_type AS experienceType,
+        effect_day AS effectDay
+        FROM
+        flb.t_experience_gold
+        <where>
+            AND experience_type = #{type}
+            AND #{currentTime} BETWEEN time_start AND time_end
+        </where>
+    </select>
+    <insert id="addUserExperienceGold" parameterType="java.util.Map">
+        INSERT INTO flb.t_user_experience
+        SET user_id = #{userId},
+        gold_id = #{expId},
+        STATUS = #{status},
+        start_time = #{startTime},
+        end_time = #{endTime},
+        year_yield = #{amount},
+        yield_status = #{yieldStatus},
+        grant_status = #{grantStatus}
+    </insert>
+    <insert id="addExpGoldFunding" parameterType="java.util.Map">
+        INSERT INTO flb.t_experience_funding
+        SET user_id = #{userId},
+        exp_id = #{expId},
+        create_time = #{createTime},
+        operator_type = #{status},
+        <if test="income != null">
+            income = #{income},
+        </if>
+        <if test="expenses != null">
+            expenses = #{expenses},
+        </if>
+        <if test="overage != null">
+            overage = #{overage},
+        </if>
+        remark = #{remark}
+    </insert>
+    <select id="getExperienceGolds" parameterType="java.util.Map" resultType="ExperienceGoldInfo">
+        SELECT
+        ue.id AS id,
+        exp.id AS expId,
+        exp.experience_type AS experienceType,
+        exp.experience_gold AS experienceGold,
+        exp.year_yield AS yearYield,
+        exp.effect_day AS effectDay,
+        ue.status AS status ,
+        ue.start_time AS startTime,
+        ue.end_time AS endTime
+        FROM flb.t_experience_gold AS exp,flb.t_user_experience AS ue
+        <where>
+            exp.id = ue.gold_id
+            AND ue.grant_status = 1
+            AND ue.user_id = #{userId, jdbcType=INTEGER}
+            <if test="type != null">
+                AND exp.experience_type = #{type}
+            </if>
+            <if test="status == 3">
+                AND ue.status = 2
+                AND ue.yield_status = 'YWC'
+            </if>
+            <if test="status == 1">
+                AND  ue.status = #{status}
+                <![CDATA[AND ue.end_time > now()]]>
+            </if>
+            <if test="status == 2">
+                AND  ue.status = #{status} AND ue.yield_status != 'YWC'
+            </if>
+            <if test="yieldStatus != null">
+                AND ue.yield_status = #{yieldStatus}
+            </if>
+            <if test="isUp == 0">
+                order by ue.end_time ASC,exp.experience_gold DESC limit 100
+            </if>
+            <if test="isUp == 1">
+                <![CDATA[AND ue.end_time > #{time}]]>  order by ue.end_time ASC,exp.experience_gold DESC limit 100
+            </if>
+        </where>
+    </select>
+</mapper>

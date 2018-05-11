@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserThirdpartyMapper">
+	<insert id="addUserThirdparty" parameterType="Map">
+		INSERT INTO flb.t_user_thirdparty(user_id, username, open_id,type,bind_time,bind_status)
+		VALUES(#{userId}, #{username}, #{openId},#{type},#{currentDate},#{bindStatus})
+	</insert>
+	
+	<select id="isBindThirdparty" parameterType="java.util.Map" resultType="UserThirdparty">
+		select t.user_id userId from flb.t_user_thirdparty t 
+		where t.open_id=#{openId} and t.user_id=#{userId} and t.type=#{type} and t.bind_status='QY' limit 1
+	</select>
+	
+	<select id="isBindThirdpartyOpenId" parameterType="java.util.Map" resultType="UserThirdparty">
+		select t.user_id userId from flb.t_user_thirdparty t 
+		where t.open_id=#{openId} and t.type=#{type} and t.bind_status='QY' limit 1
+	</select>
+	
+	<select id="getUserByOpenId" parameterType="java.util.Map" resultType="UserThirdparty">
+		select t.user_id userId from flb.t_user_thirdparty t 
+		where t.open_id=#{openId} and t.type=#{type} and t.bind_status='QY' limit 1
+	</select>
+	
+	<update id="cancelAutoLogin" parameterType="java.util.Map">
+		update flb.t_user_thirdparty t set t.bind_status='JY'  
+		where t.open_id=#{openId} and t.bind_status='QY'
+	</update>
+</mapper>

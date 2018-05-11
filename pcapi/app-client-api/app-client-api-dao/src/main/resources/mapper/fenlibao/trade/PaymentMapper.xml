@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PaymentMapper">
+	<insert id="addOrder" parameterType="PaymentOrderEntity" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.payment_order (submit_time,user_id,amount,channel_code,sn) VALUES (#{submitTime},#{userId},#{amount},#{channelCode},#{sn})
+	</insert>
+	
+	<update id="updateOrder" parameterType="PaymentOrderEntity">
+		UPDATE flb.payment_order
+		<set>
+			<if test="submitTime != null">
+				submit_time = #{submitTime}, 
+			</if>
+			<if test="finishedTime != null">
+				finished_time = #{finishedTime},
+			</if>
+			<if test=" sn != null and sn != ''">
+				sn = #{sn},
+			</if>
+			<if test="status != null">
+				_status = #{status}
+			</if>
+		</set>
+		<where>
+			id = #{id}
+		</where>
+	</update>
+	
+	<select id="lockOrder" parameterType="java.lang.Integer" resultType="PaymentOrderEntity">
+		SELECT id, create_time createTime, user_id userId, amount, _status `status` FROM flb.payment_order WHERE id = #{id} LIMIT 1 FOR UPDATE
+	</select>
+	
+</mapper>

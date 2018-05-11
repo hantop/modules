@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="AccessoryInfoMapper">
+	<insert id="insertAccessoryInfo" parameterType="AccessoryInfo">
+	  <selectKey resultType="java.lang.Integer" order="AFTER" keyProperty="id">
+          SELECT LAST_INSERT_ID() AS id
+       </selectKey>
+	  insert into S10._1050 (F02, F03, F04)
+      values (#{createTime,jdbcType=TIMESTAMP}, #{type,jdbcType=INTEGER},#{suffix,jdbcType=VARCHAR})
+	</insert>
+	
+	<select id="getAccessoryInfo" parameterType="int" resultType="AccessoryInfo">
+		select  F02 as createTime,F03 as type,F04 as suffix FROM S10._1050
+		WHERE F01 = #{id}
+	</select>
+</mapper>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration status="INFO" monitorInterval="30">
+    <Properties>
+        <Property name="log-path">${log-path}/schedule-p2p</Property>
+        <Property name="sms-log-path">${log-path}/sms</Property>
+        <Property name="zqzrAutoCancel-log-path">${log-path}/zqzrAutoCancel</Property>
+        <Property name="makeLoan-log-path">${log-path}/makeLoan</Property>
+    </Properties>
+    <appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <ThresholdFilter level="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout charset="UTF-8" pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+        </Console>
+        <File name="Log" fileName="${log-path}/schedule-p2p.log" append="false">
+            <PatternLayout charset="UTF-8" pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+        </File>
+        <RollingFile name="RollingFile" fileName="${log-path}/schedule.log" filePattern="logs/$${date:yyyy-MM}/app-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout charset="UTF-8" pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+            <SizeBasedTriggeringPolicy size="100MB"/>
+        </RollingFile>
+        
+        <File name="SmsFile" fileName="${sms-log-path}/schedule-p2p-sms.log" append="false">
+            <PatternLayout charset="UTF-8" pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+        </File>
+        <RollingFile name="SmsRollingFile" fileName="${sms-log-path}/sms.log" append="true" filePattern="${sms-log-path}/$${date:yyyy-MM}/sms-%d{MM-dd-yyyy}-%i.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"/>
+            <SizeBasedTriggeringPolicy size="100MB"/>
+            <TimeBasedTriggeringPolicy modulate="true" interval="24"/>
+        </RollingFile>
+        
+        <File name="zqzrAutoCancelFile" fileName="${zqzrAutoCancel-log-path}/schedule-p2p-zqzrAutoCance.log" append="false">
+            <PatternLayout charset="UTF-8" pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+        </File>
+        <RollingFile name="zqzrAutoCancelRollingFile" fileName="${zqzrAutoCancel-log-path}/zqzrAutoCance.log" append="true" filePattern="${zqzrAutoCancel-log-path}/$${date:yyyy-MM}/zqzrAutoCancel-%d{MM-dd-yyyy}-%i.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"/>
+            <SizeBasedTriggeringPolicy size="100MB"/>
+            <TimeBasedTriggeringPolicy modulate="true" interval="24"/>
+        </RollingFile>
+        
+        <File name="MakeLoanFile" fileName="${makeLoan-log-path}/schedule-p2p-makeLoan.log" append="false">
+            <PatternLayout charset="UTF-8" pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %class{36} %L %M - %msg%xEx%n"/>
+        </File>
+        <RollingFile name="MakeLoanRollingFile" fileName="${makeLoan-log-path}/flow.log" append="true" filePattern="${makeLoan-log-path}/$${date:yyyy-MM}/makeLoan-%d{MM-dd-yyyy}-%i.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"/>
+            <SizeBasedTriggeringPolicy size="100MB"/>
+            <TimeBasedTriggeringPolicy modulate="true" interval="24"/>
+        </RollingFile>
+    </appenders>
+    <loggers>
+        <!-- 短信扫描任务日志 -->
+        <logger name="com.fenlibao.p2p.schedule.task.SmsManagerJob" additivity="false" level="info">
+            <AppenderRef ref="SmsFile" level="info"/>
+            <AppenderRef ref="SmsRollingFile" level="info"/>
+        </logger>
+        
+          <!-- 债权转让自动下架定时任务任务日志 -->
+        <logger name="com.fenlibao.p2p.schedule.task.ZqzrAutoCancelJob" additivity="false" level="info">
+            <AppenderRef ref="zqzrAutoCancelFile" level="info"/>
+            <AppenderRef ref="zqzrAutoCancelRollingFile" level="info"/>
+        </logger>
+       
+        <!-- 债权转让自动下架操作日志-->
+        <logger name="com.fenlibao.p2p.service.creditassignment.impl.TenderTransferManageServiceImpl" additivity="false" level="info">
+            <AppenderRef ref="zqzrAutoCancelFile" level="info"/>
+            <AppenderRef ref="zqzrAutoCancelRollingFile" level="info"/>
+        </logger>
+        
+        <!-- 放款任务日志 -->
+        <logger name="com.fenlibao.p2p.schedule.task.xinwang.XWAutoConfirmTenderJob" additivity="false" level="info">
+            <AppenderRef ref="MakeLoanFile" level="info"/>
+            <AppenderRef ref="MakeLoanRollingFile" level="info"/>
+        </logger>
+        
+        <root level="DEBUG">
+            <appender-ref ref="Console"/>
+            <appender-ref ref="Log"/>
+            <appender-ref ref="RollingFile"/>
+        </root>
+    </loggers>
+</configuration>

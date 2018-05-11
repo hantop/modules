@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.ReplacePhoneMapper">
+    <select id="getReplacePhoneList" parameterType="java.util.Map" resultType="ReplacePhoneInfo">
+        SELECT
+        uid AS userId,
+        old_phone AS oldPhone,
+        new_phone AS newPhone,
+        operator,
+        create_time operatorTime
+        FROM
+        pms.da_replace_phone
+        <where>
+            <if test="phoneNum != null and phoneNum != ''">
+                AND (old_phone = #{phoneNum} or new_phone = #{phoneNum})
+            </if>
+            <if test="operator != null and operator != ''">
+                AND operator like '%${operator}%'
+            </if>
+            <if test="unbindStartTime != null">
+                <![CDATA[AND create_time >= #{unbindStartTime}]]>
+            </if>
+            <if test="unbindEndTime != null">
+                <![CDATA[AND create_time  <= #{unbindEndTime}]]>
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 查询当前号码是否注册 -->
+    <select id="getUserInfoByPhone" resultType="UserAuthInfo">
+        SELECT
+        u.F01 AS userId,
+        u.F04 AS phoneNum
+        FROM
+        s61.t6110 u
+        <where>
+            <if test="userId != null">
+                <![CDATA[AND u.F01 = #{userId}]]>
+            </if>
+            <if test="phoneNum != null">
+                <![CDATA[AND u.F04 = #{phoneNum}]]>
+            </if>
+            AND u.F06 = 'ZRR'
+            AND u.F13 = 'F'
+        </where>
+    </select>
+
+    <!-- 查询当前号码是否实名认证过 -->
+    <select id="getUserAuthByPhone" resultType="UserAuthInfo">
+        SELECT
+        u.F01 AS userId,
+        u.F04 AS phoneNum,
+        auth.f06 AS idcard,
+        auth.f07 AS idcardEncrypt
+        FROM
+        s61.t6110 u
+        INNER JOIN s61.t6141 auth ON auth.F01 = u.F01
+        <where>
+            AND u.F06 = 'ZRR'
+            AND auth.F04 = 'TG'
+            AND u.F04 = #{phoneNum}
+        </where>
+    </select>
+
+    <!-- 已经注册未实名的用户更换手机号码 -->
+    <update id="updateRegUserCancel" parameterType="java.util.Map">
+        UPDATE s61.t6110
+        SET F02 = #{account},F04 = #{phone},F07 = #{status}
+        WHERE F01 = #{userId}
+    </update>
+
+    <!-- 更新用户表 -->
+    <update id="updateUserPhone" parameterType="java.util.Map">
+        UPDATE s61.t6110
+        SET F02 = #{rePhone},F04 = #{rePhone}
+        WHERE F01 = #{userId}
+    </update>
+    <!-- 更新资金账号(t6101) -->
+    <update id="updateUserFundPhone" parameterType="java.util.Map">
+        UPDATE s61.t6101
+        SET F05 = #{rePhone}
+        WHERE F02 = #{userId}
+    </update>
+    <!-- 用户推广信息(t6111) -->
+    <update id="updateUserByRankingPhone" parameterType="java.util.Map">
+        UPDATE s61.t6111
+        SET F02 = #{rePhone}
+        WHERE F01 = #{userId}
+    </update>
+    <update id="updateUserRankingPhone" parameterType="java.util.Map">
+        UPDATE s61.t6111
+        SET F03 = #{rePhone}, F04 = #{rePhone}
+        WHERE F01 IN (SELECT * FROM (SELECT F01 FROM s61.t6111 WHERE F04=#{oldPhone}) AS temp )
+    </update>
+    <!-- 发放工资用户信息(t6193) -->
+    <update id="updateUserSalaryPhone" parameterType="java.util.Map">
+        UPDATE s61.t6193
+        SET F05 = #{rePhone}
+        WHERE F02 = #{userId}
+    </update>
+
+    <!-- 发放工资用户明细信息(t6195) -->
+    <update id="updateUserSalaryDetailPhone" parameterType="java.util.Map">
+        UPDATE s61.t6195
+        SET F06 = #{rePhone}
+        WHERE F03 = #{userId}
+    </update>
+
+    <!-- 更换手机号码记录 -->
+    <insert id="saveReplacePhone" parameterType="java.util.Map">
+        INSERT INTO pms.da_replace_phone(uid, old_phone, new_phone, create_time, operator)
+        VALUE(#{userId}, #{oldPhone}, #{rePhone}, NOW(), #{operator})
+    </insert>
+</mapper>

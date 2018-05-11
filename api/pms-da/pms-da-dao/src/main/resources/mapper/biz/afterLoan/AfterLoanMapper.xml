@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.afterLoan.AfterLoanMapper">
+
+    <select id="getBorrowInfoAferLoanByBidId" resultType="BorrowInfoAfterLoan">
+        SELECT
+            *
+        FROM
+          flb.borrower_info_after_loan
+        WHERE bid_id = #{bidId}
+    </select>
+
+    <insert id="saveOrUpdateBorrowerInfo" parameterType="BorrowInfoAfterLoan">
+        INSERT INTO
+        flb.borrower_info_after_loan
+        (
+            bid_id,
+            use_detail,
+            finance_detail,
+            repay_ability,
+            overdue_detail,
+            lawsuit_detail,
+            punish_detail,
+            create_time,
+            update_time,
+            publish_times
+        ) VALUES(
+
+            #{bidId},
+            #{useDetail},
+            #{financeDetail},
+            #{repayAbility},
+            #{overdueDetail},
+            #{lawsuitDetail},
+            #{punishDetail},
+            #{createTime},
+            #{updateTime},
+            #{publishTimes}
+        )
+        ON DUPLICATE KEY UPDATE
+            bid_id = #{bidId} ,
+            use_detail = #{useDetail} ,
+            finance_detail = #{financeDetail} ,
+            repay_ability = #{repayAbility} ,
+            overdue_detail = #{overdueDetail} ,
+            lawsuit_detail = #{lawsuitDetail} ,
+            punish_detail = #{punishDetail} ,
+            create_time =#{createTime} ,
+            update_time = #{updateTime} ,
+            publish_times = #{publishTimes}
+
+
+    </insert>
+
+
+    <select id="afterLoanList" resultType="LoanList">
+        SELECT
+        t6230.F01 bidId
+        /*标Id*/
+        ,
+        t6110.F01 borrowerId
+        /*借款用户Id*/
+        ,
+        CASE WHEN t6110.F06 = 'ZRR' THEN t6141.F02
+        WHEN t6110.F06 = 'FZRR' THEN t6161.F04 END AS borrowerName,
+        /*用户名称*/
+
+        t6110.F02 borrowerAccount
+        /*借款人账号*/
+        ,
+        t6230.F03 title
+        /*标的名称*/
+        ,
+        t6230.F05 borrowMoney
+        /*借款金额*/
+        ,
+        (t6230.F05 - t6230.F07) bidMoney
+        /*投标金额*/
+        ,
+        t6230.F06 investRate
+        /*投资年利率*/
+        ,
+        t6230.F20 bidStatus,
+        t6238.F06 borroweRate
+        /*借款年利率*/
+        ,
+        CASE
+        WHEN t6230.F09 > 0
+        THEN CONCAT(t6230.F09, '个月')
+        WHEN t6230.F32 > 0
+        THEN CONCAT(t6230.F32, '天')
+        END AS term
+        /*借款期限*/
+        ,
+        t6231.F11 fullDate
+        /*满标时间*/
+        ,
+        t6230.F10                   repayment,
+        loan_order.F03              orderStatus,
+        t6231.entrust_payee_user_id receiptID,
+        entrustPayAccount.F02       receiptAccount
+        FROM
+        s62.t6230
+        LEFT JOIN
+        s61.t6110
+        ON
+        t6110.F01 = t6230.F02
+        LEFT JOIN s61.t6141 ON t6110.F01 = t6141.F01
+        LEFT JOIN s61.t6161 ON t6110.F01 = t6161.F01
+        LEFT JOIN
+        s62.t6231
+        ON
+        t6230.f01 = t6231.F01
+        LEFT JOIN
+        s62.t6238
+        ON
+        t6230.f01 = t6238.F01
+        LEFT JOIN
+        flb.t_xw_confirm_tender confirm
+        ON
+        confirm.project_id = t6230.F01
+        LEFT JOIN
+        s65.t6501 loan_order
+        ON
+        confirm.order_id = loan_order.F01
+        LEFT JOIN
+        s61.t6110 entrustPayAccount
+        ON
+        t6231.entrust_payee_user_id = entrustPayAccount.F01
+
+        where
+         t6230.F36 = '0001'
+        AND t6230.F20 = 'HKZ'
+
+        and (t6230.F09>1 or t6230.F32>30)
+
+
+        <if test="borrowerName !=''and borrowerName !=null">
+            and (CASE WHEN t6110.F06 = 'ZRR' THEN t6141.F02 LIKE concat('%',#{borrowerName},'%')  WHEN t6110.F06 = 'FZRR' THEN  t6161.F04 LIKE concat('%',#{borrowerName},'%') END  )
+        </if>
+
+        <if test="borrowerAccount !=''and borrowerAccount !=null">
+            and  t6110.F02  LIKE concat('%',#{borrowerAccount},'%')
+        </if>
+
+
+
+        ORDER BY t6230.F24 DESC
+    </select>
+</mapper>

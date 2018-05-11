@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="DistrictMapper">
+	<!-- 获取省编码 -->
+	<select id="getProvinceCode" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT `code` FROM flb.t_district WHERE `level` = 'SHENG' AND province_id = 
+			(SELECT province_id FROM flb.t_district WHERE `code` = #{cityCode} LIMIT 1) LIMIT 1
+	</select>
+</mapper>

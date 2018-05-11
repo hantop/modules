@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserBaseInfoMapper">
+	<update id="updateUserBaseInfo" parameterType="java.util.Map">
+	   update s61.t6141
+	    <set>
+	       <if test="userName!=null">
+	         F02=#{userName,jdbcType=VARCHAR},
+	       </if>
+	       <if test="realNameAuth!=null">
+	         F04=#{realNameAuth,jdbcType=VARCHAR},
+	       </if>
+	       <if test="headPicCode!=null">
+	         F05=#{headPicCode,jdbcType=VARCHAR},
+	       </if>
+	       <if test="cardID!=null">
+	         F06=#{cardID,jdbcType=VARCHAR},
+	       </if>
+	       <if test="cardIDEncrypt!=null">
+	         F07=#{cardIDEncrypt,jdbcType=VARCHAR},
+	       </if>
+	       <if test="birthDate!=null">
+	         F08=#{birthDate,jdbcType=TIMESTAMP},
+	       </if>
+	    </set>
+		where F01=#{userId} 
+	</update>
+
+	<insert id="addUserBaseInfo" parameterType="java.util.Map">
+		INSERT INTO S61.T6141
+		  SET F01 = #{userId},
+		   	  F03 = #{type}
+	</insert>
+	
+	<select id="getBaseInfo" parameterType="java.lang.Integer" resultType="UserBaseInfo">
+		SELECT F01 userId,F02 userName,F04 realNameAuth,F06 cardID,F07 cardIDEncrypt FROM S61.T6141 WHERE F01= #{userId}
+	</select>
+	
+	<select id="getEnterpriseBaseInfo" parameterType="java.lang.Integer" resultType="EnterpriseBaseInfoVO">
+		SELECT F01 userId,F02 code,F03 license,F04 name,F07 registerYear,F11 corporate,F13 idCardNo FROM S61.T6161 WHERE F01= #{userId}
+	</select>
+
+	<select id="getPlatformUserNo" parameterType="java.util.Map" resultType="PlatformUser">
+		SELECT
+		xr.request_no AS requestNo,
+		xr.platform_user_no AS platformUserNo
+		FROM flb.t_xw_request xr
+        WHERE xr.interface_name IN ('PERSONAL_REGISTER_EXPAND','ENTERPRISE_REGISTER') AND  xr.state = #{status}
+        AND xr.request_time <![CDATA[<=]]> DATE_SUB(now(), INTERVAL 10 MINUTE)
+        limit #{limit}
+	</select>
+</mapper>

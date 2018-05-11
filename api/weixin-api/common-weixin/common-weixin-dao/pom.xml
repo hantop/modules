@@ -1,0 +1,28 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+	<groupId>com.fenlibao.weixin-api.common-weixin</groupId>
+    <artifactId>common-weixin-dao</artifactId>
+    <name>common-weixin-dao</name>
+	
+	<parent>
+        <artifactId>common-weixin</artifactId>
+        <groupId>com.fenlibao.weixin-api</groupId>
+		<version>1.0-SNAPSHOT</version>
+    </parent>
+	
+    <dependencies>
+        <dependency>
+            <groupId>com.fenlibao.weixin-api.common-weixin</groupId>
+            <artifactId>common-weixin-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+    </dependencies>	
+</project>

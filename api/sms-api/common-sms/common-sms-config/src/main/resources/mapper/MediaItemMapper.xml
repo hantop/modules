@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fenlibao.p2p.sms.persistence.MediaItemMapper" >
+  <resultMap id="BaseResultMap" type="com.fenlibao.p2p.sms.domain.MediaItem" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="create_time" property="createTime" jdbcType="BIGINT" />
+    <result column="media_type" property="mediaType" jdbcType="INTEGER" />
+    <result column="meta" property="meta" jdbcType="VARCHAR" />
+    <result column="message_data_id" property="messageDataId" jdbcType="BIGINT" />
+  </resultMap>
+  <resultMap id="ResultMapWithBLOBs" type="com.fenlibao.p2p.sms.domain.MediaItem" extends="BaseResultMap" >
+    <result column="data" property="data" jdbcType="LONGVARBINARY" />
+  </resultMap>
+  <sql id="Base_Column_List" >
+    id, create_time, media_type, meta, message_data_id
+  </sql>
+  <sql id="Blob_Column_List" >
+    data
+  </sql>
+  <select id="selectByPrimaryKey" resultMap="ResultMapWithBLOBs" parameterType="java.lang.Long" >
+    select 
+    <include refid="Base_Column_List" />
+    ,
+    <include refid="Blob_Column_List" />
+    from xuanwu_media_item
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long" >
+    delete from xuanwu_media_item
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  <insert id="insert" parameterType="com.fenlibao.p2p.sms.domain.MediaItem" >
+    <selectKey resultType="java.lang.Long" keyProperty="id" order="AFTER" >
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into xuanwu_media_item (create_time, media_type, meta, 
+      message_data_id, data)
+    values (#{createTime,jdbcType=BIGINT}, #{mediaType,jdbcType=INTEGER}, #{meta,jdbcType=VARCHAR}, 
+      #{messageDataId,jdbcType=BIGINT}, #{data,jdbcType=LONGVARBINARY})
+  </insert>
+  <insert id="insertSelective" parameterType="com.fenlibao.p2p.sms.domain.MediaItem" >
+    <selectKey resultType="java.lang.Long" keyProperty="id" order="AFTER" >
+      SELECT LAST_INSERT_ID()
+    </selectKey>
+    insert into xuanwu_media_item
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="createTime != null" >
+        create_time,
+      </if>
+      <if test="mediaType != null" >
+        media_type,
+      </if>
+      <if test="meta != null" >
+        meta,
+      </if>
+      <if test="messageDataId != null" >
+        message_data_id,
+      </if>
+      <if test="data != null" >
+        data,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="createTime != null" >
+        #{createTime,jdbcType=BIGINT},
+      </if>
+      <if test="mediaType != null" >
+        #{mediaType,jdbcType=INTEGER},
+      </if>
+      <if test="meta != null" >
+        #{meta,jdbcType=VARCHAR},
+      </if>
+      <if test="messageDataId != null" >
+        #{messageDataId,jdbcType=BIGINT},
+      </if>
+      <if test="data != null" >
+        #{data,jdbcType=LONGVARBINARY},
+      </if>
+    </trim>
+  </insert>
+  <update id="updateByPrimaryKeySelective" parameterType="com.fenlibao.p2p.sms.domain.MediaItem" >
+    update xuanwu_media_item
+    <set >
+      <if test="createTime != null" >
+        create_time = #{createTime,jdbcType=BIGINT},
+      </if>
+      <if test="mediaType != null" >
+        media_type = #{mediaType,jdbcType=INTEGER},
+      </if>
+      <if test="meta != null" >
+        meta = #{meta,jdbcType=VARCHAR},
+      </if>
+      <if test="messageDataId != null" >
+        message_data_id = #{messageDataId,jdbcType=BIGINT},
+      </if>
+      <if test="data != null" >
+        data = #{data,jdbcType=LONGVARBINARY},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKeyWithBLOBs" parameterType="com.fenlibao.p2p.sms.domain.MediaItem" >
+    update xuanwu_media_item
+    set create_time = #{createTime,jdbcType=BIGINT},
+      media_type = #{mediaType,jdbcType=INTEGER},
+      meta = #{meta,jdbcType=VARCHAR},
+      message_data_id = #{messageDataId,jdbcType=BIGINT},
+      data = #{data,jdbcType=LONGVARBINARY}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.fenlibao.p2p.sms.domain.MediaItem" >
+    update xuanwu_media_item
+    set create_time = #{createTime,jdbcType=BIGINT},
+      media_type = #{mediaType,jdbcType=INTEGER},
+      meta = #{meta,jdbcType=VARCHAR},
+      message_data_id = #{messageDataId,jdbcType=BIGINT}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>

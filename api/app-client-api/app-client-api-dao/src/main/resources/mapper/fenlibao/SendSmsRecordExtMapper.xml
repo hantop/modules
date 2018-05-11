@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SendSmsRecordExtMapper">
+	<insert id="insertSendSmsRecordExt" parameterType="SendSmsRecordExt">
+	  insert into S10._1041 (F01,F02)
+      values (#{id,jdbcType=INTEGER}, #{phoneNum,jdbcType=VARCHAR})
+	</insert>
+	
+</mapper>

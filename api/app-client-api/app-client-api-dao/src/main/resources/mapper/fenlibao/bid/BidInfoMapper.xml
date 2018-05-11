@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BidInfoMapper">
+
+	<select id="getBorrowerInfo" parameterType="int" resultType="BorrowerInfo">
+		SELECT 
+			 u.F01 userId,
+			 u.F13 infoMsg,
+			 i.F06 identify,
+			 u.F06 phone,
+			 a.F04 company,
+			 a.F14 income,
+			 u.F11 isHouseCertified,
+			 u.F12 isCarCertified
+		FROM s61.t6118 u
+		INNER JOIN s62.t6230 t ON t.F02 = u.F01
+		LEFT  JOIN s61.t6141 i ON i.F01 = u.F01
+		LEFT  JOIN s61.t6143 a ON a.F02 = u.F01
+		WHERE t.F01 = #{bidId}
+		LIMIT 1
+	</select>
+	
+	<!-- 判断用户是否已经投过标，防止重复提交 -->
+	<select id="getBidBaseInfoByUser" parameterType="java.util.Map" resultType="BidBaseInfo">
+		select s.F01 bidId,
+			   s.F03 bidTitle
+		from S62.T6250 t 
+		inner join S62.T6230 s on t.F02=s.F01
+		where t.F02=#{bidId} and t.F03=#{userId} 
+		limit 1
+	</select>
+
+	<!-- 查询标的基本信息 -->
+	<select id="getBidBaseInfo" parameterType="java.util.Map" resultType="BidBaseInfo">
+		SELECT
+			T6230.F01 bidId,
+			T6230.F03 bidTitle,
+			T6230.F04 bidType,
+			T6230.F05 loanAmount,
+			T6230.F06 yearYield,
+			T6230.F10 repaymentMode,
+			T6230.F20 bidStatus,
+			T6230.F09 loanMonths,
+			T6230.F32 loanDays,
+			T6230.F28 isNoviceBid,
+			T6230.F38 cgMode
+		FROM
+			S62.T6230
+		WHERE T6230.F01 = #{bidId}
+		LIMIT 1
+	</select>
+
+	<!-- 查询标的扩展信息 -->
+	<select id="getBidExtendInfo" parameterType="java.util.Map" resultType="BidExtendInfo">
+		SELECT
+			T6231.F02 totalRepaymentPeriod,
+			T6231.F03 leftRepaymentPeriod,
+			T6231.F06 nextRepaymentDate,
+			T6231.F09 remark,
+			T6231.F12 loanDte,
+			T6231.F13 payoffDate,
+			T6231.F17 interestDate,
+			T6231.F18 expireDate
+		FROM
+			S62.T6231
+		WHERE T6231.F01 = #{bidId}
+		LIMIT 1
+	</select>
+
+	<!-- 查询标的扩展信息 -->
+	<select id="getBidAllInfo" parameterType="java.util.Map" resultType="BidExtendInfo">
+		SELECT
+			T6230.F01 bidId,
+			T6230.F03 bidTitle,
+			T6230.F04 bidType,
+			T6230.F06 yearYield,
+			T6230.F10 repaymentMode,
+			T6230.F20 bidStatus,
+			T6230.F09 loanMonths,
+			T6230.F32 loanDays,
+			T6230.F28 isNoviceBid,
+			T6231.F02 totalRepaymentPeriod,
+			T6231.F03 leftRepaymentPeriod,
+			T6231.F06 nextRepaymentDate,
+			T6231.F09 remark,
+			T6231.F12 loanDte,
+			T6231.F13 payoffDate,
+			T6231.F17 interestDate,
+			T6231.F18 expireDate
+		FROM
+			S62.T6230
+		INNER JOIN
+			S62.T6231 ON t6231.F01=T6230.F01
+		WHERE T6230.F01 = #{bidId}
+		LIMIT 1
+	</select>
+
+	<select id="getNeedUpdateRows" resultType="com.fenlibao.p2p.model.entity.PfBidInfoVo">
+		SELECT
+		a.projectId AS bid,
+		b.F07 AS voteAmount,
+		b.F20 AS state,
+		c.F11 AS successTime
+		FROM
+		pf.v_bid_info a INNER JOIN  s62.t6230 b ON a.projectId = b.F01
+		INNER JOIN s62.t6231 c ON a.projectId = c.F01
+		WHERE
+		a.state NOT IN ('YJQ', 'YLB')
+		AND
+		( a.voteAmount <![CDATA[<>]]> b.F07 OR a.state <![CDATA[<>]]> b.F20 );
+	</select>
+
+	<update id="updateBidInfo" parameterType="java.util.List">
+		UPDATE pf.v_bid_info a
+			<trim prefix="set" suffixOverrides=",">
+				<trim prefix=" a.voteAmount = case " suffix=" end,">
+					<foreach collection="list" item="item" index="index">
+						when a.projectId = #{item.bid} then #{item.voteAmount}
+					</foreach>
+				</trim>
+				<trim prefix=" a.successTime = case " suffix=" end,">
+					<foreach collection="list" item="item" index="index">
+						when a.projectId = #{item.bid} then #{item.successTime}
+					</foreach>
+				</trim>
+				<trim prefix=" a.state = case " suffix=" end,">
+					<foreach collection="list" item="item" index="index">
+						when a.projectId = #{item.bid} then #{item.state}
+					</foreach>
+				</trim>
+			</trim>
+		WHERE
+			a.projectId IN
+			<foreach collection="list" separator="," item="i" index="index" open="(" close=")" >
+				#{i.bid}
+			</foreach>
+	</update>
+
+	<insert id="addBidInfo">
+		INSERT INTO pf.v_bid_info (
+			projectId,
+			title,
+			amount,
+			voteAmount,
+			interestRate,
+			typeName,
+			repaymentType,
+			province,
+			city,
+			userID,
+			amountUsedDesc,
+			successTime,
+			publishTime,
+			deadline_m,
+			deadline_d,
+			state
+		) SELECT
+			t6230.F01 AS projectId,
+			t6230.F03 AS title,
+			t6230.F05 AS amount,
+			t6230.F07 AS voteAmount,
+			t6230.F06 AS interestRate,
+			t6230.F33 AS typeName,
+			t6230.F10 AS repaymentType,
+			t5019.F06 AS province,
+			t5019.F07 AS city,
+			t6230.F02 AS userID,
+			t6231.F08 AS amountUsedDesc,
+			t6231.F11 AS successTime,
+			t6230.F22 AS publishTime,
+			t6230.F09 AS deadline_m,
+			t6230.F32 AS deadline_d,
+			t6230.F20 AS state
+		FROM
+			s62.t6230 
+		INNER JOIN s62.t6231  ON t6230.F01 =  t6231.F01
+		LEFT JOIN s50.t5019  ON t6231.F07 =  t5019.F01
+		WHERE 
+			t6230.F01<![CDATA[>=]]> 2000000
+		AND t6230.F05 <![CDATA[<=]]> 1000000
+		AND
+			t6230.F20 in('TBZ','DFK','HKZ','YJQ','YLB','YDF','DFZ')
+		AND
+		NOT EXISTS (
+				SELECT
+					v_bid_info.projectId
+				FROM
+					pf.v_bid_info
+		where v_bid_info.projectId= t6230.F01
+			)
+		</insert>
+		
+		
+		<insert id="addBidInvestrecords" >
+		INSERT INTO pf.v_bid_investrecords (
+			id,
+			projectId,
+			subscribeUserName,
+			amount,
+			addDate,
+			type
+		) SELECT
+			t6250.F01 AS id,
+			t6250.F02 AS projectId,
+			t6250.F03 AS subscribeUserName,
+			t6250.F04 AS amount,
+			t6250.F06 AS addDate,
+			t6250.F09 AS type
+		FROM
+			s62.t6250 
+		WHERE 
+			t6250.F02<![CDATA[>=]]> 2000000
+		 AND
+		 NOT EXISTS (
+				SELECT
+					v_bid_investrecords.id
+				FROM
+					pf.v_bid_investrecords
+		where v_bid_investrecords.id= t6250.F01
+			)
+		</insert>
+
+		<!-- 查询标的借款人信息 -->
+	<select id="getBidBorrowerInfo" parameterType="int" resultType="BidBorrowerInfo">
+		SELECT
+			a.id,
+			a.bid,
+			a.user_id,
+			a.borrower_info,
+			a.credit,
+			a.bank_transaction,
+			a.risk,
+			a.create_time,
+			a.update_time,
+			a.operator AS operator,
+			b.F02 AS realName,
+			b.F07 AS realCreditCardNum,
+			a.real_phone AS realPhone,
+			a.industry AS industry,
+			a.address AS address,
+			a.subject_nature AS subjectNature,
+			a.other_borrower_info AS otherBorrowerInfo
+		FROM
+			flb.t_bid_ext_user a LEFT JOIN s61.t6141 b ON(a.user_id = b.F01)
+		WHERE
+			a.bid = #{bidId}
+		LIMIT 1
+	</select>
+	
+	<select id="getTenderIdLatest" parameterType="java.util.Map" resultType="InvestShareVO">
+		SELECT F01 id,F04 buyAmount FROM s62.t6250 WHERE F02 = #{bidId} AND F03 = #{userId} ORDER BY F01 DESC limit 1
+	</select>
+
+	<select id="getUserInvestCount" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		select t.F01 from s62.t6250 t where t.F03 = #{userId} limit 1 union all select s.F01 from s62.t6251 s where s.F04 = #{userId} limit 1 union all select plan.id from flb.t_user_plan plan where plan.user_id = #{userId} limit 1
+	</select>
+	<select id="getTBZ" parameterType="java.lang.Integer" resultType="AutoTenderVO">
+		SELECT F01 bidId,F07 surplusAmount FROM s62.t6230 WHERE F20 = 'TBZ' AND F07 <![CDATA[ < ]]> 100 AND F07 <![CDATA[ > ]]> 0 AND F36 = '0001' AND F38 = #{versionType}
+	</select>
+	<select id="getDirectionalBid" parameterType="java.util.Map" resultType="DirectionalBid">
+		SELECT
+			flb.t_directional_bid.bid bidId,
+			flb.t_directional_bid.total_user_assets totalUserAssets,
+			flb.t_directional_bid.user_investing_amount userInvestAmount,
+			flb.t_directional_bid.user_accumulated_income userAccumulatedIncome,
+			flb.t_directional_bid.target_user targetUser,
+			s62.t6230.F39 anytimeQuit,
+			s62.t6231.F30 innerPlan
+		FROM
+			s62.t6230
+		LEFT JOIN flb.t_directional_bid ON flb.t_directional_bid.bid = s62.t6230.F01
+		LEFT JOIN s62.t6231 ON s62.t6230.F01 = s62.t6231.F01
+		WHERE
+			t6230.F01=#{bidId}
+	</select>
+
+	<!-- AND <![CDATA[ (((F05-F07)/F05) > 0.5 OR F22 < CURDATE()) ]]> -->
+	<select id="getCreditLoanTBZ" parameterType="java.util.Map" resultType="AutoTenderVO">
+		SELECT F01 bidId,F07 surplusAmount FROM s62.t6230 WHERE F20 = 'TBZ' AND F36 = '0002'
+		<if test="type != null and type == 1">
+			AND DATE_ADD(F22,INTERVAL 12 HOUR) <![CDATA[ < ]]> NOW()
+		</if>
+		AND F38 = #{versionType}
+		ORDER BY F22 ASC
+	</select>
+
+	<select id="getBidBorrowerInfoAfterLoan" parameterType="int" resultType="com.fenlibao.p2p.model.entity.bid.BidBorrowerInfoAfterLoan">
+		SELECT
+			bid_id AS bidId,
+			use_detail AS useDetail,
+			finance_detail AS financeDetail,
+			repay_ability AS repayAbility,
+			overdue_detail AS overdueDetail,
+			lawsuit_detail AS lawsuitDetail,
+			punish_detail AS punishDetail,
+			create_time AS createTime,
+			update_time AS updateTime,
+			publish_times AS publishTimes
+		FROM
+			flb.borrower_info_after_loan
+		WHERE
+			bid_id=#{bidId}
+		LIMIT 1
+	</select>
+
+	<select id="countPlanBindBid" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT count(*) FROM flb.`t_plan_product_lib` WHERE plan_id = #{planId} AND is_bind = 1 AND product_type = 1;
+	</select>
+
+	<select id="getPlanBindBidList" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT product_id FROM flb.`t_plan_product_lib` WHERE plan_id = #{planId} AND is_bind = 1 AND product_type = 1 LIMIT #{offset},#{pageSize};
+	</select>
+
+	<select id="getThridPartySunAmout" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+	SELECT
+	sum(v_bid_info.amount-v_bid_info.voteAmount)
+	FROM
+	pf.v_bid_info
+	<where>
+		<if test='successDate != null'>
+			 DATE_FORMAT(v_bid_info.successTime, '%Y-%m-%d') = DATE_FORMAT(#{successDate}, '%Y-%m-%d')
+		</if>
+	</where>
+	</select>
+	<select id="getThridPartyFristDate" parameterType="java.util.Map" resultType="java.util.Date">
+		SELECT MIN(t6230.F22) FROM s62.t6230
+	</select>
+	<select id="getThridPartyRandomDayBids" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+		t6230.F01 AS  id  ,t6230.F05 as amount
+		FROM
+		s62.t6230
+		WHERE DATE_FORMAT(t6230.F22,'%Y-%m-%d') = DATE_FORMAT(#{successDate},'%Y-%m-%d') AND t6230.F05 <![CDATA[<]]> 1000000 AND t6230.F20 IN('YJQ','YDF') ;
+	</select>
+
+	<insert id="addBidInfoFromHistory" parameterType="java.util.Map">
+		INSERT INTO pf.v_bid_info (
+		projectId,
+		title,
+		amount,
+		voteAmount,
+		interestRate,
+		typeName,
+		repaymentType,
+		province,
+		city,
+		userID,
+		amountUsedDesc,
+		successTime,
+		publishTime,
+		deadline_m,
+		deadline_d,
+		state
+		) SELECT
+		(ceiling(rand() * 10000000)) + t6230.F01 AS projectId,
+		t6230.F03 AS title,
+		t6230.F05 AS amount,
+		t6230.F07 AS voteAmount,
+		t6230.F06 AS interestRate,
+		t6230.F33 AS typeName,
+		t6230.F10 AS repaymentType,
+		t5019.F06 AS province,
+		t5019.F07 AS city,
+		t6230.F02 AS userID,
+		t6231.F08 AS amountUsedDesc,
+		DATE_SUB(NOW(),INTERVAL 1 DAY) AS successTime,
+		DATE_SUB(NOW(), INTERVAL TIMESTAMPDIFF(DAY,t6230.F22 ,t6231.F11)+1 DAY)  AS publishTime,
+		t6230.F09 AS deadline_m,
+		t6230.F32 AS deadline_d,
+		t6230.F20 AS state
+		FROM
+		s62.t6230
+		INNER JOIN s62.t6231  ON t6230.F01 =  t6231.F01
+		LEFT JOIN s50.t5019  ON t6231.F07 =  t5019.F01
+		WHERE
+		t6230.F01 in
+		<foreach item="item" index="index" collection="ids" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</insert>
+
+	<insert id="addBidInvestrecordsFromHistory" parameterType="java.util.List">
+		INSERT INTO pf.v_bid_investrecords (
+		id,
+		projectId,
+		subscribeUserName,
+		amount,
+		addDate,
+		type
+		) SELECT
+		(ceiling(rand() * 10000000)) + t6250.F01 AS id,
+		t6250.F02 AS projectId,
+		t6250.F03 AS subscribeUserName,
+		t6250.F04 AS amount,
+		t6250.F06 AS addDate,
+		t6250.F09 AS type
+		FROM
+		s62.t6250
+		WHERE
+		t6250.F02 IN
+		<foreach item="item" index="index" collection="ids" open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</insert>
+
+	<select id="getNoSensitiveAgreementPath" parameterType="java.util.Map" resultType="java.lang.String">
+		SELECT no_sensitive_agreement FROM s62.electronic_signature WHERE bid = #{bidId};
+	</select>
+
+	<select id="getSignIdAndDocId" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT no_sensitive_sign_id, no_sensitive_doc_id FROM s62.sign_agreement_operate_msg WHERE bid = #{bidId};
+	</select>
+
+
+
+</mapper>

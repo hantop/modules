@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.plan.PlanMapper">
+    <select id="listPlanLoan" resultType="PlanLoan">
+        SELECT
+            plan.id planId,
+            bid.F20 status,
+            bid_extend.F11 tenderfullTime
+        FROM
+            `flb`.`t_plan` plan
+        INNER JOIN flb.t_plan_bid t ON plan.id = t.plan_id
+        INNER JOIN s62.t6230 bid ON t.bid_id = bid.F01
+        INNER JOIN s62.T6231 bid_extend ON bid_extend.F01 = bid.F01
+        WHERE
+            bid.F20 IN('TBZ', 'DFK', 'HKZ', 'YJQ')
+        AND plan.id IN
+        <foreach collection="loanIds" item="loanId" open="(" separator="," close=")">
+            #{loanId}
+        </foreach>
+        ORDER BY plan.id
+    </select>
+
+    <select id="getPlanBidsStatus" parameterType="java.util.Map" resultType="PlanBidsStatus">
+        SELECT
+            t.plan_id AS planId,
+            t.bid_id AS bidId,
+            bid.F20 AS status,
+            bid.F07 AS surplusAmount,
+            bid.F06 AS yearYield
+        FROM
+            flb.t_plan_bid t
+        LEFT JOIN s62.t6230 bid ON t.bid_id = bid.F01
+        WHERE
+          t.plan_id = #{planId}
+    </select>
+
+    <select id="getLoans" parameterType="LoansForm" resultType="Loan">
+        SELECT
+            *
+        FROM
+        (
+            SELECT
+                pb.`id`,
+                pb.`plan_id`,
+                pb.`bid_id`,
+                pb.`create_time`,
+                pb.`update_time`,
+                bid.`F05` amount,
+                (
+                    CASE WHEN bid.F09 != 0 THEN bid.F09
+                    ELSE bid.F32
+                    END
+                ) cycle,
+                (
+                    CASE WHEN bid.F09 = 0 THEN 'd'
+                    ELSE 'm'
+                    END
+                ) cycleType,
+                bid.F03 loanName,
+                bid.F20 status,
+                plan.title planName,
+                plan.`rate`,
+                plan.`raised_rate`,
+                (
+                    SELECT
+                      MAX(extend.F11)
+                    FROM
+                      `flb`.`t_plan` p
+                    INNER JOIN flb.t_plan_bid t ON p.id = t.plan_id
+                    INNER JOIN s62.t6230 bid ON t.bid_id = bid.F01
+                    INNER JOIN s62.t6231 extend ON bid.`F01` = extend.F01
+                    WHERE p.`id` = plan.`id`
+                    AND p.id NOT IN(
+                        SELECT
+                          p.id
+                        FROM
+                          `flb`.`t_plan` p
+                        INNER JOIN flb.t_plan_bid t ON p.id = t.plan_id
+                        INNER JOIN s62.t6230 bid ON t.bid_id = bid.F01
+                        WHERE p.`id` = plan.id
+                        AND bid.F20 = 'TBZ'
+                        GROUP BY p.id
+                    )
+                ) tenderfullTime
+            FROM `flb`.`t_plan_bid` pb
+            INNER JOIN flb.t_plan plan ON plan.id = pb.plan_id
+            INNER JOIN s62.t6230 bid ON bid.`F01` = pb.`bid_id`
+            <where>
+                <if test="planId != null and planId != ''">
+                    pb.`plan_id` = #{planId}
+                </if>
+                <if test="loanName != null and loanName != ''">
+                    AND bid.F03 LIKE '%${loanName}%'
+                </if>
+                <if test="planName != null and planName != ''">
+                    AND plan.title LIKE '%${planName}%'
+                </if>
+                <if test="releaseStartDate != null and releaseStartDate != ''">
+                    <![CDATA[AND plan.`create_time` >= #{releaseStartDate}]]>
+                </if>
+                <if test="releaseEndDate != null and releaseEndDate != ''">
+                    <![CDATA[AND plan.`create_time` <= #{releaseEndDate}]]>
+                </if>
+                <if test="statuses != null">
+                    AND bid.F20 IN
+                    <foreach collection="statuses" item="status" open="(" separator="," close=")">
+                        #{status}
+                    </foreach>
+                </if>
+            </where>
+        ) t
+        <where>
+            <if test="tenderfullStartDate != null and tenderfullStartDate != ''">
+                <![CDATA[AND tenderfullTime >= #{tenderfullStartDate}]]>
+            </if>
+            <if test="tenderfullEndDate != null and tenderfullEndDate != ''">
+                <![CDATA[AND tenderfullTime <= #{tenderfullEndDate}]]>
+            </if>
+        </where>
+    </select>
+
+    <select id="getPlan" parameterType="java.lang.Integer" resultType="Plan">
+        <include refid="plan"/>
+        <where>
+            id = #{id}
+        </where>
+    </select>
+
+    <select id="getPlans" resultType="Plan">
+        SELECT
+            *
+        FROM 
+        (
+            SELECT
+                plan.`id`,
+                plan.`title`,
+                plan.`rate`,
+                plan.`raised_rate`,
+                plan.`amount`,
+                plan.`invested_amount`,
+                plan.`cycle`,
+                plan.`cycle_type`,
+                plan.`repayment_type`,
+                plan.`stage_num`,
+                plan.`description`,
+                plan.`is_novice_bid`,
+                (
+                   CASE
+                    WHEN bid.F20 = 'TBZ' AND <![CDATA[bid.F07 >= 100]]> THEN 'TBZ'
+                    WHEN bid.F20 = 'DFK' OR (bid.F20 = 'TBZ' AND <![CDATA[bid.F07 < 100]]>) THEN 'DFK'
+                    WHEN bid.F20 = 'HKZ' THEN bid.F20
+                    ELSE 'YJQ'
+                   END
+                ) status,
+                plan.`create_time`,
+                plan.`update_time`,
+                COUNT(*) loanNum,
+                (
+                    SELECT
+                      COUNT(DISTINCT pr.`user_id`)
+                    FROM
+                      flb.t_plan_record pr
+                    WHERE
+                      pr.`plan_id` = plan.`id`
+                ) investPeopleNum,
+                (
+                    SELECT
+                      MAX(extend.F11)
+                    FROM
+                      `flb`.`t_plan` p
+                    INNER JOIN flb.t_plan_bid t ON p.id = t.plan_id
+                    INNER JOIN s62.t6230 bid ON t.bid_id = bid.F01
+                    INNER JOIN s62.t6231 extend ON bid.`F01` = extend.F01
+                    WHERE p.`id` = plan.`id`
+                    AND p.id NOT IN(
+                        SELECT
+                          p.id
+                        FROM
+                          `flb`.`t_plan` p
+                        INNER JOIN flb.t_plan_bid t ON p.id = t.plan_id
+                        INNER JOIN s62.t6230 bid ON t.bid_id = bid.F01
+                        WHERE p.`id` = plan.`id`
+                        AND bid.F20 = 'TBZ'
+                        GROUP BY p.id
+                    )
+                ) tenderfullTime
+            FROM `flb`.`t_plan` plan
+            INNER JOIN flb.t_plan_bid t ON plan.id = t.plan_id
+            LEFT JOIN s62.t6230 bid ON t.bid_id = bid.F01
+            <where>
+                <if test="title != null and title !=''">
+                    AND plan.`title` like '%${title}%'
+                </if>
+                <if test="releaseStartDate != null and releaseStartDate != ''">
+                    <![CDATA[AND plan.`create_time` >= #{releaseStartDate}]]>
+                </if>
+                <if test="releaseEndDate != null and releaseEndDate != ''">
+                    <![CDATA[AND plan.`create_time` <= #{releaseEndDate}]]>
+                </if>
+                <if test="status != null and status != ''">
+                    AND bid.F20 = #{status}
+                    <choose>
+                        <when test="status == 'TBZ'">
+                            <![CDATA[AND bid.F07 >= 100]]>
+                        </when>
+                        <when test="status == 'DFK'">
+                            OR (bid.F20 = 'TBZ' <![CDATA[AND bid.F07 <= 100]]>)
+                        </when>
+                    </choose>
+                </if>
+            </where>
+            GROUP BY plan.id
+            ORDER BY plan.`create_time` DESC
+        ) t
+        <where>
+            <if test="tenderfullStartDate != null and tenderfullStartDate != ''">
+                    <![CDATA[AND tenderfullTime >= #{tenderfullStartDate}]]>
+                </if>
+            <if test="tenderfullEndDate != null and tenderfullEndDate != ''">
+                <![CDATA[AND tenderfullTime <= #{tenderfullEndDate}]]>
+            </if>
+        </where>
+    </select>
+
+    <sql id="plan">
+        SELECT
+          plan.`id`,
+          plan.`title`,
+          plan.`rate`,
+          plan.`raised_rate`,
+          plan.`amount`,
+          plan.`invested_amount`,
+          plan.`cycle`,
+          plan.`cycle_type`,
+          plan.`repayment_type`,
+          plan.`stage_num`,
+          plan.`description`,
+          plan.`is_novice_bid`,
+          plan.`status`,
+          plan.`create_time`,
+          plan.`update_time`
+        FROM `flb`.`t_plan` plan
+    </sql>
+</mapper>

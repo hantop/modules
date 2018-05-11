@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserCreditMapper">
+	<insert id="addUserCredit" parameterType="java.util.Map">
+		INSERT INTO S61.T6116
+		  SET F01 = #{userId}
+	</insert>
+
+	<insert id="addUserCreditArchive" parameterType="java.util.Map">
+		INSERT INTO S61.T6144
+		  SET F01 = #{userId}
+	</insert>
+
+	<select id="getCreditAuthItem" resultType="int">
+		SELECT F01 FROM S51.T5123
+	</select>
+
+	<insert id="addUserCreditAuthInfo" parameterType="java.util.Map">
+		INSERT INTO S61.T6120
+		  SET
+			  F01 = #{userId},
+			  F02 = #{creditAuthInfoId}
+	</insert>
+</mapper>

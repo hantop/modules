@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TenderShareMapper">
+    <insert id="addTenderShare" parameterType="TenderShareEntity">
+        INSERT INTO
+          flb.t_tender_share_record (tender_id,user_id,_code,quantity,remaining_qty,effective_time,setting_id,item_type)
+        VALUES
+          (#{tenderId},#{userId},#{code},#{quantity},#{remainingQty},#{effectiveTime},#{settingId},#{itemType})
+    </insert>
+    
+    <insert id="addReceiveRecord" parameterType="ReceiveTenderShareEntity">
+        INSERT INTO flb.t_tender_share_record_get (
+            phone_num,
+            investment_share_id,
+            red_envelope_id,
+            coupon_type,
+            reward_set_id
+        )
+        VALUES
+            (
+                #{phoneNum},
+                #{investmentShareId},
+                #{redEnvelopeId},
+                #{couponType},
+                (
+                    SELECT
+                        reward.id
+                    FROM
+                        flb.t_tender_share_setting_reward reward
+                    INNER JOIN flb.t_tender_share_setting setting ON setting.id = reward.setting_id
+                    INNER JOIN flb.t_tender_share_record record ON record.setting_id = setting.id
+                    WHERE
+                        record.id = #{investmentShareId}
+                    AND reward.reward_id = #{redEnvelopeId}
+                    AND reward.reward_type = #{couponType}
+                )
+            )
+    </insert>
+
+    <select id="getRecordByCode" parameterType="java.lang.String" resultType="TenderShareEntity">
+        SELECT
+          id,tender_id tenderId,user_id userId,_code code,quantity,remaining_qty remainingQty,create_time createTime,effective_time effectiveTime,setting_id settingId
+        FROM
+          flb.t_tender_share_record WHERE _code = #{code} limit 1 FOR UPDATE
+    </select>
+    
+    <select id="getReceiveCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM flb.t_tender_share_record_get WHERE phone_num = #{phoneNum} AND investment_share_id = #{investmentShareId} LIMIT 1
+    </select>
+    
+    <update id="updateShareRemainingQty" parameterType="java.util.Map">
+        UPDATE flb.t_tender_share_record SET remaining_qty = #{remainingQty} WHERE id = #{id} LIMIT 1
+    </update>
+    
+    <select id="getShareCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM flb.t_tender_share_record WHERE user_id = #{userId} AND tender_id = #{tenderId} AND item_type = #{itemType} LIMIT 1
+    </select>
+    
+    <select id="getRedEnvelopeQty" parameterType="java.lang.String" resultType="ReceiveTenderShareEntity">
+        SELECT red_envelope_id redEnvelopeId,COUNT(1) redEnvelopeQty,coupon_type couponType FROM flb.t_tender_share_record_get WHERE phone_num = #{phoneNum} GROUP BY red_envelope_id,coupon_type
+    </select>
+
+    <select id="getRestShareNum" parameterType="java.lang.String" resultType="ShareRecordVO">
+        SELECT COUNT(1) total,g.red_envelope_id redEnvelopId,record.id recordId
+            FROM flb.t_tender_share_record_get g
+                INNER JOIN flb.t_tender_share_record record ON record.id = g.investment_share_id
+            WHERE
+                record._code = #{redEnvelopeCode}
+            GROUP BY g.red_envelope_id
+    </select>
+</mapper>

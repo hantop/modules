@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SalaryMapper">
+	<select id="getUserEarnByDate" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(T6252.F07),0)
+		FROM
+			s62.T6252,
+			s62.T6230,
+			s61.T6110,
+			s62.T6211
+		WHERE
+			T6211.F05 = 'XJB'
+		AND T6211.F01 = T6230.F04
+		AND T6252.F02 = T6230.F01
+		AND T6252.F04 = T6110.F01
+		AND T6110.F01 = #{userId}
+		AND T6252.F05 IN <foreach collection="feeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND T6252.F09 = #{status}
+		AND T6230.F27 = 'F'
+		AND T6110.F06 = #{userType}
+		AND (DATEDIFF(T6252.F10, DATE(#{earnDate})) = 0) limit 1
+	</select>
+
+	<select id="getXjbInvestSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(tender.F04), 0)
+		FROM s62.t6230 bid
+		LEFT JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+		LEFT JOIN s62.t6250 tender ON bid.F01 = tender.F02
+		WHERE bid_type.F05 = 'XJB'
+		AND bid_type.F03 = 'QY'
+		AND bid.F20 = 'HKZ'
+		AND tender.F03 = #{userId} limit 1
+	</select>
+
+	<!-- 薪金宝投资冻结总额 -->
+	<select id="getXjbTenderFreezeSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+		SELECT
+		IFNULL(SUM(tender.F04), 0)
+		FROM s62.t6230 bid
+		LEFT JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+		LEFT JOIN s62.t6250 tender ON bid.F01 = tender.F02
+		WHERE bid_type.F05 = 'XJB'
+		AND bid_type.F03 = 'QY'
+		AND bid.F20 IN('TBZ', 'DFK')
+		AND tender.F03 = #{userId}
+	</select>
+
+	<!-- 
+	<select id="getSalarInfo" parameterType="java.util.Map" resultType="SalaryInfo">
+		SELECT T6230.F01 AS id,T6230.F03 AS name, T6230.F06 AS rate,T6230.F31 AS fundraisDate
+        FROM S62.T6230 INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02 INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04 
+        WHERE T6211.F05=#{proType} 
+        <if test="status!=null">
+           and t6230.F20 = #{status}
+        </if>
+        <if test="month!=null">
+          and T6230.F09=#{month}
+        </if>
+        <if test="days!=null">
+          and DAYOFMONTH(T6230.F31)=#{days}
+        </if>
+          order by T6230.F31 limit 1
+		
+	</select>
+	 -->
+	 
+	 <select id="getSalarInfo" parameterType="java.util.Map" resultType="SalaryInfo">
+		select * from (
+			(SELECT T6230.F01 AS id,T6230.F03 AS name, T6230.F06 AS rate,T6230.F31 AS fundraisDate
+	        FROM S62.T6230 INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02 INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04 
+	        WHERE T6211.F05=#{proType} 
+	        and t6230.F20 = 'TBZ' 
+	        and T6230.F09=#{month} 
+	        <![CDATA[AND #{currentDate} <= T6230.F31 ]]>  
+	        order by T6230.F31 limit 1)
+			union
+			(SELECT T6230.F01 AS id,T6230.F03 AS name, T6230.F06 AS rate,T6230.F31 AS fundraisDate
+	        FROM S62.T6230 INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02 INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04 
+	        WHERE T6211.F05=#{proType} 
+	        and T6230.F09=#{month} 
+	        <![CDATA[AND  #{currentDate} > T6230.F31 ]]>  
+	        order by T6230.F31 desc limit 1)
+        )
+        info limit 1
+	</select>
+	 
+	 
+	<select id="getSalaryDetail" parameterType="java.util.Map" resultType="SalaryInfo">
+		SELECT T6230.F01 AS id, T6230.F02 AS userId, T6230.F03 AS name,  T6230.F06 AS rate,T6230.F31 AS fundraisDate,T6230.F05 totalSum,T6230.F07 leftSum
+        FROM S62.T6230 INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01 INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02 INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+        WHERE t6230.F01=#{id} and T6211.F05=#{proType} limit 1
+	</select>
+	
+	<!-- 获取标信息 
+	<select id="getBidInfo" parameterType="java.util.Map"  resultType="BidInfo">
+	 SELECT * FROM T6230 t
+	 WHERE F01 = #{bidId} AND F20= #{bidStatus}
+	</select>
+	-->
+	<!-- 获取用户账户信息 
+	<select id="getUserAccountInfo" parameterType="java.util.Map"  resultType="UserAccountInfo">
+	 SELECT F01, F02, F03, F06
+	 FROM S61.T610
+	 WHERE T6101.F02=#{userId} AND T6101.F03=#{accountType}
+	</select>
+	-->
+	<!-- OrderHanderDao start
+	<insert id="insertOrderPrimary" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+ 		insert into T6501(F02, F03, F) values(#{orderType}, #{orderStatus},  #{orderSource},  #{userId})
+	</insert>
+	 -->
+	
+	<!-- 往期薪金宝计划列表 -->
+	<select id="getSalaryPlanHistoryList" parameterType="java.util.Map"  resultType="BidInfo">
+		 select  t.F01 bidId,t.F03 bidTitle,t.F06 yearRate, DAYOFMONTH(t.F31) investDay,t.F20 bidStatus,t.F09 loandays,t.F31 stopBidDay
+		 from S62.T6230 t inner join S62.T6211 p on t.F04=p.F01
+		 where p.F05=#{bidType} and p.F03='QY' and t.F09 =12 and t.F20 in ('DFK','HKZ','YJQ','YDF')
+		 <if test="timestamp !=null ">
+			<![CDATA[AND t.F22 < #{timestamp}]]>  
+		</if>
+		order by t.F31 desc limit 10
+	</select>
+	
+	<!-- 用户薪金宝计划列表 -->
+	<select id="getUserXjbBidList" parameterType="java.util.Map"  resultType="UserXjbBidInfo">
+		select r.id id,t.F03 bidTitle,t.F06 yearRate,t.F09 loandays,t.F22 publishTime,r.f_join_time userJoinTime,DATE_ADD(t.F31, INTERVAL t.F09 MONTH) planStopTime, r.f_amount monthAmount,r.f_day investDay
+		from flb.t_join_record r
+		left join S62.t6230 t on r.f_bid_id=t.F01 
+		where r.f_user_id=#{userId} and r.f_type=2 and t.F20 in ('TBZ','DFK','HKZ','YJQ','YDF')
+		<if test="investDay!=null and investDay != 0 ">
+			<![CDATA[ AND r.f_day = #{investDay}]]> 
+		</if>
+	 	<if test="timestamp != null ">
+			<![CDATA[ AND r.f_join_time < #{timestamp}]]>
+		</if>
+		order by r.f_join_time desc limit 10
+	</select>
+	
+	<!-- 获取用户薪金宝购买债券记录  此处修改是因为计算用户投资以T6250为主  zhaohongfeng  2015-9-5 10:17:47  
+	<select id="getBuyBidList" parameterType="java.util.Map"  resultType="UserXjbBidInfo">
+		select z.F04 monthAmount, t.F09 loandays,t.F06 yearRate 
+		from S62.T6250 z 
+		inner join S62.T6230 t on z.F02=t.F01 
+		inner join S62.T6211 p on t.F04=p.F01
+		where p.F05 = #{bidType} 
+		and z.F03 = #{userId}
+		and DAYOFMONTH(t.F31) = #{period}
+	</select>
+	-->
+
+	<!-- 获取用户薪金宝购买债券记录 -->
+	<select id="getBuyBidList" parameterType="java.util.Map"  resultType="UserXjbBidInfo">
+		select A.monthAmount monthAmount, t.F06 yearRate, t.F09 loandays
+		from (select r.id, r.f_user_id userId, r.f_amount monthAmount, r.f_day investDay, 
+		r.f_join_time firstJoinTime, DATE_ADD(t.F31, INTERVAL 11 MONTH) planStopTime,t.F22 publishTime
+			from flb.t_join_record r
+			left join S62.t6230 t on r.f_bid_id=t.F01 where r.id = #{userXjbId}
+		) A
+		inner join S62.t6250 z on z.F03 = A.userId
+		inner join S62.t6230 t on z.F02 = t.F01 
+		left join S62.t6211 s on s.F01 = t.F04
+		where DAYOFMONTH(t.F31)=A.investDay and t.F20 in ('TBZ','DFK','HKZ','YJQ','YDF') and s.F05=#{bidType}
+		<![CDATA[ AND z.F06 >= A.publishTime ]]>
+		<![CDATA[ AND z.F06 <= A.planStopTime ]]>
+	</select>
+	
+	<!-- 获取用户薪金宝第一次加入记录 -->
+	<select id="getUserXjbJoinRecord" parameterType="java.util.Map"  resultType="UserXjbJoinRecord">
+		select  t.F31 firstJoinPlanDate,r.f_day investDay, DATE_ADD(t.F31, INTERVAL t.F09 MONTH) planStopTime
+		from flb.t_join_record r 
+		inner join S62.t6230 t on r.f_bid_id=t.F01  
+		where t.F20 in ('TBZ','DFK','HKZ') and r.f_type=2 
+		<if test="userSalaryId!=null and userSalaryId !=0">
+		 	and r.id=#{userSalaryId}
+		</if>
+		<if test="userId!=null and userId!=0">
+		 	and r.f_user_id=#{userId} 
+		</if>
+		<if test="investDay !=null and investDay !=0">
+		 	and r.f_day=#{investDay} 
+		</if>
+		order by r.f_join_time desc limit 1
+	</select>
+	
+	<!--  获取当前用户投资日的未结清的薪金宝计划列表 -->
+	<select id="getUserXjbInvestDayList" parameterType="java.util.Map"  resultType="UserXjbBidInfo">
+		select r.id id, r.f_amount monthAmount
+		from flb.t_join_record r 
+		inner join S62.t6230 t on r.f_bid_id=t.F01 
+		where r.f_user_id=#{userId} and r.f_type=2 and t.F20 in ('TBZ','DFK','HKZ')
+		<if test="investDay != null and investDay != 0">
+			<![CDATA[ and r.f_day = #{investDay}]]>
+		</if>
+		order by r.f_join_time desc limit 1
+	</select>
+	
+	
+	<!-- 获取续买的标id -->
+	<select id="getContinueBuyBid" parameterType="java.util.Map"  resultType="BidInfo">
+		select t.F01 bidId
+		from S62.t6230 t inner join S62.T6211 p on t.F04=p.F01
+		where p.F05=#{bidType} and t.f09=#{currentLoadDays} and DAYOFMONTH(t.F31) = #{investDay} 
+		and t.F20='TBZ'
+		<![CDATA[AND now() < DATE_ADD(t.F31, INTERVAL t.F09 MONTH)]]> 
+		order by t.F01 limit 1
+	</select>
+	
+	<!-- 根据标id 获取新金标期数 -->
+	<select id="getBidPeriodById" parameterType="int" resultType="int">
+		select DAYOFMONTH(t.F31) period
+		from S62.t6230 t where t.F01=#{loanId} limit 1
+	</select>
+	
+	<!-- 根据userId 获取用户姓名 -->
+	<select id="getUserName"  parameterType="int" resultType="String">
+		select F02 userName from S61.T6141 t where t.F01=#{userId};
+	</select>
+	
+	<!-- 获取薪金宝计划明细信息 -->
+	<select id="getSalaryDetailInfo" parameterType="java.util.Map" resultType="SalaryDetailVO">
+		SELECT t.F01 xjbId, t.F03 xjbTitle, t.F06 xjbYield,t.F09 xjbTime, DAYOFMONTH(t.F31) investDay
+        FROM S62.T6230 t
+        WHERE t.F01=#{salaryId} limit 1
+	</select>
+	
+	<!-- 判断用户是否已经投过标，防止重复提交 -->
+	<select id="isUserBided" parameterType="java.util.Map" resultType="BidInfo">
+		select t.F02 bidId, s.F31 stopBidDay, DAYOFMONTH(s.F31) investDay from S62.T6250 t inner join S62.T6230 s on t.F02=s.F01
+		where t.F02=#{bidId} and t.F03=#{userId} limit 1
+	</select>
+	
+	<!-- 获取标的下一次投资日 -->
+	<select id="getBidNextInvestDay" parameterType="java.util.Map" resultType="BidInfo">
+		select t.F01 bidId, DAYOFMONTH(t.F31) investDay
+		from S62.t6230 t inner join S62.T6211 p on t.F04=p.F01
+		where p.F05=#{bidType} and t.F01=#{bidId}
+		and t.F20='TBZ' limit 1
+	</select>
+	
+	<!-- 获取用户的下一次投资日 -->
+	<select id="getUserNextInvestDay" parameterType="java.util.Map" resultType="BidInfo">
+		select f_day investDay
+		from flb.t_join_record r
+		inner join S62.t6230 t on r.f_bid_id=t.F01  
+		where r.id=#{userXjbId}
+		and t.F20 in ('TBZ','DFK','HKZ')
+		order by r.f_join_time desc limit 1
+	</select>
+
+	<!--判断当前月份用户是否投过该薪金宝  -->
+	<select id="isUserHaveBid" parameterType="java.util.Map" resultType="BidInfo">
+		 select t.F02 bidId from S62.T6250 t inner join S62.T6230 s ON t.F02=s.F01
+		 inner join S62.T6211 p on s.F04=p.F01
+		 where p.F05=#{bidType} 
+		 and t.F03=#{userId} 
+		 and YEAR(t.F06)=YEAR(#{currentDate}) 
+		 and MONTH(t.F06)=MONTH(#{currentDate}) 
+		 limit 1
+	</select>
+	
+</mapper>
+	
+	
+	

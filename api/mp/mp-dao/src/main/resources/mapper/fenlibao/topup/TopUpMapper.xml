@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TopUpMapper">
+	
+	<select id="getParvalue" parameterType="java.lang.Integer" resultType="ParvalueVO">
+		SELECT
+			p._code CODE,
+			p.parvalue,
+			p.selling_price AS sellingPrice,
+			t.type_code AS integralCode,
+		  p._status AS sellingFlag,
+			c.max_use_number AS integralQty
+		FROM
+			mp.mp_mobile_topup_parvalue AS p,
+			mp.mp_points_type AS t,
+		    mp.mp_points_consume_use_config AS c
+		WHERE
+			p.t_id = t.id and p.t_id = c.t_id
+		AND p._type =#{type}
+		ORDER BY p.parvalue asc
+	</select>
+	
+	<select id="getParvalueIno" parameterType="java.util.Map" resultType="ParvalueVO">
+		SELECT p._code code, p.parvalue,t.type_code as integralCode FROM mp.mp_mobile_topup_parvalue as p,mp.mp_points_type as t WHERE p.t_id = t.id	
+		<if test="parvalueCode != null">
+			and p._code = #{parvalueCode}
+		</if>
+		<if test="pointsTypeCode != null">
+			and t.type_code = #{pointsTypeCode}
+		</if>
+		and p._status = 1
+	</select>
+	
+	<select id="getParvalueByCode" parameterType="java.lang.String" resultType="ParvalueEntity">
+		SELECT selling_price as sellingPrice,parvalue FROM mp.mp_mobile_topup_parvalue WHERE _code = #{code} AND _status = 1 LIMIT 1
+	</select>
+	
+	<insert id="addOrder" parameterType="MobileTopupOrderEntity" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO mp.mp_mobile_topup_order 
+			(order_num,user_id,phone_num,parvalue_code,integral_code,integral_qty,user_pay_amount,p_id,top_up_channel) 
+		VALUES 
+			(#{orderNum},#{userId},#{phoneNum},#{parvalueCode},#{integralCode},#{integralQty},#{userPayAmount},#{p_id},#{topUpChannel})
+	</insert>
+	
+	<insert id="addYishangOrder" parameterType="MobileTopupOrderEntity" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO mp.mp_mobile_topup_order 
+			(order_num,user_id,phone_num,parvalue_code,integral_code,integral_qty,user_pay_amount,p_id,top_up_channel,consumption_order_id) 
+		VALUES 
+			(#{orderNum},#{userId},#{phoneNum},#{parvalueCode},#{integralCode},#{integralQty},#{userPayAmount},#{p_id},#{topUpChannel},#{consumptionOrderId})
+	</insert>
+	
+	<select id="getOrder" parameterType="java.util.Map" resultType="MobileTopupOrderEntity">
+		SELECT 
+			id,user_id userId,phone_num phoneNum,parvalue_code parvalueCode,integral_code integralCode,integral_qty integralQty,user_pay_amount userPayAmount,order_num orderNum,top_up_channel topUpChannel,
+			platform_pay_amount platformPayAmount,p_id,_status status,thirdparty_ordernum thirdpartyOrdernum, create_time createTime,end_time endTime ,consumption_order_id consumptionOrderId
+		FROM 
+			mp.mp_mobile_topup_order
+			<where>
+		          <if test="id != null">
+		            and id = #{id}
+		          </if>
+			      <if test="orderNum != null">
+			        and order_num = #{orderNum}
+			      </if>
+			      <if test="status != null">
+			        and _status = #{status}
+			      </if>
+			      <if test="consumptionOrderId != null">
+			        and consumption_order_id = #{consumptionOrderId}
+			      </if>
+	       </where>
+	       LIMIT 1 FOR UPDATE
+	</select>
+	
+	
+	<select id="getOrderRecordList" parameterType="java.lang.Integer" resultType="MobileTopUpOrderRecord">
+		SELECT
+			mp_mobile_topup_order.id AS orderId,
+			mp_mobile_topup_order.user_id AS userId,
+			(CASE 
+			WHEN mp_mobile_topup_order._status =1 THEN '处理中' 
+			WHEN mp_mobile_topup_order._status =2 THEN '交易成功' 
+			WHEN mp_mobile_topup_order._status =3 THEN '交易失败' 
+			END)AS status,
+			mp_mobile_topup_parvalue.parvalue AS parvalue,
+			mp_mobile_topup_order.create_time AS createTime
+		FROM
+			mp.mp_mobile_topup_order
+		INNER JOIN mp.mp_mobile_topup_parvalue ON mp_mobile_topup_order.parvalue_code = mp_mobile_topup_parvalue._code
+		where mp_mobile_topup_order.user_id= #{userId}
+		and mp_mobile_topup_order._status > 0
+		ORDER BY createTime DESC
+		LIMIT #{startPageIndex},#{limit}
+		
+	</select>
+	
+	<update id="updateOrder" parameterType="MobileTopupOrderEntity">
+	   update mp.mp_mobile_topup_order
+	   <set>
+	      <if test="status != null">
+	        _status = #{status},
+	      </if>
+	      <if test="endTime != null">
+	        end_time = #{endTime},
+	      </if>
+	      <if test="platformPayAmount != null">
+	        platform_pay_amount = #{platformPayAmount},
+	      </if>
+	      <if test="thirdpartyOrdernum != null">
+	        thirdparty_ordernum = #{thirdpartyOrdernum},
+	      </if>
+	      <if test="p_id != null">
+	        p_id = #{p_id},
+	      </if>
+	   </set>
+	   <where>
+	      <if test="id != null">
+	        and id = #{id}
+	      </if>
+	      <if test="orderNum != null">
+	        and order_num = #{orderNum}
+	      </if>
+	   </where>
+	</update>
+	
+	<select id="getFrequency" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(id) FROM mp.`mp_mobile_topup_order` WHERE (_status = 1 OR _status = 2) AND user_id = #{userId} AND SUBDATE(CURDATE(), #{days}) <![CDATA[<=]]> DATE(create_time)
+	</select>
+	
+	<select id="getFrequencyByMonth" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT COUNT(id) FROM mp.`mp_mobile_topup_order` WHERE (_status = 1 OR _status = 2) AND user_id = #{userId} AND DATE_FORMAT(create_time,'%Y-%m') = DATE_FORMAT(CURDATE(),'%Y-%m')
+	</select>
+	
+	
+	<select id="getOrderListInCharge" parameterType="java.lang.Integer" resultType="MobileTopUpOrderInchargeEntity">
+		SELECT
+			id as orderId,
+			order_num as customOrderCode
+		FROM
+			mp.mp_mobile_topup_order
+		WHERE
+			_status =1
+		AND
+			top_up_channel=1
+		AND
+			DATE_ADD(create_time,INTERVAL 10 minute)<![CDATA[ < ]]>CURRENT_TIMESTAMP()
+		ORDER BY
+			create_time DESC
+		LIMIT #{page},#{limit}
+	</select>
+
+	<!-- 添加手机充值异常记录 -->
+	<insert id="addTopupErrorRecord" parameterType="java.util.Map" >
+		insert into
+		mp.mp_mobile_topup_error (order_num)
+		values (#{orderNum})
+	</insert>
+
+	<!--手机充值备灾处理-->
+	<select id="yishangErrorRecords" parameterType="java.lang.Integer" resultType="MobileTopUpErrorRecord">
+		SELECT
+			e.order_num as customOrderCode,
+			e.record_state as state
+		FROM
+			mp.mp_mobile_topup_error e
+		INNER JOIN mp.mp_mobile_topup_order
+		ON e.order_num = mp_mobile_topup_order.order_num
+		where e.record_state='WCL'
+					AND mp_mobile_topup_order._status=0
+		order BY  e.create_time desc
+		limit 200
+	</select>
+
+	<select id="getYishangErrorRecord" parameterType="java.util.Map" resultType="MobileTopUpErrorRecord">
+		SELECT
+			e.order_num as customOrderCode,
+			e.record_state as state
+		FROM
+			mp.mp_mobile_topup_error e
+		where e.record_state='WCL'
+		AND order_num = #{orderNum}
+		FOR UPDATE
+	</select>
+
+	<update id="updateErrorRecords" parameterType="MobileTopUpErrorRecord">
+		update mp.mp_mobile_topup_error e
+		SET e.record_state = #{state},e.update_time=NOW()
+		where e.order_num= #{customOrderCode}
+	</update>
+
+	<select id="getUserTopUpSameMonth" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT
+			IFNULL(SUM(mp_mobile_topup_parvalue.parvalue),0)
+		FROM
+			mp.mp_member_points_use_info AS a
+		INNER JOIN mp.mp_points_type ON a.t_id = mp_points_type.id
+		INNER JOIN mp.mp_mobile_topup_parvalue ON mp_points_type.id = mp_mobile_topup_parvalue.t_id
+		where
+			(a.exchange_status= 2 or a.exchange_status= 1)
+		and a.user_id = #{userId}
+		and DATE_FORMAT(a.create_time,'%y-%m')=DATE_FORMAT(NOW(),'%y-%m')
+	</select>
+</mapper>

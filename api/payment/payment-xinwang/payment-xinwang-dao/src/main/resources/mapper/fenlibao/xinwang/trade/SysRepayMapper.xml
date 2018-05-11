@@ -1,0 +1,528 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysRepayMapper">
+    <select id="getCurrentTerm" parameterType="java.lang.Integer" resultType="java.lang.Integer" >
+        select min(F06) term from s62.t6252 where F02= #{projectId} and F09='WH'
+    </select>
+
+    <select id="getRepaymentPlan" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWRepaymentPlan">
+        select F01 id,F02 projectId,F03 payerId,F04 payeeId,F05 feeType,F06 term,F07 amount,F08 dueDate,F09 repayState,F10 actualRepayTime,F11 creditId from s62.t6252
+        <where>
+            <if test="projectId!=null">
+                and F02= #{projectId}
+            </if>
+            <if test="feeType!=null">
+                and F05= #{feeType}
+            </if>
+
+
+            <if test="feeTypeList!=null">
+                and F05 IN
+                <foreach item="item" index="index" collection="feeTypeList" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+
+            </if>
+
+
+            <if test="term!=null">
+                and F06= #{term}
+            </if>
+            <if test="notEqualTerm!=null">
+                and F06 != #{notEqualTerm}
+            </if>
+            <if test="repayState!=null">
+                and F09= #{repayState}
+            </if>
+            <if test="creditId!=null">
+                and F11= #{creditId}
+            </if>
+
+            <if test="amount!=null">
+                and F07= #{amount}
+            </if>
+        </where>
+    </select>
+
+    <select id="getRepaymentPlanByUniqueKey" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWRepaymentPlan">
+        select F01 id,F02 projectId,F03 payerId,F04 payeeId,F05 feeType,F06 term,F07 amount,F08 dueDate,F09 repayState,F10 actualRepayTime,F11 creditId from s62.t6252
+        <where>
+            <if test="id!=null">
+                and F01= #{id}
+            </if>
+            <if test="feeType!=null">
+                and F05= #{feeType}
+            </if>
+            <if test="term!=null">
+                and F06= #{term}
+            </if>
+            <if test="creditId!=null">
+                and F11= #{creditId}
+            </if>
+        </where>
+        limit 1
+        FOR UPDATE
+    </select>
+
+    <select id="getRemainPrincipalOfCredit" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT sum(F07) FROM S62.T6252 WHERE F11 = #{creditId} and F05=7001 and F06>=#{term}
+    </select>
+
+    <update id="updateRepaymentPlanById" parameterType="java.util.Map">
+        update s62.t6252
+        <set>
+            <if test="amount!=null">
+                F07= #{amount},
+            </if>
+            <if test="repayState!=null">
+                F09= #{repayState},
+            </if>
+            <if test="now!=null">
+                F10= now()
+            </if>
+        </set>
+        where F01= #{id}
+    </update>
+
+
+
+    <update id="updateRepaymentPlanByIds" parameterType="java.util.Map">
+        update s62.t6252
+        <set>
+            <if test="now!=null">
+                F10= now(),
+            </if>
+
+            <if test="newStatus!=null">
+                F09= #{newStatus}
+            </if>
+
+        </set>
+
+        <if test="ids!=null">
+            where F01 IN
+            <foreach item="item" index="index" collection="ids" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+
+        </if>
+
+        <if test="term!=null">
+            and F06= #{term}
+        </if>
+    </update>
+
+
+    <update id="finishRepaymentPlanOfCredit" parameterType="java.util.Map">
+        update s62.t6252
+        set
+            F09= 'YH',
+            F10= now()
+        <where>
+            F11= #{creditId} and F09='WH' and F05 IN
+            <foreach item="item" index="index" collection="feeTypeList" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+            <if test="term!=null">
+                and F06= #{term}
+            </if>
+        </where>
+    </update>
+
+    <update id="updateInterestOfRemainTerms" parameterType="java.util.Map">
+        UPDATE S62.T6252 SET F07 = 0, F09 = 'TQH', F10 = now() WHERE F02 = #{projectId} AND F06 > #{term} AND F05 in (7002,7022,7023,7035)
+    </update>
+
+    <insert id="batchInsertCreditRepayDetail" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        INSERT flb.t_xw_credit_repay (order_id,credit_id,plan_id,investor_id,investor_platform_user_no,repay_request_no,marketing_request_no,principal,interest,overdue_penalty,overdue_commission,prepay_penalty,tender_increase_interest,project_increase_interest,service_charge
+        ,interest_service_fee,penalty_divide,deal_fee
+        )
+        values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.orderId},#{item.creditId},#{item.planId},#{item.investorId},#{item.investorPlatformUserNo},#{item.repayRequestNo},#{item.marketingRequestNo},#{item.principal},#{item.interest},#{item.overduePenalty},#{item.overdueCommission},#{item.prepayPenalty},#{item.tenderIncreaseInterest},#{item.projectIncreaseInterest},#{item.serviceCharge},#{item.interestServiceFee},#{item.penaltyDivide},#{item.dealFee})
+        </foreach>
+    </insert>
+
+    <update id="updateCreditRepayDetail" parameterType="java.util.Map">
+        update flb.t_xw_credit_repay
+        <set>
+            <if test="repayRequestNo!=null">
+                repay_request_no= #{repayRequestNo},
+            </if>
+            <if test="marketingRequestNo!=null">
+                marketing_request_no= #{marketingRequestNo},
+            </if>
+            <if test="repayState!=null">
+                repay_state= #{repayState},
+            </if>
+            <if test="marketingState!=null">
+                marketing_state= #{marketingState},
+            </if>
+        </set>
+        <where>
+            <if test="id!=null">
+                id= #{id}
+            </if>
+            <if test="oldMarketingState!=null">
+                and marketing_state= #{oldMarketingState}
+            </if>
+
+            <if test="oldRepayState!=null">
+                and repay_state= #{oldRepayState}
+            </if>
+
+            <if test="byRepayRequestNo!=null">
+                and repay_request_no= #{byRepayRequestNo}
+            </if>
+            <if test="byMarketingRequestNo!=null">
+                and marketing_request_no= #{byMarketingRequestNo}
+            </if>
+        </where>
+    </update>
+
+    <select id="getCreditRepayDetailByRepayRequestNo" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysCreditToRepay">
+        SELECT id,order_id orderId,credit_id creditId,plan_id planId,investor_id investorId,investor_platform_user_no investorPlatformUserNo,repay_request_no repayRequestNo,marketing_request_no marketingRequestNo,principal,interest,overdue_penalty overduePenalty,overdue_commission overdueCommission,prepay_penalty prepayPenalty,tender_increase_interest tenderIncreaseInterest,project_increase_interest projectIncreaseInterest,service_charge serviceCharge,
+        interest_service_fee as interestServiceFee,penalty_divide as penaltyDivide,deal_fee as dealFee,
+
+        repay_state repayState,marketing_state marketingState
+        FROM flb.t_xw_credit_repay where repay_request_no= #{repayRequestNo} limit 1
+    </select>
+
+    <select id="getCreditRepayDetailByMarketingRequestNo" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysCreditToRepay">
+        SELECT id,order_id orderId,credit_id creditId,plan_id planId,investor_id investorId,investor_platform_user_no investorPlatformUserNo,repay_request_no repayRequestNo,marketing_request_no marketingRequestNo,principal,interest,overdue_penalty overduePenalty,overdue_commission overdueCommission,prepay_penalty prepayPenalty,tender_increase_interest tenderIncreaseInterest,project_increase_interest projectIncreaseInterest,service_charge serviceCharge,repay_state repayState,marketing_state marketingState
+        FROM flb.t_xw_credit_repay where marketing_request_no= #{marketingRequestNo} limit 1
+    </select>
+
+    <select id="getCreditRepayDetailByOrderId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysCreditToRepay">
+        SELECT id,order_id orderId,credit_id creditId,plan_id planId,investor_id investorId,investor_platform_user_no investorPlatformUserNo,repay_request_no repayRequestNo,marketing_request_no marketingRequestNo,principal,interest,overdue_penalty overduePenalty,overdue_commission overdueCommission,prepay_penalty prepayPenalty,tender_increase_interest tenderIncreaseInterest,project_increase_interest projectIncreaseInterest,service_charge serviceCharge,repay_state repayState,marketing_state marketingState
+        FROM flb.t_xw_credit_repay where order_id= #{orderId}
+    </select>
+
+    <select id="getAbnormalCreditRepays" parameterType="java.lang.Integer" resultType="java.lang.String">
+        select b.request_no
+        from (select * from flb.t_xw_credit_repay where repay_state='XINWANG_REPAY_FINISH' and order_id= #{orderId}) a INNER JOIN flb.t_xw_request b ON a.repay_request_no=b.request_no limit 100
+    </select>
+
+    <select id="getAbnormalCreditMarketings" parameterType="java.lang.Integer" resultType="java.lang.String">
+        select b.request_no
+        from (select * from flb.t_xw_credit_repay where marketing_state='XINWANG_REPAY_FINISH' and order_id= #{orderId}) a INNER JOIN flb.t_xw_request b ON a.marketing_request_no=b.request_no limit 100
+    </select>
+
+    <insert id="createProjectRepayInfo" parameterType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectRepayInfo" useGeneratedKeys="true" keyProperty="id">
+        INSERT flb.t_xw_repay (project_id,term,order_id,repay_type,borrower_repay_amount,repay_progress,compensatory)
+        VALUES (#{projectId},#{term},#{orderId},#{repayType},#{borrowerRepayAmount},#{repayProgress},#{compensatory})
+    </insert>
+
+    <update id="updateProjectRepayInfo" parameterType="java.util.Map">
+        update flb.t_xw_repay
+        <set>
+            <if test="repayProgress!=null">
+                repay_progress= #{repayProgress},
+            </if>
+            <if test="preTreatRequestNo!=null">
+                pre_treat_request_no= #{preTreatRequestNo},
+            </if>
+        </set>
+        where id= #{id}
+    </update>
+
+    <select id="getProjectRepayInfoByRequestNo" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectRepayInfo">
+        SELECT a.id,a.project_id projectId,a.term,a.order_id orderId,a.repay_type repayType,a.borrower_repay_amount borrowerRepayAmount,a.repay_progress repayProgress,a.compensatory,a.pre_treat_request_no preTreatRequestNo from flb.t_xw_repay a INNER JOIN (select * from flb.t_xw_request where request_no= #{requestNo}) b ON a.order_id=b.order_id
+    </select>
+
+    <select id="getProjectRepayInfoByOrderId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectRepayInfo">
+        SELECT id,project_id projectId,term,order_id orderId,repay_type repayType,borrower_repay_amount borrowerRepayAmount,repay_progress repayProgress,compensatory,pre_treat_request_no preTreatRequestNo from flb.t_xw_repay where order_id= #{orderId} limit 1
+    </select>
+
+    <select id="getCreditRepayAcceptFailList" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysCreditToRepay">
+        select a.id,a.order_id orderId,a.credit_id creditId,a.plan_id planId,a.investor_id investorId,a.investor_platform_user_no investorPlatformUserNo,a.repay_request_no repayRequestNo,a.marketing_request_no marketingRequestNo,a.principal,a.interest,a.overdue_penalty overduePenalty,a.overdue_commission overdueCommission,a.prepay_penalty prepayPenalty,a.tender_increase_interest tenderIncreaseInterest,a.project_increase_interest projectIncreaseInterest,a.service_charge serviceCharge,a.repay_state repayState,a.marketing_state marketingState
+        from (select * from flb.t_xw_credit_repay where order_id= #{orderId} and repay_state='NOT_YET_ACCEPT') a
+    </select>
+
+    <select id="getCreditMarketingAcceptFailList" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysCreditToRepay">
+        select a.id,a.order_id orderId,a.credit_id creditId,a.plan_id planId,a.investor_id investorId,a.investor_platform_user_no investorPlatformUserNo,a.repay_request_no repayRequestNo,a.marketing_request_no marketingRequestNo,a.principal,a.interest,a.overdue_penalty overduePenalty,a.overdue_commission overdueCommission,a.prepay_penalty prepayPenalty,a.tender_increase_interest tenderIncreaseInterest,a.project_increase_interest projectIncreaseInterest,a.service_charge serviceCharge,a.repay_state repayState,a.marketing_state marketingState
+        from (select * from flb.t_xw_credit_repay where order_id= #{orderId} and marketing_state='NOT_YET_ACCEPT'  and (tender_increase_interest+project_increase_interest)>0) a
+    </select>
+
+    <select id="getRepayResultConfirmList" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        (
+        /*非营销款*/
+        SELECT
+            a.id,
+            a.interface_name   interfaceName,
+            a.batch_no         batchNo,
+            a.request_no       requestNo,
+            a.order_id         orderId,
+            a.platform_user_no platformUserNo,
+            a.user_id          userId,
+            a.request_time     requestTime,
+            a.state,
+            a.update_time updateTime
+            ,b. repay_state
+             ,b. marketing_state
+        FROM
+            flb.t_xw_request a
+        INNER JOIN
+            flb.t_xw_credit_repay b
+        ON
+            (b.repay_request_no=a.request_no )
+        where a.interface_name='ASYNC_TRANSACTION'
+        and a.state in ('DQR' ,'CG')
+        AND TIMESTAMPDIFF(MINUTE,a.request_time,NOW())>30
+        AND b.repay_state='ACCEPTED'  limit 100
+        )
+        union all
+        (/*营销款*/
+        SELECT
+            a.id,
+            a.interface_name   interfaceName,
+            a.batch_no         batchNo,
+            a.request_no       requestNo,
+            a.order_id         orderId,
+            a.platform_user_no platformUserNo,
+            a.user_id          userId,
+            a.request_time     requestTime,
+            a.state,
+            a.update_time updateTime
+             ,b. repay_state
+            ,b. marketing_state
+        FROM
+            flb.t_xw_request a
+        INNER JOIN
+            flb.t_xw_credit_repay b
+        ON
+            ( b.marketing_request_no = a.request_no)
+        WHERE
+        a.interface_name='ASYNC_TRANSACTION'
+        and a.state in ('DQR' ,'CG')
+        AND TIMESTAMPDIFF(MINUTE,a.request_time,NOW())>30
+        AND  b. marketing_state='ACCEPTED'  limit 100
+        )
+
+    </select>
+
+    <select id="getRepayRerunList" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+       SELECT  a.id,  a.interface_name interfaceName,  a.batch_no batchNo,  a.request_no requestNo,  a.order_id orderId,  a.platform_user_no platformUserNo,
+        a.user_id userId,  a.request_time requestTime,  a.state,  a.update_time updateTime
+        FROM flb.t_xw_credit_repay b
+        INNER JOIN flb.t_xw_request a ON b.repay_request_no = a.request_no  AND  b.repay_state = 'XINWANG_REPAY_FINISH'
+        INNER JOIN s65.t6501 c  ON b.order_id = c.F01 AND c.F03 = 'DQR' WHERE  a.state = 'CG'   AND TIMESTAMPDIFF(MINUTE, a.request_time, NOW()) > 30 LIMIT 100
+    </select>
+
+    <select id="getRepayMarketingResultConfirmList" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        SELECT
+            a.id,
+            a.interface_name   interfaceName,
+            a.batch_no         batchNo,
+            a.request_no       requestNo,
+            a.order_id         orderId,
+            a.platform_user_no platformUserNo,
+            a.user_id          userId,
+            a.request_time     requestTime,
+            a.state,
+            a.update_time updateTime,
+            b. marketing_state
+        FROM
+             flb.t_xw_request a
+        LEFT JOIN
+         flb.t_xw_credit_repay b
+        ON b.marketing_request_no=a.request_no
+        WHERE
+           a.interface_name='ASYNC_TRANSACTION'
+          and TIMESTAMPDIFF(MINUTE,a.request_time,NOW()) >30
+        and a.state in ('DQR' ,'CG')
+        AND b. marketing_state='ACCEPTED'
+         limit 100
+    </select>
+
+    <select id="getRepayMarketingRerunList" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        SELECT
+            a.id,
+            a.interface_name   interfaceName,
+            a.batch_no         batchNo,
+            a.request_no       requestNo,
+            a.order_id         orderId,
+            a.platform_user_no platformUserNo,
+            a.user_id          userId,
+            a.request_time     requestTime,
+            a.state,
+            a.update_time updateTime
+        FROM
+            flb.t_xw_request a
+        LEFT JOIN
+            flb.t_xw_credit_repay b
+        ON
+            b.marketing_request_no = a.request_no
+        WHERE
+            a.state = 'CG'
+        AND TIMESTAMPDIFF(MINUTE, a.request_time, NOW()) > 30
+        AND b.marketing_state = 'XINWANG_REPAY_FINISH' LIMIT 100
+    </select>
+
+    <select id="getAutoRepayProjectList" resultType="java.lang.Integer">
+        SELECT a.F01 FROM s62.t6230 a INNER JOIN s62.t6231 b ON b.F01 = a.F01 WHERE
+        a.F20 = 'HKZ'
+        AND a.F34 = 0
+        AND a.F36 = '0002'
+        AND a.F38 = 2
+        AND b.F06<![CDATA[<=]]>NOW() LIMIT 100
+    </select>
+
+    <select id="getSealBidUsers" resultType="java.lang.Integer">
+        SELECT t2.F01 FROM flb.t_special_account t1 INNER JOIN s61.t6110 t2 on t1.phone_num=t2.F02 where status=1
+    </select>
+
+    <select id="planHasProjectNotYetRepay" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT  plan_id
+        FROM
+        (
+		    SELECT plan_id,sum(flag) notYetRepayCount
+		    FROM
+			(
+				SELECT
+					a.plan_id,
+					a.bid_id,
+					b.f20,
+					CASE
+				WHEN b.f20 = 'YJQ' THEN
+					0
+				ELSE
+					1
+				END flag
+				FROM
+					(
+						SELECT
+							*
+						FROM
+							flb.t_plan_bid
+						WHERE
+							plan_id =(
+								SELECT
+									plan_id
+								FROM
+									flb.t_plan_bid
+								WHERE
+									bid_id = #{projectId}
+								LIMIT 1
+							)
+					)a
+				INNER JOIN s62.t6230 b ON a.bid_id = b.F01
+			)c
+	    )d
+	    WHERE d.notYetRepayCount = 0
+    </select>
+
+    <select id="getOrderNotFinishRepayRecords" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectRepayInfo">
+        select a.id,a.project_id projectId,a.term,a.order_id orderId,a.repay_type repayType,a.borrower_repay_amount borrowerRepayAmount,a.repay_progress repayProgress,a.compensatory,a.pre_treat_request_no preTreatRequestNo from flb.t_xw_repay a INNER JOIN s65.t6501 b ON a.order_id=b.F01 where b.F03='DQR' and TIMESTAMPDIFF(MINUTE,b.F05,NOW())>40;
+    </select>
+
+    <select id="getProjectNotFinishRepayRecords" resultType="java.lang.Integer">
+        select a.F01 from s62.t6230 a INNER JOIN s62.t6231 b ON a.F01=b.F01 WHERE a.F20='HKZ' and b.F03=0
+    </select>
+
+    <select id="getNotFinishRepayPlan" resultType="java.lang.Integer">
+        select b.F01 from flb.t_xw_repay a INNER JOIN s62.t6252 b ON a.project_id=b.F02 and a.term=b.F06 INNER JOIN flb.t_xw_credit_repay c ON a.order_id=c.order_id and b.F11=c.credit_id where c.repay_state='PLATFORM_REPAY_FINISH' and b.F09='WH' and b.F05 in(7001,7002,7004,7005,7020)
+         UNION
+        select b.F01 from flb.t_xw_repay a INNER JOIN s62.t6252 b ON a.project_id=b.F02 and a.term=b.F06 INNER JOIN flb.t_xw_credit_repay c ON a.order_id=c.order_id and b.F11=c.credit_id where c.marketing_state='PLATFORM_REPAY_FINISH' and b.F09='WH' and b.F05 in(7022,7023);
+    </select>
+
+    <insert id="insertRepayMsgFlag" parameterType="java.lang.Integer">
+        insert flb.t_xw_repay_msg (order_id) values (#{orderId})
+    </insert>
+
+    <select id="getRepayMsgFlagByOrderId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        select has_send_msg from flb.t_xw_repay_msg where order_id= #{orderId} for update
+    </select>
+
+    <update id="updateRepayMsgFlagByOrderId" parameterType="java.util.Map">
+        update flb.t_xw_repay_msg set has_send_msg= #{flag} where order_id= #{orderId}
+    </update>
+
+    <select id="getUnusualRepays" resultType="UnusualRepay">
+        SELECT id id,order_id orderId,bid_id bidId,status status FROM flb.t_xw_unusual_repay WHERE status = 1 LIMIT 100
+    </select>
+
+    <update id="updateUnusualRepay" parameterType="java.util.Map">
+        update flb.t_xw_unusual_repay
+        <set>
+            <if test="status!=null">
+                `STATUS` = #{status},
+            </if>
+        </set>
+        <where>
+            <if test="id!=null">
+                AND id = #{id}
+            </if>
+            <if test="preStatus!=null">
+                AND `STATUS` = #{preStatus}
+            </if>
+        </where>
+    </update>
+
+    <insert id="addUnulsualRepay" parameterType="UnusualRepay">
+        INSERT INTO flb.t_xw_unusual_repay(order_id,bid_id,`status`) VALUES (#{orderId},#{bidId},#{status})
+    </insert>
+
+    <select id="getUnusualRepayByOrder" resultType="UnusualRepay" parameterType="java.lang.Integer">
+        SELECT id id,order_id orderId,bid_id bidId,status status FROM flb.t_xw_unusual_repay WHERE order_id = #{orderId}
+    </select>
+
+
+
+    <select id="getCreditId" resultType="java.lang.Integer" parameterType="java.util.Map">
+        SELECT distinct F11 from S62.T6252
+
+        <where>
+            <if test="projectId!=null">
+                and F02= #{projectId}
+            </if>
+            <if test="feeType!=null">
+                and F05= #{feeType}
+            </if>
+            <if test="term!=null">
+                and F06= #{term}
+            </if>
+            <if test="notEqualTerm!=null">
+                and F06 != #{notEqualTerm}
+            </if>
+            <if test="repayState!=null">
+                and F09= #{repayState}
+            </if>
+            <if test="creditId!=null">
+                and F11= #{creditId}
+            </if>
+        </where>
+    </select>
+
+
+    <update id="updateRepaymentPlanByCredit" parameterType="java.util.Map">
+
+        UPDATE S62.T6252
+        <set>
+            <if test="now!=null">
+                F10= now(),
+            </if>
+
+            <if test="newStatus!=null">
+                F09= 'YH'
+            </if>
+
+        </set>
+        WHERE F11 = #{creditId}
+
+        <if test="oldStatus!=null">
+           and F09= #{oldStatus}
+        </if>
+
+        <if test="amount!=null">
+           and  F07= #{amount}
+        </if>
+
+        <if test="term!=null">
+            and  F06= #{term}
+        </if>
+
+
+    </update>
+
+</mapper>

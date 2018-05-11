@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CheckAmountMapper">
+    <!-- 获取昨天委托开户的所有用户 -->
+    <select id="getAllXwUsers" resultType="com.fenlibao.p2p.model.check.amount.XwAccount" parameterType="java.util.Map">
+        SELECT
+        xw.id,
+        xw.platform_user_no as platformUserNo,
+        xw.user_id as userId,
+        xw.user_role as userRole,
+        xw.audit_status as auditStatus,
+        xw.user_type AS userType,
+        xw.active_status AS activeStatus,
+        xw.bankcard_no AS bankcardNo
+        FROM
+          flb.t_xw_account AS xw
+        WHERE
+        <if test="userRole != null">
+            xw.user_role = #{userRole}
+        </if>
+    </select>
+    <insert id="saveUserAmountError" parameterType="java.util.Map">
+        INSERT INTO errorlog.t_user_amount_error
+          (user_id, platform_user_no, local_wlzh, xw_wlzh, wlzh_sub, local_sdzh, xw_sdzh, sdzh_sub, xw_balance, create_time)
+        VALUES
+        (#{userId}, #{platformUserNo}, #{localWlzh}, #{xwWlzh}, #{wlzhSub}, #{localSdzh}, #{xwSdzh}, #{sdzhSub}, #{xwBalance}, NOW())
+    </insert>
+</mapper>

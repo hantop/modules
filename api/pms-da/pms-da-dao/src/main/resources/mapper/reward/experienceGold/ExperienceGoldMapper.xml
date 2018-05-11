@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="com.fenlibao.dao.pms.da.reward.experienceGold.ExperienceGoldMapper">
+	<resultMap id="BaseResultMap"
+		type="com.fenlibao.model.pms.da.reward.ExperienceGold">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="activity_name" property="activityName"
+			jdbcType="VARCHAR" />
+		<result column="time_start" property="timeStart" jdbcType="TIMESTAMP" />
+		<result column="time_end" property="timeEnd" jdbcType="TIMESTAMP" />
+		<result column="year_yield" property="yearYield" jdbcType="DECIMAL" />
+		<result column="experience_gold" property="experienceGold"
+			jdbcType="DECIMAL" />
+		<result column="experience_type" property="experienceType"
+			jdbcType="TINYINT" />
+		<result column="effect_month" property="effectMonth" jdbcType="INTEGER" />
+		<result column="remarks" property="remarks" jdbcType="VARCHAR" />
+		<result column="effect_day" property="effectDay" jdbcType="INTEGER" />
+		<result column="activity_code" property="activityCode"
+			jdbcType="VARCHAR" />
+		<result column="invest_money" property="investMoney" jdbcType="DECIMAL" />
+	</resultMap>
+
+	<select id="findAllActivityCode" resultMap="BaseResultMap">
+		select DISTINCT flb.t_experience_gold.activity_code activityCode, flb.t_experience_gold.id id FROM
+		flb.t_experience_gold
+		JOIN flb.t_user_experience ON (flb.t_experience_gold.id = flb.t_user_experience.gold_id)
+		WHERE flb.t_user_experience.grant_id = #{grantId}
+	</select>
+
+	<sql id="Base_Column_List">
+		id, activity_name, time_start, time_end, year_yield, experience_gold,
+		experience_type,
+		effect_month, remarks, effect_day, activity_code, invest_money
+	</sql>
+
+	<insert id="insertExperienceGoldRecordDetail" parameterType="java.util.List">
+		insert into flb.t_user_experience
+		(user_id,gold_id,status,start_time,year_yield,end_time,yield_status,grant_id,grant_status)
+		values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.userId},#{item.goldId},#{item.status},#{item.startTime},#{item.yearYield},#{item.endTime},#{item.yieldStatus},#{item.grantId},#{item.grantStatus})
+		</foreach>
+	</insert>
+	
+	<insert id="insertExperienceFunding" parameterType="java.util.List">
+		insert into flb.t_experience_funding
+		(user_id,create_time,income,overage,operator_type,exp_id)
+		values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.userId},#{item.createTime},#{item.income},#{item.overage},#{item.operatorType},#{item.expId})
+		</foreach>
+	</insert>
+
+	<select id="getExperienceGoldbyCode" resultType="ExperienceGold"
+		parameterType="String">
+		select id,year_yield yearYield,activity_code activityCode,effect_day effectDay,experience_gold experienceGold,activity_name activityName,time_start timeStart,time_end timeEnd,experience_type experienceType,effect_month effectMonth,remarks,invest_money investMoney from
+		flb.t_experience_gold where activity_code= #{activityCode}
+	</select>
+
+	<select id="getExperienceGoldRecordDetail" resultType="UserExperience"
+		parameterType="com.fenlibao.model.pms.da.reward.UserExperience">
+		select
+		a.id,a.user_id userId,a.gold_id goldId,a.status,a.gold_origin
+		goldOrigin,a.start_time startTime,a.year_yield yearYield,a.end_time
+		endTime,a.yield_status yieldStatus,a.grant_id grantId,a.grant_status
+		grantStatus,b.activity_code activityCode,c.F04 phone
+		from flb.t_user_experience a
+		left join flb.t_experience_gold b
+		on a.gold_id=b.id
+		left join s61.t6110 c
+		on a.user_id=c.F01
+		<where>
+			<if test="grantId != null">
+                    <![CDATA[AND a.grant_id = #{grantId}]]>
+			</if>
+			<if test="goldId != null">
+                    <![CDATA[AND a.gold_id = #{goldId}]]>
+			</if>
+			<if test="grantStatus != null">
+                    <![CDATA[AND a.grant_status = #{grantStatus}]]>
+			</if>
+		</where>
+	</select>
+
+	<update id="updateExperienceGoldRecordDetail" parameterType="java.util.List">
+		update flb.t_user_experience
+		<trim prefix="set" suffixOverrides=",">
+			<trim prefix="start_time = case " suffix=" end,">
+				<foreach collection="list" item="i" index="index">
+					<if test="i.startTime!=null">
+						when id= #{i.id} then #{i.startTime}
+					</if>
+				</foreach>
+			</trim>
+			<trim prefix=" end_time = case " suffix=" end,">
+				<foreach collection="list" item="i" index="index">
+					<if test="i.endTime!=null">
+						when id= #{i.id} then #{i.endTime}
+					</if>
+				</foreach>
+			</trim>
+			<trim prefix="grant_status = case" suffix=" end,">
+				<foreach collection="list" item="i" index="index">
+					<if test="i.grantStatus!=null">
+						when id= #{i.id} then #{i.grantStatus}
+					</if>
+				</foreach>
+			</trim>
+			<trim prefix="status = case" suffix=" end,">
+				<foreach collection="list" item="i" index="index">
+					<if test="i.status!=null">
+						when id= #{i.id} then #{i.status}
+					</if>
+				</foreach>
+			</trim>
+		</trim>
+		where
+		<foreach collection="list" separator="or" item="i" index="index">
+			id=#{i.id}
+		</foreach>
+	</update>
+
+	<select id="selectByPrimaryKey" resultMap="BaseResultMap"
+		parameterType="java.lang.Integer">
+		select
+		id,activity_code,effect_day,experience_gold,year_yield,remarks AS expGoldComment
+		from flb.t_experience_gold
+		where id = #{id,jdbcType=INTEGER}
+	</select>
+
+	<select id="findExperienceGoldPager" resultMap="BaseResultMap">
+		SELECT
+		flb.t_experience_gold.id id,
+		flb.t_experience_gold.activity_code activity_code,
+		flb.t_experience_gold.effect_day effect_day,
+		flb.t_experience_gold.experience_gold experience_gold,
+		flb.t_experience_gold.year_yield year_yield,
+		flb.t_user_experience.grant_status grantStatus
+		FROM
+		flb.t_experience_gold
+		LEFT JOIN flb.t_user_experience ON (flb.t_experience_gold.id = flb.t_user_experience.gold_id)
+
+		<where>
+			<if test="activityCode != null">
+				and activity_code like '%${activityCode}%'
+			</if>
+		</where>
+		GROUP BY flb.t_experience_gold.id
+		ORDER BY id desc
+	</select>
+
+	<select id="getExperienceGoldCountByCode" resultType="int">
+		SELECT
+		count(1)
+		FROM flb.t_experience_gold experience_gold
+		WHERE experience_gold.activity_code=#{param1}
+		<if test="param2 > 0">
+			AND experience_gold.id != #{param2}
+		</if>
+	</select>
+
+	<insert id="insertSelective" parameterType="com.fenlibao.model.pms.da.reward.ExperienceGold">
+		insert into flb.t_experience_gold
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+			<if test="activityName != null">
+				activity_name,
+			</if>
+			<if test="timeStart != null">
+				time_start,
+			</if>
+			<if test="timeEnd != null">
+				time_end,
+			</if>
+			<if test="yearYield != null">
+				year_yield,
+			</if>
+			<if test="experienceGold != null">
+				experience_gold,
+			</if>
+			<if test="experienceType != null">
+				experience_type,
+			</if>
+			<if test="effectMonth != null">
+				effect_month,
+			</if>
+			<if test="remarks != null">
+				remarks,
+			</if>
+			<if test="effectDay != null">
+				effect_day,
+			</if>
+			<if test="activityCode != null">
+				activity_code,
+			</if>
+			<if test="investMoney != null">
+				invest_money,
+			</if>
+			<if test="expGoldComment != null">
+				remarks,
+			</if>
+		</trim>
+		<trim prefix="values (" suffix=")" suffixOverrides=",">
+			<if test="activityName != null">
+				#{activityName,jdbcType=VARCHAR},
+			</if>
+			<if test="timeStart != null">
+				#{timeStart,jdbcType=TIMESTAMP},
+			</if>
+			<if test="timeEnd != null">
+				#{timeEnd,jdbcType=TIMESTAMP},
+			</if>
+			<if test="yearYield != null">
+				#{yearYield,jdbcType=DECIMAL},
+			</if>
+			<if test="experienceGold != null">
+				#{experienceGold,jdbcType=DECIMAL},
+			</if>
+			<if test="experienceType != null">
+				#{experienceType,jdbcType=TINYINT},
+			</if>
+			<if test="effectMonth != null">
+				#{effectMonth,jdbcType=INTEGER},
+			</if>
+			<if test="remarks != null">
+				#{remarks,jdbcType=VARCHAR},
+			</if>
+			<if test="effectDay != null">
+				#{effectDay,jdbcType=INTEGER},
+			</if>
+			<if test="activityCode != null">
+				#{activityCode,jdbcType=VARCHAR},
+			</if>
+			<if test="investMoney != null">
+				#{investMoney,jdbcType=DECIMAL},
+			</if>
+			<if test="expGoldComment != null">
+				#{expGoldComment,jdbcType=VARCHAR},
+			</if>
+		</trim>
+	</insert>
+
+	<update id="updateByPrimaryKeySelective" parameterType="com.fenlibao.model.pms.da.reward.ExperienceGold">
+		update flb.t_experience_gold
+		<set>
+			<if test="activityName != null">
+				activity_name = #{activityName,jdbcType=VARCHAR},
+			</if>
+			<if test="timeStart != null">
+				time_start = #{timeStart,jdbcType=TIMESTAMP},
+			</if>
+			<if test="timeEnd != null">
+				time_end = #{timeEnd,jdbcType=TIMESTAMP},
+			</if>
+			<if test="yearYield != null">
+				year_yield = #{yearYield,jdbcType=DECIMAL},
+			</if>
+			<if test="experienceGold != null">
+				experience_gold = #{experienceGold,jdbcType=DECIMAL},
+			</if>
+			<if test="experienceType != null">
+				experience_type = #{experienceType,jdbcType=TINYINT},
+			</if>
+			<if test="effectMonth != null">
+				effect_month = #{effectMonth,jdbcType=INTEGER},
+			</if>
+			<if test="remarks != null">
+				remarks = #{remarks,jdbcType=VARCHAR},
+			</if>
+			<if test="effectDay != null">
+				effect_day = #{effectDay,jdbcType=INTEGER},
+			</if>
+			<if test="activityCode != null">
+				activity_code = #{activityCode,jdbcType=VARCHAR},
+			</if>
+			<if test="investMoney != null">
+				invest_money = #{investMoney,jdbcType=DECIMAL},
+			</if>
+			<if test="expGoldComment != null">
+				remarks = #{expGoldComment,jdbcType=VARCHAR},
+			</if>
+		</set>
+		where id = #{id,jdbcType=INTEGER}
+	</update>
+
+	<delete id="experienceGoldRemove" parameterType="java.util.List">
+		delete from flb.t_experience_gold where id in
+		<foreach collection="list" item="item" open="(" separator=","
+			close=")">
+			#{item}
+		</foreach>
+	</delete>
+	
+	<select id="experienceGoldStatistics" resultType="com.fenlibao.model.pms.da.reward.ExperienceGoldStatistics">
+    SELECT b.activity_code activityCode,count(1) grantCount,sum(b.experience_gold) grantSum,floor(b.year_yield*sum(b.experience_gold)/365)/100*effect_day incomeSum
+    FROM flb.t_user_experience a
+    LEFT JOIN flb.t_experience_gold b ON b.id = a.gold_id
+    where 
+    a.grant_id = #{grantId}
+    AND a.grant_status = 1
+    GROUP BY 
+    b.activity_code
+    </select>
+</mapper>

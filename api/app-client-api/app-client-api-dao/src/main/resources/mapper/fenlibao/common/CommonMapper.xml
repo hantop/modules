@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CommonMapper">
+    <select id="platformStatictis" resultType="java.util.Map" >
+		SELECT
+			IFNULL(SUM(da_hourly_statistics.invest_money),0) AS sumMoney
+		FROM
+			pms.da_hourly_statistics
+    </select>
+</mapper>

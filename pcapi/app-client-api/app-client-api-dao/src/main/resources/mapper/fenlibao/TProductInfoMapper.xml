@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ProductInfoMapper">
+	<select id="getProductInfo" parameterType="int" resultType="TProductInfo">
+		SELECT
+		    f_name as name,
+			f_distribution as distribution,
+			f_earings_rang as earingsRang,
+			f_status as status,
+			f_type as type
+		FROM flb.t_product_info 
+		<where>
+		   <if test="id != null">
+			  id=#{id}
+		   </if>
+		</where>
+		
+	</select>
+</mapper>

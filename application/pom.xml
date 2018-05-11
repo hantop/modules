@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>application</artifactId>
+    <packaging>pom</packaging>
+
+    <parent>
+        <groupId>com.fenlibao</groupId>
+        <artifactId>modules</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <modules>
+        <module>client-api-fenlibao</module>
+        <module>pms-p2p</module>
+        <module>schedule-p2p</module>
+        <module>sms-front</module>
+        <module>weixin-front</module>
+        <module>p2p-platform</module>
+    </modules>
+</project>

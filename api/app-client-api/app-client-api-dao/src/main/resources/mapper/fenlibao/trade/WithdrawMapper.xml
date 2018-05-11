@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="WithdrawMapper">
+	<select id="getWithdrawFreezeSum" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(withdraw.F04), 0)
+		FROM
+			s61.t6130 withdraw
+		LEFT JOIN s61.t6110 userinfo ON userinfo.F01 = withdraw.F02
+		WHERE withdraw.F09 != 'TXSB' AND withdraw.F16 = 'F' 
+		AND withdraw.F02 = #{userId}
+		AND withdraw.F17 = #{cgMode} LIMIT 1
+	</select>
+	<!-- 获取支行信息 -->
+	<select id="getBranchInfo" parameterType="int" resultType="BranchInfo">
+		SELECT branch.order_id AS orderId, branch.city_code AS cityCode, 
+			branch.branch_name AS branchName FROM flb.t_bank_branch_info 
+				AS branch WHERE branch.order_id = (SELECT F09 FROM s65.t6503 WHERE F01 = #{orderId}) LIMIT 1
+	</select>
+	<!-- 保存支行信息 -->
+	<insert id="saveBranchInfo" parameterType="BranchInfo">
+		INSERT INTO flb.t_bank_branch_info (order_id, city_code, branch_name) VALUES (#{orderId}, #{cityCode}, #{branchName})
+	</insert>
+	<select id="getSuccessApplyId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT F01 FROM s61.t6130 WHERE F09 != 'TXSB' AND F02 = #{userId} LIMIT 1
+	</select>
+
+	<select id="getLimitAmount" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(limit_money,0) FROM pms.user_withdraw_limit WHERE user_id = #{userId} ORDER BY create_time DESC LIMIT 1
+	</select>
+
+	<select id="getCGWithdrawFreezeSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+		SELECT
+		IFNULL(SUM(withdraw.amount), 0)
+		FROM
+		flb.t_xw_withdraw withdraw
+		LEFT JOIN flb.t_xw_request request ON request.request_no = withdraw.request_no
+		WHERE request.state IN ('DTJ','DQR') AND withdraw.platform_user_no = #{platformNo}
+		LIMIT 1
+	</select>
+</mapper>

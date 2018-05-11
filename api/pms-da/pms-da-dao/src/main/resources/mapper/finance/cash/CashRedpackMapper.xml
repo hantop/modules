@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.finance.cash.CashRedpacketMapper">
+
+    <sql id="cashListSql">
+        SELECT
+        date_format(s61.t6194.F04,'%Y-%m-%d') sendTime,
+        s61.T6110.F04 phoneNum,
+        s61.t6195.F07 money
+        FROM s61.t6194
+        INNER JOIN s61.t6195 ON s61.t6194.F01 = s61.t6195.F02
+        INNER JOIN s61.T6110 ON s61.t6195.F03 = s61.T6110.F01
+        WHERE s61.t6194.F13 = '5118'
+        <if test="startTime != null">
+            AND s61.t6194.F04 &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND s61.t6194.F04 &lt;= #{endTime}
+        </if>
+        <if test="minMoney != null">
+            AND s61.t6195.F07 &gt;= #{minMoney}
+        </if>
+        <if test="maxMoney != null">
+            AND s61.t6195.F07 &lt;= #{maxMoney}
+        </if>
+        <if test="phoneNum != null and phoneNum != ''">
+            AND s61.T6110.F04  = #{phoneNum}
+        </if>
+        UNION ALL
+        SELECT
+        date_format(pms.da_reward_record.grant_time,'%Y-%m-%d') sendTime,
+        s61.T6110.F04 phoneNum,
+        s61.t6195.F07 money
+        FROM s61.t6195
+        INNER JOIN pms.da_reward_record ON pms.da_reward_record.id = s61.t6195.F09
+        INNER JOIN s61.T6110 ON s61.t6195.F03 = s61.T6110.F01
+        <where>
+            <if test="startTime != null">
+                AND pms.da_reward_record.grant_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND pms.da_reward_record.grant_time &lt;= #{endTime}
+            </if>
+            <if test="minMoney != null">
+                AND s61.t6195.F07 &gt;= #{minMoney}
+            </if>
+            <if test="maxMoney != null">
+                AND s61.t6195.F07 &lt;= #{maxMoney}
+            </if>
+            <if test="phoneNum != null and phoneNum != ''">
+                AND s61.T6110.F04 = #{phoneNum}
+            </if>
+        </where>
+    </sql>
+
+    <select id="findCashListByPager" resultType="CashRedpacket">
+        <include refid="cashListSql"/>
+    </select>
+
+    <select id="sumCashMoney" resultType="java.math.BigDecimal">
+        SELECT sum(money) FROM (
+            SELECT
+              s61.t6195.F07 money
+            FROM s61.t6194
+            INNER JOIN s61.t6195 ON s61.t6194.F01 = s61.t6195.F02
+            INNER JOIN s61.T6110 ON s61.t6195.F03 = s61.T6110.F01
+            WHERE s61.t6194.F13 = '5118'
+            <if test="startTime != null">
+                AND s61.t6194.F04 &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND s61.t6194.F04 &lt;= #{endTime}
+            </if>
+            <if test="minMoney != null">
+                AND s61.t6195.F07 &gt;= #{minMoney}
+            </if>
+            <if test="maxMoney != null">
+                AND s61.t6195.F07 &lt;= #{maxMoney}
+            </if>
+            <if test="phoneNum != null and phoneNum != ''">
+                AND s61.T6110.F04 = #{phoneNum}
+            </if>
+            UNION ALL
+            SELECT
+              s61.t6195.F07 money
+            FROM s61.t6195
+            INNER JOIN pms.da_reward_record ON pms.da_reward_record.id = s61.t6195.F09
+            INNER JOIN s61.T6110 ON s61.t6195.F03 = s61.T6110.F01
+            <where>
+                <if test="startTime != null">
+                    AND pms.da_reward_record.grant_time &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND pms.da_reward_record.grant_time &lt;= #{endTime}
+                </if>
+                <if test="minMoney != null">
+                    AND s61.t6195.F07 &gt;= #{minMoney}
+                </if>
+                <if test="maxMoney != null">
+                    AND s61.t6195.F07 &lt;= #{maxMoney}
+                </if>
+                <if test="phoneNum != null and phoneNum != ''">
+                    AND s61.T6110.F04 = #{phoneNum}
+                </if>
+            </where>
+        ) as tab
+    </select>
+
+    <select id="findAllCashList" resultType="CashRedpacket">
+        <include refid="cashListSql"/>
+    </select>
+</mapper>

@@ -1,0 +1,645 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.statistics.invest.RegMapper">
+
+    <sql id="regListSql">
+		SELECT
+		st6110.F01 userId,
+		DATE_FORMAT(st6110.f09, '%Y-%m-%d') registerTime,
+		st6110.F04 phone,
+		s61.t6141.F02 NAME,
+		CASE s61.t6141.F04
+		WHEN 'TG' THEN
+		'是'
+		ELSE
+		'否'
+		END realName,
+		CASE ISNULL(payExtend.baofoo_bind_id)
+		WHEN '1' THEN
+		'否'
+		ELSE
+		'是'
+		END AS bindBank,
+		CASE flb.t_user_origin.client_type_id
+		WHEN '1' THEN
+		'IPhone客户端'
+		WHEN '2' THEN
+		'Android客户端'
+		WHEN '3' THEN
+		'Ipad客户端'
+		WHEN '4' THEN
+		'WP客户端'
+		WHEN '5' THEN
+		'wap端'
+		WHEN '6' THEN
+		'微信端'
+		WHEN '7' THEN
+		'pc端'
+		ELSE
+		'未知'
+		END AS clientType,
+		fund,
+		invest_tab.invest_money investMoney,
+		invest_tab.num investNum,
+		t_channel.`name` AS channelName,
+		t6101.f06 AS balance,
+		investment.userInvestSum AS investSum
+		FROM
+		(
+			SELECT
+			*
+			FROM
+			s61.`t6110`
+			<where>
+				<if test="startTime != null">
+					AND s61.t6110.f09 &gt;= #{startTime}
+				</if>
+				<if test="endTime != null">
+					AND s61.t6110.f09 &lt;= #{endTime}
+				</if>
+			</where>
+		) st6110
+		LEFT JOIN s61.t6141 ON s61.t6141.F01 = st6110.F01
+		LEFT JOIN s61.t6114 ON s61.t6114.F02 = st6110.F01
+		LEFT JOIN flb.t_user_origin ON st6110.f01 = flb.t_user_origin.user_id
+		LEFT JOIN flb.t_channel ON t_user_origin.channel_code = t_channel. CODE
+		LEFT JOIN flb.t_pay_extend payExtend ON st6110.F01 = payExtend.id
+		LEFT JOIN (
+		SELECT
+		SUM(
+		CONVERT (
+		s61.t6102.F06,
+		DECIMAL (20, 2)
+		) - CONVERT (
+		s61.t6102.F07,
+		DECIMAL (20, 2)
+		)
+		) AS fund,
+		s61.t6101.F02 fund_user_id
+		FROM
+		s61.t6101
+		LEFT JOIN S61.t6102 ON s61.t6102.F02 = S61.T6101.F01
+		WHERE
+			s61.T6101.F02 IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+			)
+		AND s61.t6102.F03 = '1001'
+		AND s61.T6101.F03 = 'WLZH'
+		GROUP BY
+		s61.t6101.F02
+		) AS fund_info ON fund_info.fund_user_id = st6110.F01
+		LEFT JOIN (
+		SELECT
+		invest_info.user_id invest_user_id,
+		COUNT(1) num,
+		SUM(invest_info.invest_money) invest_money
+		FROM
+		(
+		-- 投标总额、人数
+		SELECT
+		tender.F03 user_id,
+		IFNULL(tender.F04, 0) invest_money
+		FROM
+		S62.T6250 tender
+		LEFT JOIN flb.t_user_plan_product pro ON pro.tender_id = tender.F01
+		WHERE
+			tender.f03 IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+			)
+		AND pro.tender_id IS NULL
+		AND NOT EXISTS (
+		SELECT
+		bid_record_id
+		FROM
+		flb.t_plan_bid_record
+		WHERE
+		tender.F01 = bid_record_id
+		)
+		UNION ALL
+		-- 债权转让总额、人数
+		SELECT
+		record.F03 user_id,
+		IFNULL(record.F05, 0) invest_money
+		FROM
+		s62.t6262 record
+		INNER JOIN s62.t6251 finacing ON finacing.F01 = record.F12
+		LEFT JOIN flb.t_user_plan_product pro ON pro.product_id = finacing.F01
+		WHERE
+			record.F03 IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+			)
+		AND pro.product_id IS NULL -- 投资原消费信贷计划总额,人数
+		UNION ALL
+		SELECT
+		record.user_id user_id,
+		record.amount invest_money
+		FROM
+		flb.t_plan_record record -- 投资新计划总额,人数
+		UNION ALL
+		SELECT
+		up.user_id user_id,
+		up.invest_amount invest_money
+		FROM
+		flb.t_user_plan up
+		WHERE
+			up.user_id IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+			)
+		) invest_info
+		GROUP BY
+		invest_info.user_id
+		) AS invest_tab ON invest_tab.invest_user_id = st6110.F01
+		LEFT JOIN (
+			SELECT
+				bid_record.investUserId user_id,
+				SUM(bid_record.userInvestSum) userInvestSum
+			FROM
+			(
+				-- 普通标的
+				SELECT
+				tender.F03 investUserId,
+				SUM(tender.F04) userInvestSum
+				FROM
+				S62.T6250 tender
+				LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.tender_id = tender.F01
+				WHERE
+				tender.f03 IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+				)
+				AND tender.F01 IN (
+				SELECT
+				tender.F01
+				FROM
+				S62.T6250 tender
+				INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+				WHERE
+					bid.F20 IN ('TBZ', 'DFK')
+				)
+				AND NOT EXISTS (
+				SELECT
+				bid_record_id
+				FROM
+				flb.t_plan_bid_record
+				WHERE
+				tender.F01 = bid_record_id
+				)
+				AND t_user_plan_product.id IS NULL
+				GROUP BY
+				tender.F03
+			-- 债权转让
+			UNION ALL
+			SELECT
+			refund.F04 investUserId,
+			SUM(refund.F07) userInvestSum
+			FROM
+			s62.t6252 refund
+			LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.product_id = refund.F11
+			WHERE
+				refund.F04 IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+				)
+			AND refund.F05 = '7001'
+			AND refund.F09 = 'WH'
+			AND t_user_plan_product.id IS NULL
+			GROUP BY
+			refund.F04
+		-- 新计划
+			UNION ALL
+			SELECT
+			up.user_id investUserId,
+			SUM(up.invest_amount) userInvestSum
+			FROM
+			flb.t_user_plan up
+			WHERE
+				up.user_id IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+				)
+			AND up.`status` IN (1, 2, 4)
+			GROUP BY
+			up.user_id
+			UNION ALL
+			-- 旧计划
+			SELECT
+			record.user_id investUserId,
+			SUM(record.amount) userInvestSum
+			FROM
+			flb.t_plan_record record
+			LEFT JOIN flb.t_plan_bid_record pbrecord ON pbrecord.plan_record_id = record.id
+			LEFT JOIN s62.t6250 tender ON pbrecord.bid_record_id = tender.F01
+			LEFT JOIN s62.t6230 bid ON tender.F02 = bid.F01
+			WHERE
+				record.user_id IN (
+				SELECT
+				f01
+				FROM
+				s61.`t6110`
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+				</where>
+				)
+			AND bid.F20 IN ('TBZ', 'DFK')
+			GROUP BY
+			record.user_id
+			) bid_record
+			GROUP BY
+			bid_record.investUserId
+		) AS investment ON investment.user_id = st6110.F01
+		LEFT JOIN s61.t6101 ON s61.t6101.F02 = st6110.F01
+		AND s61.t6101.f03 = 'WLZH'
+		<where>
+			<if test="isAuth != null and isAuth != ''">
+				AND s61.t6141.f04 = #{realName}
+			</if>
+			<if test="isBankCar != '' and isBankCar == 0">
+				AND payExtend.baofoo_bind_id IS NULL
+			</if>
+			<if test="isBankCar != '' and isBankCar == 1">
+				AND payExtend.baofoo_bind_id IS NOT NULL
+			</if>
+			<if test="isInvestMoney != '' and isInvestMoney == 0">
+				AND invest_tab.invest_money IS NULL
+			</if>
+			<if test="isInvestMoney != '' and isInvestMoney == 1">
+				AND invest_tab.invest_money &gt; 0
+			</if>
+			<if test="minInvestMoney != null">
+				AND invest_tab.invest_money &gt;= #{minInvestMoney}
+			</if>
+			<if test="maxInvestMoney != null">
+				AND invest_tab.invest_money &lt;= #{maxInvestMoney}
+			</if>
+		</where>
+		ORDER BY st6110.f09 DESC
+    </sql>
+
+	<select id="getMoneyTotal" resultType="RegisterForm">
+		SELECT
+		  SUM(invest_tab.invest_money) AS investMoneyTotal,
+		  SUM(investment.invest_sum) AS investSumTotal
+		FROM
+		  s61.t6110
+		  LEFT JOIN s61.t6141
+			ON s61.t6141.F01 = s61.t6110.F01
+		  LEFT JOIN s61.t6114
+			ON s61.t6114.F02 = s61.t6110.F01
+		  LEFT JOIN
+			(SELECT
+		invest_info.user_id invest_user_id,
+		COUNT(1) num,
+		SUM(invest_info.invest_money) invest_money
+		FROM
+		(
+		-- 投标总额、人数
+		SELECT
+		tender.F03 user_id,
+		IFNULL(tender.F04, 0) invest_money
+		FROM
+		S62.T6250 tender
+		LEFT JOIN flb.t_user_plan_product pro ON pro.tender_id = tender.F01
+		WHERE
+		tender.f03 IN (
+		SELECT
+		f01
+		FROM
+		s61.`t6110`
+		<where>
+			<if test="startTime != null">
+				AND s61.t6110.f09 &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+				AND s61.t6110.f09 &lt;= #{endTime}
+			</if>
+		</where>
+		)
+		AND pro.tender_id IS NULL
+		AND NOT EXISTS (
+		SELECT
+		bid_record_id
+		FROM
+		flb.t_plan_bid_record
+		WHERE
+		tender.F01 = bid_record_id
+		)
+		UNION ALL
+		-- 债权转让总额、人数
+		SELECT
+		record.F03 user_id,
+		IFNULL(record.F05, 0) invest_money
+		FROM
+		s62.t6262 record
+		INNER JOIN s62.t6251 finacing ON finacing.F01 = record.F12
+		LEFT JOIN flb.t_user_plan_product pro ON pro.product_id = finacing.F01
+		WHERE
+		record.F03 IN (
+		SELECT
+		f01
+		FROM
+		s61.`t6110`
+		<where>
+			<if test="startTime != null">
+				AND s61.t6110.f09 &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+				AND s61.t6110.f09 &lt;= #{endTime}
+			</if>
+		</where>
+		)
+		AND pro.product_id IS NULL
+		-- 投资原消费信贷计划总额,人数
+		UNION ALL
+		SELECT
+		record.user_id user_id,
+		record.amount invest_money
+		FROM
+		flb.t_plan_record record
+		WHERE
+		record.user_id IN (
+		SELECT
+		f01
+		FROM
+		s61.`t6110`
+		<where>
+			<if test="startTime != null">
+				AND s61.t6110.f09 &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+				AND s61.t6110.f09 &lt;= #{endTime}
+			</if>
+		</where>
+		)
+		-- 投资新计划总额,人数
+		UNION ALL
+		SELECT
+		up.user_id user_id,
+		up.invest_amount invest_money
+		FROM
+		flb.t_user_plan up
+		WHERE
+		up.user_id IN (
+		SELECT
+		f01
+		FROM
+		s61.`t6110`
+		<where>
+			<if test="startTime != null">
+				AND s61.t6110.f09 &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+				AND s61.t6110.f09 &lt;= #{endTime}
+			</if>
+		</where>
+		)
+		) invest_info
+		GROUP BY
+		invest_info.user_id) AS invest_tab
+			ON invest_tab.invest_user_id = s61.t6110.F01
+		  LEFT JOIN
+			(SELECT
+			  investing.user_id,
+			  SUM(investing.invest_sum) invest_sum
+			FROM
+			  (SELECT
+				tender.F03 user_id,
+				SUM(tender.F04) invest_sum
+			  FROM
+				s62.T6250 tender
+			  WHERE tender.`F01` IN
+				(SELECT
+				  tender.`F01`
+				FROM
+				  S62.T6250 tender
+				  INNER JOIN s62.t6230 bid
+					ON bid.`F01` = tender.`F02`
+				WHERE bid.F20 IN ('TBZ', 'DFK'))
+			  GROUP BY tender.`F03`
+			  UNION
+			  ALL
+			  SELECT
+				refund.F04 user_id,
+				SUM(refund.F07) invest_sum
+			  FROM
+				s62.`t6252` refund
+				INNER JOIN s62.`t6251` financing
+					  ON financing.F01 = refund.F11
+				  WHERE refund.`F05` = '7001'
+					AND refund.`F10` IS NULL
+				  GROUP BY refund.F04) investing
+				GROUP BY investing.user_id) AS investment
+				ON investment.user_id = s61.t6110.F01
+			  LEFT JOIN s61.t6101
+				ON s61.t6101.F02 = s61.t6110.F01
+				AND s61.t6101.f03 = 'WLZH'
+				<where>
+					<if test="startTime != null">
+						AND s61.t6110.f09 &gt;= #{startTime}
+					</if>
+					<if test="endTime != null">
+						AND s61.t6110.f09 &lt;= #{endTime}
+					</if>
+					<if test="isAuth != null and isAuth != ''">
+						AND s61.t6141.f04 = #{realName}
+					</if>
+					<if test="isBankCar != '' and isBankCar == 0">
+						AND (s61.t6114.f13 IS NULL or s61.t6114.f13 = 'WRZ')
+					</if>
+					<if test="isBankCar != '' and isBankCar == 1">
+						AND (s61.t6114.f13 = 'YRZ' or s61.t6114.f13 = 'KTX')
+					</if>
+					<if test="isInvestMoney != '' and isInvestMoney == 0">
+						AND invest_tab.invest_money IS NULL
+					</if>
+					<if test="isInvestMoney != '' and isInvestMoney == 1">
+						AND invest_tab.invest_money &gt; 0
+					</if>
+					<if test="minInvestMoney != null">
+						AND invest_tab.invest_money &gt;= #{minInvestMoney}
+					</if>
+					<if test="maxInvestMoney != null">
+						AND invest_tab.invest_money &lt;= #{maxInvestMoney}
+					</if>
+				</where>
+	</select>
+
+	<!-- 累计投资金额总计 -->
+	<select id="getInvestMoneyTotal" resultType="java.math.BigDecimal">
+		SELECT
+		SUM(money) invest_money
+		FROM
+		(
+		(SELECT
+		t6250.F03 invest_user_id,
+		T6250.F05 AS money
+		FROM
+		S62.t6250
+		INNER JOIN S62.T6230
+		ON t6250.F02 = T6230.F01
+		INNER JOIN s61.T6110
+		ON s61.T6110.F01 = S62.t6250.F03
+		LEFT JOIN s62.t6251
+		ON t6251.F11 = t6250.F01
+		<where>
+			t6250.F08 = 'F'
+			<if test="startTime != null">
+				AND s61.t6110.f09 &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+				AND s61.t6110.f09 &lt;= #{endTime}
+			</if>
+		</where>)
+		UNION
+		ALL
+		(SELECT
+		t6251.F04 invest_user_id,
+		T6252.F07 AS money
+		FROM
+		S62.t6251
+		INNER JOIN S62.T6230
+		ON t6251.F03 = T6230.F01
+		INNER JOIN s61.T6110
+		ON s61.T6110.F01 = t6251.F04
+		INNER JOIN s62.t6252
+		ON t6252.F11 = t6251.F01
+		<where>
+			t6252.F05 = 7001
+			<if test="startTime != null">
+				AND s61.t6110.f09 &gt;= #{startTime}
+			</if>
+			<if test="endTime != null">
+				AND s61.t6110.f09 &lt;= #{endTime}
+			</if>
+		</where>)
+		) AS invest
+	</select>
+
+	<!-- 在投金额总计 -->
+	<select id="getInvestSumTotal" resultType="java.math.BigDecimal">
+		SELECT SUM(investing.invest_sum) invest_sum FROM s61.`t6110` LEFT JOIN
+			(
+			  (SELECT
+				tender.F03 user_id,
+				SUM(tender.F04) invest_sum
+			  FROM
+				s62.T6250 tender
+			  WHERE tender.`F01` IN
+				(SELECT
+				  tender.`F01`
+				FROM
+				  S62.T6250 tender
+				  INNER JOIN s62.t6230 bid
+					ON bid.`F01` = tender.`F02`
+				WHERE bid.F20 IN ('TBZ', 'DFK'))
+			  GROUP BY tender.`F03`)
+			  UNION
+			  ALL
+			  (SELECT
+				refund.F04 user_id,
+				SUM(refund.F07) invest_sum
+			  FROM
+				s62.`t6252` refund
+				INNER JOIN s62.`t6251` financing
+				  ON financing.F01 = refund.F11
+			  WHERE refund.`F05` = '7001'
+				AND refund.`F10` IS NULL
+			  GROUP BY refund.F04)
+			) investing
+			ON t6110.f01 = investing.user_id
+			<where>
+				<if test="startTime != null">
+					AND s61.t6110.f09 &gt;= #{startTime}
+				</if>
+				<if test="endTime != null">
+					AND s61.t6110.f09 &lt;= #{endTime}
+				</if>
+			</where>
+	</select>
+
+	<select id="findRegList" resultType="Register">
+		<include refid="regListSql"/>
+	</select>
+
+	<select id="findAllRegList" resultType="Register">
+		<include refid="regListSql"/>
+	</select>
+</mapper>

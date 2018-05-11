@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.publicity.KnowEarlyMapper">
+
+
+    <select id="getKnowEarlyList" parameterType="knowEarly" resultType="knowEarly">
+
+        SELECT
+        id            as id           ,
+        title         as title        ,
+        source        as source       ,
+        sorting       as sorting      ,
+        url           as url          ,
+        pic_server  as picServer         ,
+        pic_old_name as picOldName         ,
+        pic_new_name as picNewName        ,
+        keyword       as keyword      ,
+        digest        as digest       ,
+        content       as content      ,
+        create_time   as createTime  ,
+        update_time   as updateTime  ,
+        publish_time  as publishTime ,
+        status        as status       ,
+        publisher_id  as publisherId ,
+        all_pic_loaded as allPicUploade
+        FROM
+        flb.class_risk_know_early where 1=1
+
+        <if test="knowEarly.id !=0">
+            and id= #{knowEarly.id      }
+        </if>
+        <if test="knowEarly.status >=0">
+            and status = #{knowEarly.status      }
+        </if>
+
+        <if test="knowEarly.title !=''and knowEarly.title !=null">
+            and title like concat('%',#{knowEarly.title      },'%')
+        </if>
+
+        <if test="knowEarly.publisherId !=''and knowEarly.publisherId !=null">
+            and publisher_id like concat('%',#{knowEarly.publisherId      },'%')
+        </if>
+
+        <if test="startTime !=''and startTime !=null">
+            and update_time >=  #{startTime      }
+        </if>
+
+        <if test="endTime !=''and endTime !=null">
+            and update_time &lt;= #{endTime      }
+        </if>
+
+        order by id desc
+    </select>
+
+
+    <insert id="editKnowEarly" parameterType="knowEarly">
+        INSERT
+        INTO
+            flb.class_risk_know_early
+            (
+                id,
+                title,
+                source,
+                sorting,
+                url,
+                pic_server,
+                pic_old_name,
+                pic_new_name,
+                keyword,
+                digest,
+                content,
+                create_time,
+                update_time,
+                publish_time,
+                status,
+                publisher_id,
+                all_pic_loaded
+            )
+            VALUES
+            (
+                #{knowEarly.id } ,
+                #{knowEarly.title } ,
+                #{knowEarly.source } ,
+                #{knowEarly.sorting } ,
+                #{knowEarly.url } ,
+                #{knowEarly.picServer } ,
+                #{knowEarly.picOldName } ,
+                #{knowEarly.picNewName } ,
+                #{knowEarly.keyword } ,
+                #{knowEarly.digest } ,
+                #{knowEarly.content } ,
+                #{knowEarly.createTime },
+                now(),
+                #{knowEarly.publishTime},
+                #{knowEarly.status } ,
+                #{knowEarly.publisherId},
+                #{knowEarly.allPicUploade}
+            )
+        ON
+            DUPLICATE KEY
+        UPDATE
+            title =#{knowEarly.title } ,
+            source =#{knowEarly.source } ,
+            sorting =#{knowEarly.sorting } ,
+            url =#{knowEarly.url } ,
+            pic_server =#{knowEarly.picServer } ,
+            pic_old_name=#{knowEarly.picOldName } ,
+            pic_new_name=#{knowEarly.picNewName },
+            keyword =#{knowEarly.keyword } ,
+            digest =#{knowEarly.digest } ,
+            content =#{knowEarly.content } ,
+            create_time =#{knowEarly.createTime } ,
+            update_time =now() ,
+            publish_time=#{knowEarly.publishTime} ,
+            status =#{knowEarly.status } ,
+            publisher_id=#{knowEarly.publisherId},
+            all_pic_loaded=#{knowEarly.allPicUploade}
+    </insert>
+
+    <update id="updateAllPicUploade"  parameterType="knowEarly">
+        update flb.class_risk_know_early
+        set all_pic_loaded=concat(ifnull(all_pic_loaded,''),',',#{newUploaded})
+         where id=#{id };
+    </update>
+
+    <delete id="deleteKnowEarly">
+
+        delete from flb.class_risk_know_early where id IN
+        <foreach collection="idList" item="id" index="index" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+
+    </delete>
+
+    <select id="getKnowEarlyListByIds" parameterType="knowEarly" resultType="knowEarly">
+        SELECT
+        id            as id           ,
+        title         as title        ,
+        sorting       as sorting      ,
+        url           as url          ,
+        pic_new_name as picNewName,
+        keyword       as keyword      ,
+        digest        as digest       ,
+        content       as content      ,
+        create_time   as createTime  ,
+        update_time   as updateTime  ,
+        publish_time  as publishTime ,
+        status        as status       ,
+        publisher_id  as publisherId ,
+        all_pic_loaded as allPicUploade
+        from
+        flb.class_risk_know_early where id IN
+        <foreach collection="idList" item="id" index="index" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+</mapper>

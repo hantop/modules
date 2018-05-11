@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PointsCleanerMapper">
+	<!-- 添加定时清理积分记录 -->
+	<insert id="insertAutoClearPointsRecord" parameterType="java.util.Map" >
+		insert into
+	    mp.mp_member_points_auto_clear (user_id,numbers,clear_time)
+		values (#{userId},#{realAccount},NOW())
+	</insert>
+	<!-- 获取用户积分信息-用于清除 -->
+	<select id="getUserPiontInfoForClear" parameterType="java.util.Map" resultType="PointsClearVO">
+		SELECT
+		p.id id,
+		p.numbers memberPoints,
+		p.user_id userId
+		FROM
+		mp.mp_member_points p
+		WHERE
+		p.clear_status = 0
+		AND p.point_status = 1
+		AND p.numbers <![CDATA[>]]> 0
+		LIMIT #{limit}
+	</select>
+
+	<update id="updateMemberPointsStatus" parameterType="java.util.Map">
+		UPDATE mp.mp_member_points SET `clear_status` = #{clearStatus} WHERE user_id = #{userId}
+	</update>
+
+	<select id="getUserHoldPoints" parameterType="java.util.Map" resultType="int">
+		SELECT IFNULL(SUM(sheetn.numbers),0) holdPoints
+		FROM mp.mp_member_points_sheet sheetn WHERE
+		sheetn.change_type=1
+		AND
+		sheetn.create_time <![CDATA[>]]>  #{startTime}
+		AND
+		sheetn.user_id = #{userId}
+	</select>
+</mapper>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.client.ClientStartupMapper">
+    <insert id="saveStartupImage" parameterType="TStartupImage" keyProperty="id" useGeneratedKeys="true">
+        insert into flb.t_startup_image (
+            f_original_name,
+            f_publish_name,
+            f_server_path,
+            f_relative_path,
+            f_client_type,
+            f_screen_type,
+            f_file_size,
+            f_file_type,
+            f_status,
+            f_create_user
+        ) values (
+            #{originalName},
+            #{publishName},
+            #{serverPath},
+            #{relativePath},
+            #{clientType},
+            #{screenType},
+            #{fileSize},
+            #{fileType},
+            #{status},
+            #{createUser}
+        )
+    </insert>
+
+    <select id="getStartupImageList" parameterType="TStartupImage" resultType="TStartupImage">
+        select
+          id,
+          f_original_name originalName,
+          f_publish_name publishName,
+          f_server_path serverPath,
+          f_relative_path relativePath,
+          f_client_type clientType,
+          f_screen_type screenType,
+          f_file_size fileSize,
+          f_file_type fileType,
+          f_status status,
+          f_create_user createUser,
+          f_create_time createTime
+          from flb.t_startup_image
+          <where>
+              <if test="originalName != null">
+                  f_original_name like concat("%", #{originalName}, "%")
+              </if>
+          </where>
+        order by f_create_time desc
+    </select>
+
+    <select id="getStartupImageListByIds" resultType="TStartupImage">
+        select
+          id,
+          f_original_name originalName,
+          f_publish_name publishName,
+          f_server_path serverPath,
+          f_relative_path relativePath,
+          f_screen_type screenType,
+          f_client_type clientType,
+          f_file_size fileSize,
+          f_file_type fileType,
+          f_status status,
+          f_create_user createUser,
+          f_create_time createTime
+        from flb.t_startup_image
+        <where>
+            <if test="array != null">
+                id in
+                <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteStartupImageByIds">
+        delete from flb.t_startup_image
+        <where>
+            <if test="array != null">
+                id in
+                <foreach collection="array" item="item" index="index" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </delete>
+
+    <update id="updateStartupImage" parameterType="TStartupImage">
+        update flb.t_startup_image set f_client_type=#{clientType}, f_screen_type=#{screenType}, f_status=#{status} where id=#{id}
+    </update>
+</mapper>

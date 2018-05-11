@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BidRefundMapper">
+	<select id="getPredictEarnings" parameterType="java.util.Map" resultType="double">
+		SELECT IFNULL(SUM(t6252.F07),0) FROM s62.t6252 
+		<where>
+		   <if test="userId != null">  
+             F04=#{userId}
+           </if>
+           <if test="tradeType != null">  
+             and F05=#{tradeType}
+           </if>
+           <if test="zqId != null">  
+             and F11=#{zqId}
+           </if>
+           <if test="status != null">  
+             and F09=#{status}
+           </if>
+		</where>
+	</select>
+</mapper>

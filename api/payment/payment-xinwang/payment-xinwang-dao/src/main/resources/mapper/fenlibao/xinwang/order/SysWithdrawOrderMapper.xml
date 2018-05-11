@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysWithdrawOrderMapper">
+
+    <insert id="addOrder" parameterType="com.fenlibao.p2p.model.xinwang.entity.order.SysWithdrawOrder">
+        INSERT INTO s65.t6503 (F01,F02,F03,F04,F05,F06,F07,F08,F09) VALUES (#{id},#{userId},#{amount},#{commissionReceivable},#{paidInCommission},#{bankcard},#{thirdParty},#{thirdPartyFlow},#{withdrawApplyId})
+    </insert>
+
+    <select id="get" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.order.SysWithdrawOrder">
+        SELECT F01 id,F02 userId,F03 amount,F04 commissionReceivable,F05 paidInCommission,F06 bankcard,F07 thirdParty,F08 thirdPartyFlow,F09 withdrawApplyId from s65.t6503 where F01=#{orderId}
+    </select>
+
+</mapper>

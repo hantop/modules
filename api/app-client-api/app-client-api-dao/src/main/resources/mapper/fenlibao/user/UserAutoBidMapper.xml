@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserAutoBidMapper">
+	<!--插入一条自动投标的记录 -->
+	<insert id="insertAutoBidSetting" parameterType="java.util.Map">
+		INSERT INTO
+		flb.t_user_auto_bidding_setting(
+		user_id,interest_rate,time_min,min_mark,time_max,max_mark,bid_type,repayment_mode,reserve,validity_mod,start_time,end_time,create_time,update_time
+		)
+		value(
+		#{userId},#{interestRate},#{timeMin},#{minMark},#{timeMax},#{maxMark},#{bidType},#{repaymentMode},#{reserve},#{validityMod},#{startTime},#{endTime},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+		)
+	</insert>
+
+	<!--查询用户当前启用设置的id -->
+	<select id="selectUserAutobidSettingId" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+		id
+		FROM flb.t_user_auto_bidding_setting tab
+		WHERE
+			tab.user_id = #{userId}
+		  AND
+			tab.active = #{active}
+		  AND
+		  	tab.delete_flag = 1
+	</select>
+
+
+	<!--关闭当前用户的自动投标设置 -->
+	<update id="updateSettingByUserId" parameterType="java.util.Map">
+		UPDATE flb.t_user_auto_bidding_setting SET active = 0
+		WHERE user_id = #{userId}
+	</update>
+
+	<!--启用自动投标设置 -->
+	<update id="activeAutobidSetting" parameterType="java.util.Map">
+		UPDATE flb.t_user_auto_bidding_setting SET
+		active = #{active},
+		setting_begintime = CURRENT_TIMESTAMP,
+		update_time = CURRENT_TIMESTAMP
+		WHERE user_id = #{userId} AND id = #{id}
+	</update>
+
+	<!--查询用户设置列表 -->
+	<select id="getAutobidSettingList" parameterType="java.util.Map" resultType="AutobidSettingVO">
+		SELECT
+			 flb.t_user_auto_bidding_setting.id AS settingId,
+			 flb.t_user_auto_bidding_setting.interest_rate AS interestRate,
+			 flb.t_user_auto_bidding_setting.time_min AS timeMin,
+			 flb.t_user_auto_bidding_setting.min_mark AS minMark,
+			 flb.t_user_auto_bidding_setting.time_max AS timeMax,
+			 flb.t_user_auto_bidding_setting.max_mark AS maxMark,
+			 flb.t_user_auto_bidding_setting.validity_mod AS validityMod,
+			 UNIX_TIMESTAMP(flb.t_user_auto_bidding_setting.start_time) AS startTime,
+			 UNIX_TIMESTAMP(flb.t_user_auto_bidding_setting.end_time) AS endTime,
+			 flb.t_user_auto_bidding_setting.active as active
+		FROM flb.t_user_auto_bidding_setting
+		WHERE
+		user_id = #{userId}
+		AND
+		delete_flag = 1
+		ORDER BY update_time DESC
+		LIMIT 1
+	</select>
+
+
+	<!--查询用户设置详情 -->
+	<select id="getAutobidSettingDetail" parameterType="java.util.Map" resultType="AutobidSettingDetailVO">
+		SELECT
+		flb.t_user_auto_bidding_setting.id AS settingId,
+		flb.t_user_auto_bidding_setting.interest_rate AS interestRate,
+		 flb.t_user_auto_bidding_setting.time_min AS timeMin,
+         flb.t_user_auto_bidding_setting.min_mark AS minMark,
+         flb.t_user_auto_bidding_setting.time_max AS timeMax,
+         flb.t_user_auto_bidding_setting.max_mark AS maxMark,
+		flb.t_user_auto_bidding_setting.validity_mod AS validityMod,
+		flb.t_user_auto_bidding_setting.start_time AS startTime,
+		flb.t_user_auto_bidding_setting.end_time AS endTime,
+		flb.t_user_auto_bidding_setting.active as active,
+		flb.t_user_auto_bidding_setting.bid_type as bidType,
+		flb.t_user_auto_bidding_setting.repayment_mode as repaymentMode,
+		flb.t_user_auto_bidding_setting.reserve as reserve
+		FROM flb.t_user_auto_bidding_setting
+		WHERE
+		user_id = #{userId} AND id = #{id} AND delete_flag = 1
+	</select>
+
+	<!-- 删除用户设置 逻辑删除 -->
+	<update id="deleteAutobidSetting" parameterType="java.util.Map">
+	UPDATE flb.t_user_auto_bidding_setting SET
+	active = 0,
+	delete_flag = 0,
+	update_time = CURRENT_TIMESTAMP
+	WHERE user_id = #{userId} AND id = #{id}
+	</update>
+
+    <select id="getFirstRationalRole" resultType="UserAutobidSetting" parameterType="java.util.Map">
+        SELECT
+            tabs.`id` AS id,
+            tabs.`user_id` AS userId,
+            tabs.`interest_rate` AS interestRate,
+            tabs.`time_min` AS timeMin,
+            tabs.`min_mark` AS minMark,
+            tabs.`time_max` AS timeMax,
+            tabs.`max_mark` AS maxMark,
+            tabs.`bid_type` AS bidType,
+            tabs.`repayment_mode` AS repaymentMode,
+            IFNULL(tabs.`reserve`,0) AS reserve,
+            tabs.`validity_mod` AS validityMod,
+            tabs.`start_time` AS startTime,
+            tabs.`end_time` AS endTime,
+            tabs.`active` AS active,
+            tabs.`delete_flag` AS deleteFlag,
+            tabs.`create_time` AS createTime,
+            tabs.`update_time` AS updateTime
+        FROM
+            flb.t_user_auto_bidding_setting tabs
+        INNER JOIN s61.t6101 t6101 ON tabs.`user_id` = t6101.`F02`
+        WHERE
+            t6101.F03 = 'WLZH'
+            AND t6101.F06 - IFNULL(tabs.reserve,0) >= 100
+            <![CDATA[ AND (tabs.validity_mod = 'CQYX' OR (tabs.validity_mod = 'DIY' AND tabs.start_time <= NOW() AND tabs.end_time >= NOW() ))]]>
+            AND tabs.active = 1
+            AND tabs.delete_flag = 1
+            <![CDATA[AND tabs.setting_begintime < #{dbTime} ]]>
+        ORDER BY setting_begintime ASC
+        LIMIT 1
+    </select>
+
+    <update id="updateRoleRank" parameterType="java.util.Map">
+        UPDATE
+            flb.t_user_auto_bidding_setting
+        SET
+            setting_begintime = NOW()
+        WHERE
+            id = #{id}
+    </update>
+
+    <!--获取自动投标上次匹配成功（或生效）到现在的时间天数-->
+    <select id="getLastBidDateDiff" resultType="Integer"  parameterType="java.util.Map">
+        SELECT
+            DATEDIFF(NOW(),last_bidtime)
+        FROM
+            flb.t_user_auto_bidding_setting tabs
+        WHERE
+            id = #{id}
+    </select>
+
+	<update id="updateRoleLastBidTime" parameterType="java.util.Map">
+        UPDATE
+            flb.t_user_auto_bidding_setting
+        SET
+            last_bidtime = NOW()
+        WHERE
+            id = #{id}
+    </update>
+
+    <select id="getDBCurrentTime" resultType="java.sql.Timestamp">
+       SELECT NOW()
+    </select>
+
+	<!--获取当前设置是否启用-->
+    <select id="selectStatusBySId" parameterType="java.util.Map" resultType="java.lang.Integer">
+       SELECT
+		tab.active
+		FROM flb.t_user_auto_bidding_setting tab
+		WHERE
+		    tab.id = #{id}
+		    AND
+		  	tab.delete_flag = 1
+    </select>
+	<!--获取投标最小最大时间期限的单位-->
+	<select id="getBidTime" resultType="BidTime">
+		SELECT
+		tab.num as num,
+		tab.mark as mark
+		FROM flb.t_user_auto_bidding_time tab
+	</select>
+
+	<!--更新设置-->
+	<update id="updateAutobidSettingById" parameterType="java.util.Map">
+		UPDATE flb.t_user_auto_bidding_setting tabs SET
+		interest_rate = #{interestRate}
+		,time_min = #{timeMin}
+		,min_mark = #{minMark}
+		,time_max = #{timeMax}
+		,max_mark = #{maxMark}
+		,validity_mod = #{validityMod}
+		,update_time = CURRENT_TIMESTAMP
+		<if test="bidType!=null">
+			,bid_type = #{bidType}
+		</if>
+		<if test="repaymentMode!=null">
+			,repayment_mode = #{repaymentMode}
+		</if>
+		<if test="reserve!=null">
+			,reserve = #{reserve}
+		</if>
+		<if test="startTime!=null">
+			,start_time = #{startTime}
+		</if>
+		<if test="endTime!=null">
+			,end_time = #{endTime}
+		</if>
+		WHERE user_id = #{userId} AND id = #{id} AND delete_flag = 1
+	</update>
+
+	<!--查询用户设置记录-->
+	<select id="selectSettingNumByUserId" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+			count(*)
+		FROM flb.t_user_auto_bidding_setting tab
+		WHERE
+		tab.user_id = #{userId}
+
+		<if test="deleteFlag != null">
+			AND  tab.delete_flag = #{deleteFlag}
+		</if>
+
+	</select>
+
+	<!--查询投资期限单位的主键-->
+	<select id="getIdByNumAndMark" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			id AS id,
+			count(*) AS count
+		FROM flb.t_user_auto_bidding_time tm
+		WHERE
+		tm.num = #{num}
+		AND
+		tm.mark = #{mark}
+	</select>
+
+	<select id="getActiveSet" resultType="Integer"  parameterType="Integer">
+		SELECT
+			count(1)
+		FROM
+			flb.t_user_auto_bidding_setting tabs
+		WHERE
+			user_id = #{userId}
+		AND delete_flag = 1
+		AND active = 1
+	</select>
+</mapper>

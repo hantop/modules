@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserFundsTenderMapper">
+	
+	<!-- 获取平台用户id -->
+	<select id="getPTUserAccountId" resultType="UserFundsAccountInfo">
+		select F01 userId
+		from s71.T7101 
+		limit 1
+	</select>
+	
+	<!-- 获取账户信息 -->
+    <select id="getUserFundsAccountInfo" parameterType="java.util.Map" resultType="UserFundsAccountInfo">
+		SELECT
+			F01 fundsAccountId,
+			F02 userId,
+			F06 fundsAmount
+		FROM
+			S61.T6101
+		WHERE
+			T6101.F02 = #{userId}
+		AND T6101.F03 = #{accountType} 
+		limit 1 FOR UPDATE 
+	</select>
+	
+	<!-- 更新账户余额 -->
+	<update id="updateUserFundsAccountAmount" parameterType="java.util.Map" >
+		UPDATE S61.T6101
+		SET F06 = #{accountAmount}, F07 = #{nowDatetime}
+		WHERE F01 = #{fundsAccountId}
+    </update>
+    
+    <!-- 添加资金流水记录 -->
+	<insert id="addT6102Record" parameterType="java.util.Map" >  
+	    insert into s61.t6102 (F02,F03,F04,F05,F06,F07,F08,F09,F10)
+		values (#{zcwlzhId},#{FeeCode},#{zrwlzhId},#{nowDatetime},#{zrcashAmount},#{zccashAmount},#{balanceAmount},#{remark},'WDZ')
+	</insert> 
+	
+	<!-- 获取用户认证状态 -->
+	<select id="getUserAuthInfo" parameterType="java.util.Map" resultType="UserAuthStatus">
+		select F02 identityStatus, 
+			F03 phoneStatus, 
+			F05 tradePwdStatus 
+		from s61.t6118 
+		where F01 = #{userId} 
+		limit 1
+	</select>
+	
+</mapper>

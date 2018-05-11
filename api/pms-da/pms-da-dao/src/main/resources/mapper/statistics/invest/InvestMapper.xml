@@ -1,0 +1,653 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.statistics.invest.InvestMapper">
+
+    <!-- 投资统计 -->
+    <sql id="firstInvestInfo">
+        -- 判断是否首投,再嵌套一层
+        SELECT
+        first_invest.*
+        FROM
+        (
+        SELECT
+        _invest_info.user_id,
+        _invest_info.invest_money invest_money,
+        _invest_info.create_time create_time,
+        _invest_info.product_type,
+        _invest_info.product_type_id,
+        _invest_info.bid_type,
+        _invest_info.limit_time
+        FROM
+        (
+        -- 投标金额
+        SELECT
+        tender.F03 user_id,
+        IFNULL(tender.F04, 0) invest_money,
+        tender.F06 create_time,
+        bid_type.F01 product_type_id,
+        bid_type.F02 product_type,
+        (
+        CASE bid.F28
+        WHEN 'S' THEN
+        2
+        ELSE
+        1
+        END
+        ) bid_type,
+        (
+        CASE
+        WHEN bid.F09 > 0 THEN
+        CONCAT(bid.F09, '月')
+        WHEN bid.F32 > 0 THEN
+        CONCAT(bid.F32, '天')
+        END
+        ) limit_time
+        FROM
+        S62.T6250 tender
+        INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+        INNER JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+        LEFT JOIN flb.t_user_plan_product pro ON pro.tender_id = tender.F01
+        WHERE
+        pro.tender_id IS NULL
+        AND NOT EXISTS (
+        SELECT
+        bid_record_id
+        FROM
+        flb.t_plan_bid_record
+        WHERE
+        tender.F01 = bid_record_id
+        )
+        AND tender.F03 NOT IN (602, 60, 6833, 13362, 10071, 10969)
+        UNION ALL
+        -- 债权转让金额
+        SELECT
+        record.F03 user_id,
+        IFNULL(record.F05, 0) invest_money,
+        record.F07 create_time,
+        bid_type.F01 product_type_id,
+        bid_type.F02 product_type,
+        3 bid_type,
+        (
+        CASE
+        WHEN bid.F09 > 0 THEN
+        CONCAT(bid.F09, '月')
+        WHEN bid.F32 > 0 THEN
+        CONCAT(bid.F32, '天')
+        END
+        ) limit_time
+        FROM
+        s62.t6262 record
+        INNER JOIN s62.t6251 finacing ON finacing.F01 = record.F12
+        INNER JOIN s62.t6230 bid ON bid.F01 = finacing.F03
+        INNER JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+        LEFT JOIN flb.t_user_plan_product pro ON pro.product_id = finacing.F01
+        WHERE
+        pro.product_id IS NULL
+        AND record.F03 NOT IN (602, 60, 6833, 13362, 10071, 10969)
+        UNION ALL
+        -- 投资计划
+        SELECT
+        up.user_id user_id,
+        up.invest_amount invest_money,
+        up.create_time create_time,
+        CONCAT('8', p.type) product_type_id,
+        (
+        CASE p.type
+        WHEN 1 THEN
+        '月升计划'
+        ELSE
+        '省心计划'
+        END
+        ) product_type,
+        (
+        CASE p.is_novice
+        WHEN 1 THEN
+        2
+        ELSE
+        1
+        END
+        ) bid_type,
+        CASE p.cycle_type
+        WHEN 'd' THEN
+        CONCAT(p.cycle, '天')
+        ELSE
+        CONCAT(p.cycle, '月')
+        END AS limit_time
+        FROM
+        flb.t_user_plan up
+        LEFT JOIN flb.t_invest_plan p ON up.plan_id = p.id
+        WHERE
+        p.`status` IN (4, 5, 6)
+        AND up.user_id NOT IN (602, 60, 6833, 13362, 10071, 10969)
+        UNION ALL
+        -- 旧计划
+        SELECT
+        record.user_id user_id,
+        record.amount invest_money,
+        record.create_time create_time,
+        82 AS product_type_id,
+        '省心计划' AS product_type,
+        (
+        CASE plan.is_novice_bid
+        WHEN 'S' THEN
+        2
+        ELSE
+        1
+        END
+        ) bid_type,
+        CASE plan.cycle_type
+        WHEN 'd' THEN
+        CONCAT(plan.cycle, '天')
+        ELSE
+        CONCAT(plan.cycle, '月')
+        END AS limit_time
+        FROM
+        flb.t_plan_record record
+        INNER JOIN flb.t_plan plan ON record.plan_id = plan.id
+        WHERE record.user_id NOT IN (602, 60, 6833, 13362, 10071, 10969)
+        ) _invest_info
+            ORDER BY _invest_info.create_time ASC, _invest_info.invest_money DESC
+            ) first_invest
+            GROUP BY first_invest.user_id
+    </sql>
+
+    <sql id="investInfo">
+        SELECT
+        _invest_info.user_id,
+        _invest_info.invest_money invest_money,
+        _invest_info.create_time create_time,
+        _invest_info.product_type,
+        _invest_info.product_type_id,
+        _invest_info.bid_type,
+        _invest_info.limit_time
+        FROM
+        (
+        -- 投标金额
+        SELECT
+        tender.F03 user_id,
+        IFNULL(tender.F04, 0) invest_money,
+        tender.F06 create_time,
+        bid_type.F01 product_type_id,
+        bid_type.F02 product_type,
+        (
+        CASE bid.F28
+        WHEN 'S' THEN
+        2
+        ELSE
+        1
+        END
+        ) bid_type,
+        (
+        CASE
+        WHEN bid.F09 > 0 THEN
+        CONCAT(bid.F09, '月')
+        WHEN bid.F32 > 0 THEN
+        CONCAT(bid.F32, '天')
+        END
+        ) limit_time
+        FROM
+        S62.T6250 tender
+        INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+        INNER JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+        LEFT JOIN flb.t_user_plan_product pro ON pro.tender_id = tender.F01
+        WHERE
+        pro.tender_id IS NULL
+        AND NOT EXISTS (
+        SELECT
+        bid_record_id
+        FROM
+        flb.t_plan_bid_record
+        WHERE
+        tender.F01 = bid_record_id
+        )
+        AND tender.F03 NOT IN (602, 60, 6833, 13362, 10071, 10969)
+        <if test="investStartTime != null">
+            AND tender.F06 &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="investEndTime != null">
+            AND tender.F06 &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+        </if>
+        UNION ALL
+        -- 债权转让金额
+        SELECT
+        record.F03 user_id,
+        IFNULL(record.F05, 0) invest_money,
+        record.F07 create_time,
+        bid_type.F01 product_type_id,
+        bid_type.F02 product_type,
+        3 bid_type,
+        (
+        CASE
+        WHEN bid.F09 > 0 THEN
+        CONCAT(bid.F09, '月')
+        WHEN bid.F32 > 0 THEN
+        CONCAT(bid.F32, '天')
+        END
+        ) limit_time
+        FROM
+        s62.t6262 record
+        INNER JOIN s62.t6251 finacing ON finacing.F01 = record.F12
+        INNER JOIN s62.t6230 bid ON bid.F01 = finacing.F03
+        INNER JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+        LEFT JOIN flb.t_user_plan_product pro ON pro.product_id = finacing.F01
+        WHERE
+        pro.product_id IS NULL
+        <if test="investStartTime != null">
+            AND record.F07 &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="investEndTime != null">
+            AND record.F07 &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+        </if>
+        AND record.F03 NOT IN (602, 60, 6833, 13362, 10071, 10969)
+        UNION ALL
+        -- 投资计划
+        SELECT
+        up.user_id user_id,
+        up.invest_amount invest_money,
+        up.create_time create_time,
+        CONCAT('8', p.type) product_type_id,
+        (
+        CASE p.type
+        WHEN 1 THEN
+        '月升计划'
+        ELSE
+        '省心计划'
+        END
+        ) product_type,
+        (
+        CASE p.is_novice
+        WHEN 1 THEN
+        2
+        ELSE
+        1
+        END
+        ) bid_type,
+        CASE p.cycle_type
+        WHEN 'd' THEN
+        CONCAT(p.cycle, '天')
+        ELSE
+        CONCAT(p.cycle, '月')
+        END AS limit_time
+        FROM
+        flb.t_user_plan up
+        LEFT JOIN flb.t_invest_plan p ON up.plan_id = p.id
+        WHERE
+        p.`status` IN (4, 5, 6)
+        AND up.user_id NOT IN (602, 60, 6833, 13362, 10071, 10969)
+        <if test="investStartTime != null">
+            AND up.create_time &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="investEndTime != null">
+            AND up.create_time &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+        </if>
+        UNION ALL
+        -- 旧计划
+        SELECT
+        record.user_id user_id,
+        record.amount invest_money,
+        record.create_time create_time,
+        82 AS product_type_id,
+        '省心计划' AS product_type,
+        (
+        CASE plan.is_novice_bid
+        WHEN 'S' THEN
+        2
+        ELSE
+        1
+        END
+        ) bid_type,
+        CASE plan.cycle_type
+        WHEN 'd' THEN
+        CONCAT(plan.cycle, '天')
+        ELSE
+        CONCAT(plan.cycle, '月')
+        END AS limit_time
+        FROM
+        flb.t_plan_record record
+        INNER JOIN flb.t_plan plan ON record.plan_id = plan.id
+        <where>
+            record.user_id NOT IN (602, 60, 6833, 13362, 10071, 10969)
+            <if test="investStartTime != null">
+                AND record.create_time &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="investEndTime != null">
+                AND record.create_time &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+            </if>
+        </where>
+        ) _invest_info
+    </sql>
+
+    <resultMap id="investMoneyAndTimesTotalMap" type="java.util.Map">
+        <result property="userId" column="user_id"/>
+        <result property="investCount" column="invest_count"/>
+        <result property="investTotalMoney" column="invest_sum"/>
+    </resultMap>
+
+    <!--用户累计投资金额,累计投资次数-->
+    <select id="getInvestMoneyAndTimesTotal" parameterType="map" resultMap="investMoneyAndTimesTotalMap">
+        SELECT
+        invest_info.user_id,
+        COUNT(1) invest_count,
+        SUM(invest_info.invest_money) invest_sum
+        FROM
+        (
+        -- 普通标的投标总额、人数
+        SELECT
+        tender.F03 user_id,
+        IFNULL(tender.F04, 0) invest_money
+        FROM
+        S62.T6250 tender
+        LEFT JOIN flb.t_user_plan_product pro ON pro.tender_id = tender.F01
+        WHERE
+        pro.tender_id IS NULL
+        AND tender.F03 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        AND NOT EXISTS (
+        SELECT
+        bid_record_id
+        FROM
+        flb.t_plan_bid_record
+        WHERE
+        tender.F01 = bid_record_id
+        )
+        UNION ALL
+        -- 债权转让总额、人数
+        SELECT
+        record.F03 user_id,
+        IFNULL(record.F05, 0) invest_money
+        FROM
+        s62.t6262 record
+        INNER JOIN s62.t6251 finacing ON finacing.F01 = record.F12
+        LEFT JOIN flb.t_user_plan_product pro ON pro.product_id = finacing.F01
+        WHERE
+        pro.product_id IS NULL
+        AND record.F03 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        -- 投资原消费信贷计划总额,人数
+        UNION ALL
+        SELECT
+        record.user_id user_id,
+        record.amount invest_money
+        FROM
+        flb.t_plan_record record
+        WHERE record.user_id IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        -- 投资新计划总额,人数
+        UNION ALL
+        SELECT
+        up.user_id user_id,
+        up.invest_amount invest_money
+        FROM
+        flb.t_user_plan up
+        WHERE up.user_id IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        ) invest_info
+        GROUP BY
+        invest_info.user_id
+    </select>
+
+    <resultMap id="userBaseInfoMap" type="java.util.Map">
+        <result property="userId" column="user_id"/>
+        <result property="realName" column="realName"/>
+        <result property="surplusMoney" column="surplusMoney"/>
+    </resultMap>
+
+    <!--姓名,账户余额-->
+    <select id="getUserBaseInfo" parameterType="map" resultMap="userBaseInfoMap">
+        SELECT
+            account.F02 userId,
+            user_base.F02 realName,
+            IFNULL(account.F06, 0) surplusMoney
+        FROM s61.t6101 account
+        INNER JOIN s61.t6141 user_base ON account.F02 = user_base.F01
+        WHERE account.F03 = 'WLZH'
+        AND user_base.F04 = 'TG'
+        AND account.F02 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+    </select>
+
+    <resultMap id="productTypeExtendMap" type="java.util.Map">
+        <result property="key" column="key"/>
+        <result property="value" column="value"/>
+    </resultMap>
+
+    <select id="getProductTypeExtend" resultMap="productTypeExtendMap">
+        SELECT
+            enum_key 'key',
+            enum_value 'value'
+         FROM flb.t_enum
+        WHERE enum_table = 'bid'
+        AND enum_column = 'bid_product_type'
+    </select>
+
+    <!-- 投资统计 -->
+    <select id="getInvestDetail" resultType="InvestInfo">
+        SELECT
+            u.F01 userId,
+            u.F04 phoneNum,
+            date_format(u.F09 ,'%Y-%m-%d') regtime,
+            channel.name channelName,
+            date_format(invest_info.create_time,'%Y-%m-%d %H:%i') create_time,
+            invest_info.invest_money investMoney,
+            invest_info.product_type productType,
+            invest_info.bid_type bidType,
+            invest_info.limit_time limitTime
+        FROM
+        (
+            SELECT
+                _invest_info.*
+            FROM
+            (
+            <if test="isFirstInvest">
+              <include refid="firstInvestInfo"/>
+            </if>
+            <if test="!isFirstInvest">
+                <include refid="investInfo"/>
+            </if>
+            ) _invest_info
+            <where>
+                <if test="isFirstInvest and investStartTime != null">
+                    AND _invest_info.create_time &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+                </if>
+                <if test="isFirstInvest and investEndTime != null">
+                    AND _invest_info.create_time &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+                </if>
+                <if test="productType != null and productType != ''">
+                    AND _invest_info.product_type_id = #{productType}
+                </if>
+                <if test="minInvestMoney != null">
+                    AND _invest_info.invest_money &gt;= #{minInvestMoney,jdbcType=DECIMAL}
+                </if>
+                <if test="maxInvestMoney != null">
+                    AND _invest_info.invest_money &lt;= #{maxInvestMoney,jdbcType=DECIMAL}
+                </if>
+                <if test="bidType != null and bidType != ''">
+                    AND _invest_info.bid_type = #{bidType}
+                </if>
+                <if test="status != null and status != ''">
+                    AND _invest_info.bid_status = #{status}
+                </if>
+            </where>
+        ) invest_info
+        INNER JOIN s61.t6110 u ON u.F01 = invest_info.user_id
+        LEFT JOIN flb.t_user_origin origin ON u.F01 = origin.user_id
+        LEFT JOIN flb.t_channel channel ON channel.code = origin.channel_code
+        <where>
+            <if test="regStartTime != null">
+                AND u.F09 &gt;= #{regStartTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="regEndTime != null">
+                AND u.F09 &lt;= #{regEndTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="channelName != null and channelName != ''">
+                AND channel.name LIKE '%${channelName}%'
+            </if>
+        </where>
+        ORDER BY invest_info.create_time DESC
+    </select>
+
+    <select id="getInvestTotal"  resultType="InvestInfo">
+        SELECT
+            COUNT(DISTINCT u.F01) totalInvestor,
+            COUNT(1) totalLine,
+            SUM(invest_info.invest_money) investTotalMoney
+        FROM
+        (
+            SELECT
+                _invest_info.*
+            FROM
+            (
+        <if test="isFirstInvest">
+            <include refid="firstInvestInfo"/>
+        </if>
+        <if test="!isFirstInvest">
+            <include refid="investInfo"/>
+        </if>
+        ) _invest_info
+        <where>
+            <if test="isFirstInvest and investStartTime != null">
+                AND _invest_info.create_time &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="isFirstInvest and investEndTime != null">
+                AND _invest_info.create_time &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+            </if>
+				<if test="productType != null and productType != ''">
+					AND _invest_info.product_type_id = #{productType}
+				</if>
+				<if test="minInvestMoney != null">
+					AND _invest_info.invest_money &gt;= #{minInvestMoney,jdbcType=DECIMAL}
+				</if>
+				<if test="maxInvestMoney != null">
+					AND _invest_info.invest_money &lt;= #{maxInvestMoney,jdbcType=DECIMAL}
+				</if>
+				<if test="bidType != null and bidType != ''">
+					AND _invest_info.bid_type = #{bidType}
+				</if>
+				<if test="status != null and status != ''">
+					AND _invest_info.bid_status = #{status}
+				</if>
+			</where>
+        ) invest_info
+        INNER JOIN s61.t6110 u ON u.F01 = invest_info.user_id
+        LEFT JOIN flb.t_user_origin origin ON u.F01 = origin.user_id
+        LEFT JOIN flb.t_channel channel ON channel.code = origin.channel_code
+        <where>
+            <if test="regStartTime != null">
+                AND u.F09 &gt;= #{regStartTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="regEndTime != null">
+                AND u.F09 &lt;= #{regEndTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="channelName != null and channelName != ''">
+                AND channel.name LIKE '%${channelName}%'
+            </if>
+        </where>
+    </select>
+
+    <select id="getClientTypeList" resultType="ClientTypeInfo">
+        SELECT id ,name AS clientName FROM flb.t_client_type
+        <where>
+            <if test="typeId != null">
+                AND id = #{typeId,jdbcType=INTEGER}
+            </if>
+        </where>
+    </select>
+
+    <!-- 用户充值投资明细 不使用 -->
+    <select id="getInvestStatistics" parameterType="java.util.Map" resultType="InvestInfo">
+        SELECT total.userid,total.regtime,total.phone,total.nickname,total.clientid,
+        total.smrz,total.idcard,SUM(total.recharge) AS inmoney,total.bidcount,total.invest AS outmoney FROM
+        (SELECT course.*,t6502.f03 AS recharge FROM
+        (SELECT base.*,COUNT(base.bid) AS bidcount,SUM(base.invest) FROM
+        (SELECT t6110.`F01` AS userid,t6110.f09 regtime,t6110.`F04` AS phone,t6110.f14 AS nickname,cc.`client_type_id`
+        AS clientid,
+        t6141.`F04` AS smrz,t6141.`f06` AS idcard,t6504.f03 AS bid,t6504.f04 AS invest FROM s61.`t6110`
+        LEFT JOIN s61.`t6141` ON t6110.f01 = t6141.`F01`
+        LEFT JOIN flb.t_user_origin cc ON t6110.f01 = cc.`user_id`
+        LEFT JOIN s65.`t6504` ON t6110.f01 = t6504.f02
+        LEFT JOIN s62.`t6250` ON t6504.f05 = t6250.f01
+        <where>
+            <if test="beginTime != null">
+                <![CDATA[AND t6110.f09 >= #{beginTime}]]>
+            </if>
+            <if test="endTime != null">
+                <![CDATA[AND t6110.f09 <= #{endTime}]]>
+            </if>
+            <if test="InvestStartTime != null">
+                <![CDATA[AND t6250.f06 >= #{InvestStartTime}]]>
+            </if>
+            <if test="InvestEndTime != null">
+                <![CDATA[AND t6250.f06 <= #{InvestEndTime}]]>
+            </if>
+            <if test="phoneNum != null">
+                AND t6110.f04 = #{phoneNum}
+            </if>
+            <if test="clientType != null">
+                AND cc.client_type_id = #{clientType}
+            </if>
+        </where>
+        ) AS base GROUP BY base.userid) AS course
+        LEFT JOIN s65.`t6502` ON course.userid = t6502.f02
+        LEFT JOIN s65.`t6501` ON t6502.f01 = t6501.f01
+        ) AS total
+        <where>
+            <if test="moneyStart != null">
+                <![CDATA[AND total.invest >= #{moneyStart,jdbcType=DECIMAL}]]>
+            </if>
+            <if test="moneyEnd != null">
+                <![CDATA[AND total.invest <= #{moneyEnd,jdbcType=DECIMAL}]]>
+            </if>
+        </where>
+        GROUP BY total.userid ORDER BY total.userid DESC
+    </select>
+
+    <!-- 查询用户在投金额 -->
+    <select id="getUserInvestDetails" resultType="InvestInfo">
+        SELECT base.*,IFNULL(SUM(t6250.F04), 0) AS outmoney FROM
+        (SELECT
+        t6110.f01 AS userId,
+        t6110.f04 AS phone
+        FROM
+        s61.`t6110` WHERE t6110.f01 = #{userId})AS base
+        LEFT JOIN s62.`t6250`
+        ON base.userId = t6250.F03
+        AND t6250.F08 = 'F'
+        GROUP BY base.userId
+    </select>
+
+    <!--查询被推广用户的相关信息 -->
+    <select id="getUserRankingDetails" parameterType="java.lang.Integer" resultType="InvestInfo">
+        SELECT t3.userid AS userId,t3.phone,t3.regtime,t3.investMoney AS outmoney,t4.allred,t5.usered FROM
+        (SELECT t2.*,SUM(t6250.F04) AS investMoney FROM
+        (SELECT t6110.f01 AS userid, t6110.f02 AS phone,t6110.`F09` AS regtime FROM
+        (SELECT t6311.f03 AS userid FROM s61.`t6110` INNER JOIN s63.`t6311` ON t6110.f01 = t6311.f02 AND t6110.f01 = #{userId}) AS t1
+        INNER JOIN s61.`t6110` ON t1.userid = t6110.f01) AS t2
+        LEFT JOIN s62.`t6250` ON t2.userid = t6250.F03 GROUP BY t2.userid ORDER BY NULL) AS t3
+        LEFT JOIN
+        (SELECT userbag.user_id,SUM(red.red_money) AS allred FROM flb.`t_red_packet` AS red ,flb.`t_user_redpackets` AS userbag
+        WHERE red.id = userbag.redpacket_id AND userbag.grant_status = 1
+        AND userbag.user_id IN (SELECT t6311.f03 AS userid FROM s61.`t6110` INNER JOIN s63.`t6311` ON t6110.f01 = t6311.f02 AND t6110.f01 = #{userId})
+        GROUP BY userbag.user_id ORDER BY NULL) AS t4 ON t3.userid = t4.user_id
+        LEFT JOIN
+        (SELECT userbag.user_id,SUM(red.red_money) AS usered FROM flb.`t_red_packet` AS red ,flb.`t_user_redpackets` AS userbag
+        WHERE red.id = userbag.redpacket_id AND userbag.status=2
+        AND userbag.user_id IN (SELECT t6311.f03 AS userid FROM s61.`t6110` INNER JOIN s63.`t6311` ON t6110.f01 = t6311.f02 AND t6110.f01 = #{userId})
+        GROUP BY userbag.user_id ORDER BY NULL) AS t5 ON t3.userid = t5.user_id
+        ORDER BY t3.userId
+    </select>
+</mapper>

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BankCardMapper">
+    <select id="getBankCardsByUserId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.entity.BankCard">
+        SELECT
+          bank_card.F06 AS bankNum,
+          bank_card.F01 AS bankCardId,
+          bank_card.F04 AS districtId,
+          bank_card.F13 AS bankAuthStatus,
+		  bank.F02 AS bankName,
+		  bank.F04 AS bankCode
+        FROM
+          S61.T6114 bank_card
+        LEFT JOIN s50.T5020 bank ON bank.F01 = bank_card.F03
+        WHERE bank_card.F13 != 'WRZ'
+        AND bank_card.F02 = #{userId}
+    </select>
+
+    <select id="getUserDealStatus" parameterType="java.lang.Integer" resultType="java.util.Map">
+        SELECT
+            account.F02 AS userId,
+            account.F03 AS userType,
+            account.F06 AS balance,
+            account.F06 AS llBalance,
+            account.F05 AS userName,
+            auth.F05 AS tradersPwd,
+            auth.F10 AS tradersPwdStatus
+            FROM
+            S61.t6101 AS account,S61.T6118 AS auth
+            WHERE account.F02 = auth.F01
+            AND account.F03 = 'WLZH'
+            AND account.F02 = #{userId,jdbcType=INTEGER}
+    </select>
+
+    <select id="checkBankCardInfo" parameterType="java.lang.Integer" resultType="BankCardVO">
+        SELECT
+        bankCar.F01 AS id,
+        bankCar.F02 AS acount,
+        bankCar.F03 AS bankID,
+        bankCar.F04 AS city,
+        bankCar.F05 AS bankKhhName,
+        bankCar.F07 AS bankNumber,
+        bankCar.F08 AS status
+        FROM
+        S61.t6114 AS bankCar
+        WHERE bankCar.F02 = #{userId,jdbcType=INTEGER}
+    </select>
+    <!--获取银行卡信息，根据id -->
+    <select id="getBankCardById" parameterType="java.lang.Integer" resultType="java.util.Map">
+        SELECT
+        bankCar.F02 AS acount,
+        bankCar.F03 AS bankID,
+        bankCar.F07 AS bankNumber
+        FROM
+        S61.t6114 AS bankCar
+        WHERE bankCar.F01 = #{id,jdbcType=INTEGER}
+    </select>
+
+    <!-- 更新银行卡信息 -->
+    <update id="updateBankCardInfo" parameterType="BankCardVO">
+    	UPDATE s61.t6114 
+    	<set>
+    		<if test="null != bankID &amp;&amp; bankID != 0">
+    			F03 = #{bankID},
+    		</if>
+    		<if test="null != city">
+    			F04 = #{city},
+    		</if>
+    		<if test="null != bankKhhName">
+    			F05 = #{bankKhhName},
+    		</if>
+    		<if test="null != bankNoStar">
+    			F06 = #{bankNoStar},
+    		</if>
+    		<if test="null != bankNumber">
+    			F07 = #{bankNumber},
+    		</if>
+    		<if test="null != status">
+    			F08 = #{status},
+    		</if>
+    		<if test="null != accountName">
+    			F11 = #{accountName},
+    		</if>
+    		<if test="null != bindStatus">
+    			F13 = #{bindStatus},
+    		</if>
+    	</set>
+    	where F02 = #{acount} LIMIT 1
+    </update>
+    <!-- 通过银行卡编码获取银行ID -->
+    <select id="getIdByCode" parameterType="java.lang.String" resultType="java.lang.Integer">
+    	SELECT F01 FROM s50.t5020 WHERE F04 = #{code} AND F03 = 'QY' LIMIT 1
+    </select>
+    <select id="getBank" parameterType="java.lang.Integer" resultType="BankVO">
+        SELECT
+        bank.F02 AS bankname,
+        bank.F03 AS status,
+        bank.F04 AS engCode,
+        bank.F05 AS llCode
+        FROM
+        S50.t5020 AS bank
+        WHERE bank.F01 = #{bankId,jdbcType=INTEGER}
+    </select>
+    <select id="getBankCardMsg" parameterType="java.util.Map" resultType="java.util.Map">
+        SELECT
+        bankCar.F01 AS id,
+        bankCar.F02 AS acount,
+        bankCar.F03 AS bankID,
+        bankCar.F04 AS city,
+        bankCar.F05 AS bankKhhName,
+        bankCar.F08 AS status,
+        bank.F02 AS bankname,
+        bank.F04 AS engCode,
+        bank.F05 AS llCode
+        FROM
+        S61.t6114 AS bankCar LEFT JOIN S50.t5020 AS bank
+        ON bankCar.F03 = bank.F01
+        <where>
+            <if test="userId != null">
+                bankCar.F02=#{userId}
+            </if>
+            <if test="bankNum != null">
+                and bankCar.F07=#{bankNum}
+            </if>
+            AND bank.F01 = #{bankId,jdbcType=INTEGER}
+        </where>
+    </select>
+    <!-- 是否绑定银行卡 -->
+    <select id="isBindBankCard" parameterType="int" resultType="java.lang.String">
+    	SELECT F13 FROM s61.t6114 WHERE F08 = 'QY' AND F02 = #{userId} LIMIT 1
+    </select>
+    
+    <select id="getPaymentLimitByUserId" parameterType="java.lang.String" resultType="PaymentLimitVO">
+        SELECT p.single_limit singleLimit,p.daily_limit dailyLimit,p.monthly_limit monthlyLimit,p.minimum FROM flb.t_payment_limit p INNER JOIN s61.t6114 u ON u.F03 = p.bank_id WHERE u.F02 = #{userId} LIMIT 1
+    </select>
+
+    <select id="getQYBankCode" resultType="java.lang.String">
+        SELECT F04 FROM s50.t5020 WHERE F03 = 'QY'
+    </select>
+</mapper>

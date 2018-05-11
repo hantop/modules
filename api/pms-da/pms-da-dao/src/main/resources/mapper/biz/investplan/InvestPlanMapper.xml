@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.investplan.InvestPlanMapper">
+    <update id="updateRecommendTime" parameterType="int">
+        UPDATE flb.t_invest_plan
+        SET
+        <choose>
+            <when test="flag == true">
+                recommend_time = SYSDATE()
+            </when>
+            <otherwise>
+                recommend_time = NULL
+            </otherwise>
+        </choose>
+        ,
+        update_time = SYSDATE()
+        WHERE
+        id = #{id}
+    </update>
+
+    <select id="getInvestPlan" resultType="InvestPlan">
+        SELECT
+            `id`,
+            `type`,
+            `is_novice`,
+            `name`,
+            `number`,
+            `amount`,
+            `surplus_amount`,
+            `cycle`,
+            `cycle_type`,
+            `invest_rate`,
+            `mo_increase_rate`,
+            `min_yearly_rate`,
+            `max_yearly_rate`,
+            `raise_rate`,
+            `display_time`,
+            `release_time`,
+            `audit_time`,
+            `full_time`,
+            `settle_time`,
+            `bearrate_date`,
+            `expire_time`,
+            `overdue_rate`,
+            `status`,
+            `repay_mode`,
+            `fund_raising_period`,
+            `can_quit`,
+            `sticktop_time`,
+            `create_time`,
+            `update_time`,
+            `description`
+        FROM
+          flb.t_invest_plan
+        WHERE id = #{id}
+    </select>
+
+    <update id="cancelTimingRelease">
+        UPDATE flb.t_invest_plan
+        SET
+          surplus_amount = 0,
+          display_time = NULL,
+          release_time = NULL,
+          status = #{status},
+          update_time = SYSDATE()
+        WHERE
+          id = #{id}
+    </update>
+
+    <update id="updateSticktopTime" parameterType="int">
+        UPDATE flb.t_invest_plan
+        SET
+          <choose>
+              <when test="flag == true">
+                  sticktop_time = SYSDATE()
+              </when>
+              <otherwise>
+                  sticktop_time = NULL
+              </otherwise>
+          </choose>
+          ,
+          update_time = SYSDATE()
+        WHERE
+          id = #{id}
+    </update>
+
+    <insert id="insertPlanTermination">
+        INSERT INTO flb.t_plan_termination(plan_id, operater_id)
+        VALUES(#{planId}, #{operatorId})
+    </insert>
+
+    <update id="updatePlanTermination">
+        UPDATE flb.t_invest_plan
+        SET
+          expire_time = #{expireTime},
+          bearrate_date = #{bearrateDate},
+          full_time = #{fullTime},
+          update_time = SYSDATE(),
+          status = #{status}
+        WHERE
+          id = #{id}
+    </update>
+
+    <update id="updatePlanTimingRelease">
+        UPDATE flb.t_invest_plan
+        SET
+          surplus_amount = amount,
+          display_time = #{displayTime},
+          release_time = #{relaseTime},
+          status = #{status},
+          update_time = SYSDATE()
+        WHERE
+          id = #{id}
+    </update>
+
+    <update id="updatePlanReleaseStatus">
+        UPDATE flb.t_invest_plan
+        SET
+            status = #{status},
+            surplus_amount = amount,
+            display_time = NULL,
+            release_time = SYSDATE(),
+            update_time = SYSDATE()
+        WHERE
+        id = #{id}
+    </update>
+
+    <update id="updatePlanInvalidStatus" parameterType="int">
+        UPDATE flb.t_invest_plan
+        SET status = #{status},
+          update_time = SYSDATE()
+        WHERE
+          id = #{id}
+    </update>
+
+    <update id="updatePlanAuditStatus">
+        UPDATE flb.t_invest_plan
+        SET status = #{status},
+            audit_time = SYSDATE(),
+            update_time = SYSDATE()
+        WHERE
+          id = #{id}
+    </update>
+</mapper>

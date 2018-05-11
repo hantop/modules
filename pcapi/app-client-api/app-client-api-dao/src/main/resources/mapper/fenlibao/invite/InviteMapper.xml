@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="InviteMapper">
+	<select id="getBeinviterInfoList" resultType="BeInviterInfo">
+		SELECT
+			a.userName realname,
+			a.userCell phonenum,
+			a.userRegTime registerDate,
+			b.userInvestSum
+		FROM
+			(
+				SELECT
+					t.F01 uid,
+					n.F02 userName,
+					u1.F04 userCell,
+					u1.F09 userRegTime,
+					u1.F09 orderTime
+				FROM
+					s61.t6111 t
+				INNER JOIN s61.t6110 u1 ON u1.F01 = t.F01
+				INNER JOIN s61.t6141 n ON n.F01 = t.F01
+				INNER JOIN s61.t6110 u2 ON u2.F04 = t.F04
+				WHERE
+					u2.F01 = #{userId}
+					<if test="startDate != null">
+						<![CDATA[AND u1.F09 >= #{startDate}]]>
+					</if>
+					<if test="endDate != null">
+						<![CDATA[AND u1.F09 <= #{endDate}]]>
+					</if>
+					<if test="beInviterPhonenum != null and beInviterPhonenum != ''">
+						AND u1.F04 = #{beInviterPhonenum}
+					</if>
+			) a
+		LEFT JOIN (
+			SELECT
+				t.F01 uid,
+				n.F02 userName,
+				u1.F04 userCell,
+				u1.F09 userRegTime,
+				SUM(z.F05) userInvestSum,
+				e.F12 orderTime
+			FROM
+				s61.t6111 t
+			LEFT JOIN s61.t6110 u1 ON u1.F01 = t.F01
+			INNER JOIN s61.t6141 n ON n.F01 = t.F01
+			INNER JOIN s61.t6110 u2 ON u2.F04 = t.F04
+			INNER JOIN s62.t6251 z ON z.F04 = u1.F01
+			INNER JOIN s62.t6230 b ON b.F01 = z.F03
+			INNER JOIN s62.t6231 e ON e.F01 = z.F03
+			WHERE
+				t.F04 != ''
+			AND u2.F01 = #{userId}
+			AND b.F20 != 'YLB'
+			GROUP BY
+				t.F01
+		) b ON a.uid = b.uid
+		ORDER BY
+			registerDate DESC
+	</select>
+
+	<!-- 我的返现奖励记录 -->
+	<select id="getMyAwordInfoList" parameterType="java.util.Map" resultType="MyAwordInfo">
+		SELECT
+			threetier.invest_sum AS investAmount,
+			threetier.phonenum,
+			threetier.award_money AS award,
+			threetier.statistics_date AS countDate,
+			userbase.F02 AS realname
+		FROM
+			pms.da_daily_spreadaward_threetier threetier
+		INNER JOIN s61.t6141 userbase ON threetier.user_id = userbase.F01
+		<where>
+			threetier.spread_user_id = #{userId}
+			AND threetier.award_money > 0
+			<if test="startDate != null">
+				<![CDATA[AND threetier.statistics_date >= #{startDate}]]>
+			</if>
+			<if test="endDate != null">
+				<![CDATA[AND threetier.statistics_date <= #{endDate}]]>
+			</if>
+			<if test="beInviterPhonenum != null and beInviterPhonenum != ''">
+				AND threetier.phonenum = #{beInviterPhonenum}
+			</if>
+		</where>
+		ORDER BY threetier.statistics_date DESC
+	</select>
+
+	<select id="getMyInviteInfo" resultType="java.util.Map">
+		select count(a.userId) inviteUserRegNum,
+			   count(a.zqId) inviteUserInvNum from(
+				select 
+					t.F01 userId,t.F04 invitecells,z.F01 zqId,z.F05
+					from s61.t6111 t
+					INNER JOIN s61.t6110 u on u.F04 = t.F04
+					LEFT  JOIN s62.T6251 z on z.F04 = t.F01
+					LEFT  JOIN s62.t6230 b on b.F01 = z.F03
+					where u.F01 = #{userId}
+					group by t.F01
+			)a
+	</select>
+
+	<select id="getInviteAwardSum" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(threetier.award_money), 0)
+		FROM
+			pms.da_daily_spreadaward_threetier threetier
+		WHERE
+			threetier.spread_user_id = #{userId}
+	</select>
+
+	<select id="getUserInviteInfoList" parameterType="java.lang.Integer" resultType="UserInviteInfo">
+	
+		select * from (
+			SELECT
+				'' userName,
+				u1.F04 userCell, 
+				u1.F09 userRegTime,
+				0.00 userInvestSum,
+				u1.F09 orderTime
+					FROM
+						s61.t6111 t
+					INNER JOIN s61.t6110 u1 on u1.F01 = t.F01 
+					INNER JOIN s61.t6110 u2 on u2.F04 = t.F04
+	 				where u2.F01 =#{userId} 
+			UNION ALL
+			SELECT
+				n.F02 userName,
+				u1.F04 userCell, 
+				u1.F09 userRegTime,
+				z.F05 userInvestSum,
+				e.F12 orderTime
+					FROM
+						s61.t6111 t
+					INNER JOIN s61.t6110 u1 on u1.F01 = t.F01 
+					INNER JOIN s61.t6141 n  ON n.F01 = t.F01
+					INNER JOIN s61.t6110 u2 on u2.F04 = t.F04
+					INNER JOIN s62.t6251 z on z.F04 = u1.F01
+					INNER JOIN s62.t6230 b on b.F01 =z.F03
+					INNER JOIN s62.t6231 e on e.F01 =z.F03
+	 				where t.F04 != '' and u2.F01 =#{userId} and b.F20 != 'YLB'
+			) A 
+		ORDER BY
+		orderTime DESC limit #{startPageIndex},10
+	</select>
+	 
+</mapper>

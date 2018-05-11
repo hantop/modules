@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+        xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:mvc="http://www.springframework.org/schema/mvc"
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:tx="http://www.springframework.org/schema/tx"
+        xmlns:task="http://www.springframework.org/schema/task"
+        xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+	    http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+	    http://www.springframework.org/schema/task  
+	    http://www.springframework.org/schema/task/spring-task-3.1.xsd">
+    <mvc:annotation-driven/>
+
+    <task:annotation-driven/>
+
+    <context:component-scan base-package="com.fenlibao.p2p.controller"/>
+    <context:component-scan base-package="com.fenlibao.p2p.service"/>
+    <context:component-scan base-package="com.fenlibao.p2p.dao"/>
+    <context:component-scan base-package="com.fenlibao.p2p.launch.interceptor"/>
+
+    <tx:annotation-driven transaction-manager="transactionManager" mode="proxy" proxy-target-class="false" order="0"/>
+
+    <mvc:resources location="/theme/" mapping="/theme/**"></mvc:resources>
+
+    <mvc:interceptors>
+
+        <mvc:interceptor>
+            <mvc:mapping path="/user/**"/>
+            <mvc:mapping path="/trade/**"/>
+            <mvc:mapping path="/lianlianPay/**"/>
+            <mvc:mapping path="/sdk/**"/>
+            <mvc:mapping path="/experience/**"/>
+            <mvc:mapping path="/bid/**"/>
+            <mvc:mapping path="/creditassignment/**"/>
+            <mvc:mapping path="/invite/**"/>
+            <mvc:mapping path="/mp/**"/>
+            <mvc:mapping path="/loan/**"/>
+            <mvc:mapping path="/finacing/**"/>
+            <mvc:mapping path="/webaccess/getAccessToken"/>
+            <mvc:mapping path="/lottery/user/**"/>
+            <mvc:mapping path="payment/baofoo/**"/>
+            <mvc:exclude-mapping path="/testapi/**"/>
+            <mvc:exclude-mapping path="/user/login"/>
+            <mvc:exclude-mapping path="/user/register"/>
+            <mvc:exclude-mapping path="/user/checkEnterpriseCertificate"/>
+            <mvc:exclude-mapping path="/user/checkPhone"/>
+            <mvc:exclude-mapping path="/user/verifyCode"/>
+            <mvc:exclude-mapping path="/user/retrievePassword"/>
+            <mvc:exclude-mapping path="/user/getVerifyCode"/>
+            <mvc:exclude-mapping path="/user/platform/information"/>
+            <mvc:exclude-mapping path="/user/kdb/list"/>
+            <mvc:exclude-mapping path="/user/kdb/detail"/>
+            <mvc:exclude-mapping path="/creditassignment/transferOut/list"/>
+            <mvc:exclude-mapping path="/creditassignment/transferOut/detail"/>
+            <mvc:exclude-mapping path="/trade/topup/parvalue"/>
+            <mvc:exclude-mapping path="/lottery/user/draw/anniversaryPrizes"/>
+            <mvc:exclude-mapping path="/lottery/user/draw/lotterySpringFestival2017Info"/>
+            <mvc:exclude-mapping path="/lianlianPay/limit/list"/>
+            <mvc:exclude-mapping path="/plan/doPlan"/>
+            <mvc:exclude-mapping path="/plan/bidRecordList"/>
+
+            <bean class="com.fenlibao.p2p.launch.interceptor.TokenInterceptor"/>
+        </mvc:interceptor>
+
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+
+			<mvc:exclude-mapping path="/server/lianlian/**"/>
+            <mvc:exclude-mapping path="/testapi/**"/>
+            <mvc:exclude-mapping path="/notify/**"/>
+            <mvc:exclude-mapping path="/"/>
+            <mvc:exclude-mapping path="/index"/>
+            <mvc:exclude-mapping path="/404"/>
+            <mvc:exclude-mapping path="/500"/>
+
+            <bean class="com.fenlibao.p2p.launch.interceptor.AuthInterceptor"/>
+        </mvc:interceptor>
+
+        <!-- 拦截日志记录接口-->
+        <mvc:interceptor>
+            <mvc:mapping path="/**" />
+            <bean class="com.fenlibao.p2p.launch.interceptor.LogInterceptor" >
+                <property name="logUrls">
+                    <list>
+                        <value>/user/login</value>
+                        <value>/user/logout</value>
+                        <value>/gateway/recharge</value>
+                        <value>/gateway/withdraw</value>
+                        <value>/bid/doBid</value>
+                        <value>/transferOut/applyfor</value>
+                        <value>/transferIn/purchase</value>
+                        <value>/gateway/bindBankCard</value>
+                        <value>/gateway/unbindBankCard</value>
+                        <value>/user/retrievePassword</value>
+                    </list>
+                </property>
+            </bean>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+    <bean class="org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor"/>
+
+    <bean id="jspViewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value="/WEB-INF/page/"/>
+        <property name="suffix" value=".jsp"/>
+        <property name="order" value="0"/>
+    </bean>
+</beans>

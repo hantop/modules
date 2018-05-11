@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.idmt.permit.PmsPermitMapper">
+    <select id="getPermitsByUser" resultType="PermitVO">
+        SELECT
+          p.id,
+          p.pid,
+          p.name,
+          p.sort,
+          p.type,
+          p.description,
+          p.code,
+          p.permit_url permitUrl,
+          (
+            case when type='root' or type='topmenu' or type='leftmenu' or type='linkbutton'  then 'true' else 'false' end
+          ) isParent
+        FROM
+          pms.idmt_permission p
+        INNER JOIN pms.idmt_role_permission rp ON rp.permission_id = p.id
+        INNER JOIN pms.idmt_role r ON r.id = rp.role_id
+        INNER JOIN pms.idmt_user_role ur ON ur.role_id = r.id
+        INNER JOIN pms.idmt_user user ON user.id = ur.user_id
+        <where>
+            user.id = #{userId}
+            <if test="type != null and type != ''">
+                AND p.type = #{type}
+            </if>
+        </where>
+        GROUP BY p.id
+        ORDER BY p.sort
+    </select>
+
+	<resultMap id="BaseResultMap" type="com.fenlibao.model.pms.idmt.permit.PermitTreeNode">
+		<id column="id" property="id" jdbcType="INTEGER" />
+		<result column="pid" property="pid" jdbcType="INTEGER" />
+		<result column="name" property="name" jdbcType="VARCHAR" />
+		<result column="sort" property="sort" jdbcType="VARCHAR" />
+		<result column="type" property="type" jdbcType="VARCHAR" />
+		<result column="description" property="description" jdbcType="VARCHAR" />
+		<result column="code" property="code" jdbcType="VARCHAR" />
+		<result column="isParent" property="isParent" jdbcType="VARCHAR" />
+		<result column="permitUrl" property="permitUrl" jdbcType="VARCHAR" />
+	</resultMap>
+
+	<resultMap type="com.fenlibao.model.pms.idmt.permit.PermitTreeNode" id="treeResultMap" extends="BaseResultMap">
+		<collection property="children" column="id" javaType="list" ofType="com.fenlibao.model.pms.idmt.permit.PermitTreeNode" select="children"></collection>
+	</resultMap>
+
+	<sql id="Base_Sql">
+		id,pid,name,sort,type,description,code,permit_url permitUrl,case when type='root' or type='topmenu' or type='leftmenu' or type='linkbutton'  then 'true' else 'false' end isParent
+	</sql>
+
+	<select id="getPermitTree" resultMap="treeResultMap" resultType="java.util.List" parameterType="java.lang.Integer">
+		select
+		<include refid="Base_Sql"/>
+		from pms.idmt_permission 
+		<where>
+		<if test="_parameter==null">
+		    pid is NULL
+		</if>
+		<if test="_parameter!=null">
+		    pid = #{_parameter}
+		</if>
+		</where>
+		order by pid,sort
+	</select>
+
+	<select id="children" parameterType="java.lang.Integer" resultMap="treeResultMap">
+		select
+		<include refid="Base_Sql" />
+		from pms.idmt_permission
+		where pid = #{id,jdbcType=BIGINT} 
+		order by pid,sort
+	</select>
+
+    <!-- 插入节点 -->
+    <insert id="insertNode" parameterType="com.fenlibao.model.pms.idmt.permit.PermitTreeNode">
+       insert into pms.idmt_permission 
+       <trim prefix="(" suffix=")" suffixOverrides=",">
+           <if test="pid != null">
+               pid,
+           </if>
+           <if test="name != null">
+               name,
+           </if>
+           <if test="sort != null">
+               sort,
+           </if>
+           <if test="type != null">
+               type,
+           </if>
+           <if test="description != null">
+               description,
+           </if>
+           <if test="code != null">
+               code,
+           </if>
+           <if test="permitUrl != null">
+               permit_url,
+           </if>
+       </trim>
+       <trim prefix="values (" suffix=")" suffixOverrides=",">
+           <if test="pid != null">
+               #{pid},
+           </if>
+           <if test="name != null">
+               #{name},
+           </if>
+           <if test="sort != null">
+               #{sort},
+           </if>
+           <if test="type != null">
+               #{type},
+           </if>
+           <if test="description != null">
+               #{description},
+           </if>
+           <if test="code != null">
+               #{code},
+           </if>
+           <if test="permitUrl != null">
+               #{permitUrl},
+           </if>
+       </trim>
+    </insert>
+    <!-- 更新节点 -->
+    <update id="updateNode" parameterType="com.fenlibao.model.pms.idmt.permit.PermitTreeNode">
+       update pms.idmt_permission
+       <set>
+           <if test="name != null">
+               name=#{name},
+           </if>
+           <if test="sort != null">
+               sort=#{sort},
+           </if>
+           <if test="type != null">
+               type=#{type},
+           </if>
+           <if test="description != null">
+               description=#{description},
+           </if>
+           <if test="code != null">
+               code=#{code},
+           </if>
+           <if test="permitUrl != null">
+               permit_url=#{permitUrl},
+           </if>
+       </set>
+       where id= #{id}
+    </update>
+    
+    <delete id="deleteNode" parameterType="java.lang.Integer">
+       delete from pms.idmt_permission where id= #{_parameter}
+    </delete>
+    
+    <select id="getNodes" parameterType="com.fenlibao.model.pms.idmt.permit.PermitTreeNode" resultType="com.fenlibao.model.pms.idmt.permit.PermitTreeNode">
+        select <include refid="Base_Sql"/>
+        from pms.idmt_permission
+        <where>
+           <if test="id != null">
+               and id= #{id}
+           </if>
+           <if test="pid != null">
+               and pid= #{pid}
+           </if>
+           <if test="name != null and name !=''">
+               and name= #{name}
+           </if>
+           <if test="sort != null">
+               and sort= #{sort}
+           </if>
+           <if test="type != null and type !=''">
+               and type= #{type}
+           </if>
+           <if test="description != null and description !=''">
+               and description= #{description}
+           </if>
+           <if test="code != null and code !=''">
+               and code= #{code}
+           </if>
+           <if test="permitUrl != null and permitUrl !=''">
+               and permit_url= #{permitUrl}
+           </if>
+        </where>
+        ORDER BY pid,sort
+    </select>
+</mapper>

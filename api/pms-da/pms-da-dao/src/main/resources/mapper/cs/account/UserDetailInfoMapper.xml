@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.account.UserDetailInfoMapper">
+
+    <select id="getUserByAccount" resultType="java.util.Map" parameterType="String">
+        SELECT
+            u.F01 userId,
+            reg_userbase.F02 name
+        FROM s61.t6110 u
+        LEFT JOIN s61.t6141 reg_userbase ON reg_userbase.F01 = u.F01
+        WHERE u.f02 = #{account}
+        LIMIT 1;
+    </select>
+
+	<resultMap type="com.fenlibao.model.pms.da.cs.UserDetail" id="BaseResultMap">
+        <result column="userId" property="userId" />
+        <result column="phoneNum" property="phoneNum" />
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="nickName" property="nickName" />
+        <result column="idCard" property="idCard" />
+        <result column="idCardSec" property="idCardSec" />
+	</resultMap>
+
+    <select id="getUserDetailByUserId" resultMap="BaseResultMap" parameterType="String">
+        select
+        t6110.F01 userId,
+        t6110.F04 phoneNum,
+        t6110.F14 nickName,
+        t6141.F02 name,
+        t6141.F06 idCardSec,
+        AES_DECRYPT(FROM_BASE64(t6141.F07), '80e36e39f34e678c') idCard
+        FROM s61.t6110 t6110 LEFT JOIN s61.t6141 t6141 ON t6110.F01 = t6141.F01
+        where t6110.F06 = 'ZRR' AND t6110.F01 = #{userId}
+    </select>
+
+    <select id="getUserDetailInfo" parameterType="String" resultType="UserDetailInfo">
+        SELECT
+            u.F01 userId,
+            u.F04 phoneNum,
+            u.F09 registerTime,
+            reg_userbase.F02 name,
+            reg_userbase.F06 idcard,
+            bid_record.userInvestSum investingMoney,
+            reg_userbase.F04 authStatus,
+            extend.baofoo_bind_id bankcardStatus,
+            user_bankcard.F06 bankcardNum,
+            spread_user.F04 spreadPhonenum,
+            spread_userbase.F02 spreadName,
+            spread_userbase.F04 spreadAuthStatus,
+            account.F06 balance,
+            channel.name channelName
+        FROM
+            s61.t6110 u
+        LEFT JOIN s63.t6311 spread ON spread.F03 = u.F01
+        LEFT JOIN s61.t6110 spread_user ON spread_user.F01 = spread.F02
+        LEFT JOIN s61.t6141 spread_userbase ON spread_userbase.F01 = spread_user.F01
+        LEFT JOIN s61.t6141 reg_userbase ON reg_userbase.F01 = u.F01
+        LEFT JOIN s61.t6114 user_bankcard ON user_bankcard.F02 = u.F01
+        LEFT JOIN flb.t_pay_extend extend ON extend.id = user_bankcard.F02
+        LEFT JOIN (
+            SELECT
+                    bid_record.investUserId,
+                    SUM(bid_record.userInvestSum) userInvestSum
+                FROM
+                    (
+                        -- 普通标的
+                        SELECT
+                            tender.F03 investUserId,
+                            SUM(tender.F04) userInvestSum
+                        FROM
+                            S62.T6250 tender
+                        LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.tender_id = tender.F01
+                        WHERE
+                        tender.F03 = #{userId}
+                        AND tender.F01 IN (
+                                SELECT
+                                    tender.F01
+                                FROM
+                                    S62.T6250 tender
+                                INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+                                WHERE
+                                    bid.F20 IN ('TBZ', 'DFK')
+                            )
+                        AND NOT EXISTS (
+                            SELECT
+                                bid_record_id
+                            FROM
+                                flb.t_plan_bid_record
+                            WHERE
+                                tender.F01 = bid_record_id
+                        )
+                        AND t_user_plan_product.id IS NULL
+                        GROUP BY
+                            tender.F03
+                            -- 债权转让
+                        UNION ALL
+                            SELECT
+                                refund.F04 investUserId,
+                                SUM(refund.F07) userInvestSum
+                            FROM
+                                s62.t6252 refund
+                            LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.product_id = refund.F11
+                            WHERE
+                             refund.F04 = #{userId}
+                            AND refund.F05 = '7001'
+                            AND refund.F09 = 'WH'
+                            AND t_user_plan_product.id IS NULL
+                            GROUP BY
+                                refund.F04
+                                -- 新计划
+                            UNION ALL
+                                SELECT
+                                    up.user_id investUserId,
+                                    SUM(up.invest_amount) userInvestSum
+                                FROM
+                                    flb.t_user_plan up
+                                WHERE
+                                up.user_id = #{userId}
+                                AND up.`status` IN (1, 2, 4)
+                                GROUP BY
+                                    up.user_id
+                                UNION ALL
+                                -- 旧计划
+                                SELECT
+                                    record.user_id investUserId,
+                                    SUM(record.amount) userInvestSum
+                                FROM
+                                    flb.t_plan_record record
+                                LEFT JOIN flb.t_plan_bid_record pbrecord ON pbrecord.plan_record_id = record.id
+                                LEFT JOIN s62.t6250 tender ON pbrecord.bid_record_id = tender.F01
+                                LEFT JOIN s62.t6230 bid ON tender.F02 = bid.F01
+                                WHERE
+                                record.user_id = #{userId}
+                                AND bid.F20 IN ('TBZ', 'DFK')
+                                GROUP BY
+                                    record.user_id
+                ) bid_record
+                GROUP BY
+                    bid_record.investUserId
+        ) bid_record ON bid_record.investUserId = u.F01
+        LEFT JOIN s61.t6101 account ON (account.F02 = u.F01 AND account.F03 = 'WLZH')
+        LEFT JOIN flb.`t_user_origin` origin ON origin.`user_id` = u.`F01`
+        LEFT JOIN flb.`t_channel` channel ON channel.code = origin.channel_code
+        WHERE
+            u.F06 = 'ZRR'
+        AND u.F01 = #{userId}
+    </select>
+
+    <!-- 客服主管需要看到的完整的银行卡号 -->
+    <select id="getFullUserDetailInfo" parameterType="String" resultType="UserDetailInfo">
+        SELECT
+            u.F01 userId,
+            u.F04 phoneNum,
+            u.F09 registerTime,
+            reg_userbase.F02 name,
+            reg_userbase.F06 idcard,
+            reg_userbase.F04 authStatus,
+            extend.baofoo_bind_id bankcardStatus,
+            AES_DECRYPT(FROM_BASE64(xwa.bankcard_no), '80e36e39f34e678c') bankcardNum,
+            spread_user.F04 spreadPhonenum,
+            spread_userbase.F02 spreadName,
+            spread_userbase.F04 spreadAuthStatus,
+            account.F06 balance,
+            channel.name channelName
+        FROM
+            s61.t6110 u
+        LEFT JOIN s63.t6311 spread ON spread.F03 = u.F01
+        LEFT JOIN s61.t6110 spread_user ON spread_user.F01 = spread.F02
+        LEFT JOIN s61.t6141 spread_userbase ON spread_userbase.F01 = spread_user.F01
+        LEFT JOIN s61.t6141 reg_userbase ON reg_userbase.F01 = u.F01
+        LEFT JOIN s61.t6114 user_bankcard ON user_bankcard.F02 = u.F01
+        LEFT JOIN flb.t_pay_extend extend ON extend.id = user_bankcard.F02
+        LEFT JOIN s61.t6101 account ON (account.F02 = u.F01 AND account.F03 = 'XW_INVESTOR_WLZH')
+        LEFT JOIN flb.`t_user_origin` origin ON origin.`user_id` = u.`F01`
+        LEFT JOIN flb.t_xw_account xwa ON u.F01 = xwa.user_id AND xwa.user_role = 'INVESTOR'
+        LEFT JOIN flb.`t_channel` channel ON channel.code = origin.channel_code
+        WHERE
+            u.F06 = 'ZRR'
+        AND u.F01 = #{userId}
+    </select>
+
+    <select id="getLoanUserInfo" parameterType="String" resultType="UserDetailInfo">
+        SELECT
+        u.F01 userId,
+        u.F04 phoneNum,
+        reg_userbase.F02 name,
+        reg_userbase.F06 idcard,
+        AES_DECRYPT(FROM_BASE64(xwa.bankcard_no), '80e36e39f34e678c') bankcardNum
+        FROM
+        s61.t6110 u
+        LEFT JOIN s61.t6141 reg_userbase ON reg_userbase.F01 = u.F01
+        LEFT JOIN flb.t_xw_account xwa ON u.F01 = xwa.user_id AND xwa.user_role = 'BORROWERS'
+        WHERE
+         u.F01 = #{userId}
+    </select>
+    <!-- 获取提现冻结金额 -->
+    <select id="getWithdrawFreezeSum" resultType="java.math.BigDecimal">
+        SELECT
+        IFNULL(SUM(withdraw.F04), 0)
+        FROM
+        s61.t6130 withdraw
+        LEFT JOIN s61.t6110 userinfo ON userinfo.F01 = withdraw.F02
+        WHERE withdraw.F09 != 'TXSB' AND withdraw.F16 = 'F'
+        AND withdraw.F02 = #{userId}
+        AND withdraw.F17 = #{cgMode} LIMIT 1
+    </select>
+
+    <!-- 获取投资冻结金额 -->
+    <select id="getNewTenderFreezeSum" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(sumTemp), 0)
+        FROM
+        (
+        SELECT IFNULL(SUM(t6250.`F04`),0) AS sumTemp
+        FROM s62.`t6250` t6250
+        LEFT JOIN s62.t6230 t6230 ON t6250.`F02` = t6230.`F01`
+        WHERE NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` tupp WHERE tupp.`tender_id` = t6250.`F01`)
+        AND t6230.`F20` IN ('TBZ', 'DFK')
+        AND t6250.`F03` = #{userId}
+        AND t6230.`F38` = #{cgNum}
+        UNION ALL
+
+        SELECT IFNULL(SUM(tup.`invest_amount`),0) AS sumTemp
+        FROM flb.`t_user_plan` tup
+        LEFT JOIN flb.`t_invest_plan` tip ON tup.`plan_id` = tip.`id`
+        WHERE tip.`status` IN (4) AND tup.status IN (1)
+        AND tup.`user_id` = #{userId}
+        AND tip.`is_cg` = #{cgNum}
+        ) temp
+    </select>
+
+    <!-- 获取标的本金 + 利息 -->
+    <select id="getNewDueInAmount" resultType="DueInAmount">
+        SELECT SUM(CASE  WHEN a.F05 = 7001  THEN a.F07  ELSE 0  END ) AS 'principal',  SUM(CASE WHEN a.F05 IN (7002, 7004, 7022, 7023)  THEN a.F07 ELSE 0 END) AS 'gains'
+        FROM(
+        SELECT t6252.F05,SUM(t6252.F07) F07
+        FROM  s62.t6252 LEFT JOIN s62.t6230 ON t6230.F01 = t6252.F02
+        LEFT JOIN flb.t_user_plan_product upp  ON upp.product_id = t6252.F11
+        WHERE  t6252.F09 = 'WH'
+        AND  t6252.F04 = #{userId}
+        AND t6230.F38 = #{cgNum}
+        AND upp.id IS NULL
+        AND t6252.F05 IN (7001, 7002, 7004, 7022, 7023)
+        GROUP BY t6252.F05
+        UNION ALL
+        SELECT t6252.F05,SUM(t6252.F07) F07
+        FROM  s62.t6252  LEFT JOIN s62.t6230 ON t6230.F01 = t6252.F02
+        LEFT JOIN flb.t_user_plan_product upp  ON upp.product_id = t6252.F11
+        WHERE  t6252.F09 =  'HKZ'
+        AND  t6252.F04 = #{userId}
+        AND t6230.F38 = #{cgNum}
+        AND upp.id IS NULL
+        AND t6252.F05 IN (7001, 7002, 7004, 7022, 7023)
+        GROUP BY t6252.F05
+        )a
+    </select>
+
+    <!-- 获取计划本金 + 利息 -->
+    <select id="getPlanDueInAmount" resultType="DueInAmount">
+        SELECT
+        SUM(tempSum.principal)
+        <if test="cgNum != null and cgNum ==2">
+            -(SELECT IFNULL(sum(d.subMoney),0) FROM errorlog.tmp_plan_detail d
+            LEFT JOIN flb.t_user_plan p ON d.userPlanId = p.id
+            WHERE d.user_id = #{userId} AND  p.status != 3)
+        </if>
+        AS 'principal', SUM(tempSum.gains) AS 'gains'
+        FROM
+        (
+        SELECT <![CDATA[
+				IF(SUM(IF(temp.transaction_type IN (7001), temp.amount, 0)) < MAX(IFNULL(temp6102.return_amount,0)),
+				0, (SUM(IF(temp.transaction_type IN (7001), temp.amount, 0)) - MAX(IFNULL(temp6102.return_amount,0)))) AS 'principal',
+				IF(SUM(IF(temp.transaction_type IN (7001), temp.amount, 0)) < MAX(IFNULL(temp6102.return_amount,0)),
+				SUM(IF(temp.transaction_type IN (7001), 0, temp.amount)) - (MAX(IFNULL(temp6102.return_amount,0)) - SUM(IF(temp.transaction_type IN (7001), temp.amount, 0))),
+				SUM(IF(temp.transaction_type IN (7001), 0, temp.amount))) AS 'gains'
+			]]>
+        FROM
+        (
+        SELECT SUM(r.expect_amount) amount, r.transaction_type, r.user_plan_id
+        FROM flb.t_user_plan_repay r
+        LEFT JOIN flb.t_invest_plan p ON p.id = r.plan_id
+        LEFT JOIN flb.t_user_plan u ON u.id = r.user_plan_id
+        WHERE r.transaction_type IN (7001,7002,7004,7022,7028)  AND r.user_id = #{userId}
+        AND p.is_cg = #{cgNum}
+        and u.status !=3
+        GROUP BY r.transaction_type,r.user_plan_id
+        ) temp
+        LEFT JOIN
+        (
+        SELECT SUM(t6102.F06 - t6102.F07) return_amount, tupsr.user_plan_id
+        FROM flb.`t_user_plan_settlement_record` tupsr
+        LEFT JOIN s61.t6102 t6102 ON t6102.F01 = tupsr.t6102_f01
+        GROUP BY tupsr.user_plan_id
+        ) temp6102 ON temp.user_plan_id = temp6102.user_plan_id
+        GROUP BY temp.user_plan_id
+        ) tempSum
+    </select>
+
+    <!-- 获取标的已获收益-->
+    <select id="getNewYHGains" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(t6252.F07),0) FROM s62.t6252
+        LEFT JOIN s62.t6230 ON t6230.F01 = t6252.F02
+        WHERE t6252.F04 = #{userId} AND t6252.F09 = 'YH' AND t6252.F05 in(7002,7004,7005,7022,7023)
+        AND t6230.F38 = #{cgNum}
+        AND NOT EXISTS (SELECT 1 FROM flb.t_user_plan_product upp WHERE upp.product_id = t6252.F11 AND t6252.F04 = #{userId})
+    </select>
+
+    <!-- 获取计划已获收益 -->
+    <select id="getPlanYHGains" resultType="java.math.BigDecimal">
+        SELECT
+        IFNULL(SUM(t6102.f06) - (
+        SELECT
+        sum(invest_amount)
+        FROM flb.t_user_plan _up
+        <if test="cgNum != null">
+            LEFT JOIN flb.`t_invest_plan` _ip ON _ip.id = _up.plan_id
+        </if>
+        WHERE
+        _up.user_id = #{userId}
+        and _up.status = 3
+        <if test="cgNum != null">
+            and _ip.is_cg = #{cgNum}
+        </if>
+        ),0)
+        FROM
+        s61.t6102
+        LEFT JOIN s61.t6101 t6101 ON t6101.F01 = t6102.F02
+        LEFT JOIN flb.t_user_plan_settlement_record re ON re.t6102_f01 = t6102.F01
+        LEFT JOIN flb.t_user_plan tp ON tp.id = re.user_plan_id
+        WHERE
+        t6101.F02 = #{userId} AND t6102.F03 in (7027,7030)
+        <if test="cgNum != null and cgNum == 1">
+            and t6101.F03 = 'WLZH'
+        </if>
+        <if test="cgNum != null and cgNum == 2">
+            and t6101.F03  = 'XW_INVESTOR_WLZH'
+        </if>
+        and tp.status = 3
+    </select>
+
+    <!-- 根据手机,姓名或者电话号码查询用户是否存在 -->
+    <select id="getUserDetailInfoByPhoneOrNameOrIdCard" parameterType="String" resultType="UserDetailInfo">
+        SELECT
+            u.F01 userId,
+            u.F04 phoneNum,
+            u.F09 registerTime,
+            reg_userbase.F02 name,
+            reg_userbase.F06 idcard,
+            bid_record.userInvestSum investingMoney,
+            reg_userbase.F04 authStatus,
+            user_bankcard.F13 bankcardStatus,
+            AES_DECRYPT(FROM_BASE64(user_bankcard.F07), '80e36e39f34e678c') bankcardNum,
+            spread_user.F04 spreadPhonenum,
+            spread_userbase.F02 spreadName,
+            spread_userbase.F04 spreadAuthStatus,
+            account.balance,
+            channel.name channelName
+        FROM
+            s61.t6110 u
+        LEFT JOIN s63.t6311 spread ON spread.F03 = u.F01
+        LEFT JOIN s61.t6110 spread_user ON spread_user.F01 = spread.F02
+        LEFT JOIN s61.t6141 spread_userbase ON spread_userbase.F01 = spread_user.F01
+        LEFT JOIN s61.t6141 reg_userbase ON reg_userbase.F01 = u.F01
+        LEFT JOIN s61.t6114 user_bankcard ON user_bankcard.F02 = u.F01
+        LEFT JOIN (
+            SELECT
+                bid_record.investUserId,
+                SUM(bid_record.userInvestSum) userInvestSum
+            FROM
+            (
+                SELECT
+                    tender.F03 investUserId,
+                    SUM(tender.F04) userInvestSum
+                FROM
+                    S62.T6250 tender
+                WHERE
+                    tender.F01 IN (
+                        SELECT
+                            tender.F01
+                        FROM
+                            S62.T6250 tender
+                        INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+                        WHERE
+                            bid.F20 IN ('TBZ', 'DFK')
+                    )
+                GROUP BY tender.F03
+                UNION ALL
+                SELECT
+                    refund.F04 investUserId,
+                    SUM(refund.F07) userInvestSum
+                FROM
+                    s62.t6252 refund
+                WHERE
+                    refund.F05 = '7001'
+                AND refund.F09 = 'WH'
+                GROUP BY refund.F04
+            ) bid_record
+            GROUP BY bid_record.investUserId
+        ) bid_record ON bid_record.investUserId = u.F01
+        LEFT JOIN (
+            SELECT
+                F02 userId,
+                F06 balance
+            FROM
+                s61.t6101
+            WHERE F03 = 'WLZH'
+        ) account ON account.userId = u.F01
+        LEFT JOIN flb.`t_user_origin` origin ON origin.`user_id` = u.`F01`
+        LEFT JOIN flb.`t_channel` channel ON channel.code = origin.channel_code
+        <where>
+            u.F06 = 'ZRR'
+            <if test="phoneNum != null and phoneNum != '' ">
+              AND u.F04 = trim(#{phoneNum})
+            </if>
+            <if test="name != null and name != '' ">
+            AND reg_userbase.F02 = trim(#{name})
+            </if>
+            <if test="idCard != null and idCard != '' ">
+            AND reg_userbase.f07 = TO_BASE64(AES_ENCRYPT(#{idCard},'80e36e39f34e678c'))
+            </if>
+        </where>
+    </select>
+
+   <!-- 根据手机号码,姓名或者身份证查询用户 -->
+    <select id="getUserDetail" resultMap="BaseResultMap">
+    	select
+    	a.F01 userId,
+    	a.F04 phoneNum,
+    	a.F14 nickName,
+    	b.F02 name,
+    	b.F06 idCardSec,
+    	AES_DECRYPT(FROM_BASE64(b.F07), '80e36e39f34e678c') idCard
+		FROM s61.t6110 a LEFT JOIN s61.t6141 b on a.F01 = b.F01
+		<where>
+            a.F06 = 'ZRR'
+            <if test="phoneNum != null and phoneNum != '' ">
+              AND a.F04 = trim(#{phoneNum})
+            </if>
+            <if test="name != null and name != '' ">
+            AND b.F02 = trim(#{name})
+            </if>
+            <if test="idCard != null and idCard != '' ">
+            AND b.f07 = TO_BASE64(AES_ENCRYPT(trim(#{idCard}),'80e36e39f34e678c'))
+            </if>
+        </where>
+    </select>
+
+    <select id="getUserInvestingAmount" resultType="java.math.BigDecimal">
+        SELECT
+        SUM(bid_record.userInvestSum) userInvestSum
+    FROM
+        (
+            -- 普通标的
+            SELECT
+                tender.F03 investUserId,
+                SUM(tender.F04) userInvestSum
+            FROM
+                S62.T6250 tender
+            LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.tender_id = tender.F01
+            WHERE
+                tender.F03 = #{userId}
+            AND tender.F01 IN (
+                SELECT
+                    tender.F01
+                FROM
+                    S62.T6250 tender
+                INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+                WHERE
+                    bid.F20 IN ('TBZ', 'DFK')
+            )
+            AND NOT EXISTS (
+                SELECT
+                    bid_record_id
+                FROM
+                    flb.t_plan_bid_record
+                WHERE
+                    tender.F01 = bid_record_id
+            )
+            AND t_user_plan_product.id IS NULL
+            GROUP BY
+                tender.F03
+                -- 债权转让
+            UNION ALL
+                SELECT
+                    refund.F04 investUserId,
+                    SUM(refund.F07) userInvestSum
+                FROM
+                    s62.t6252 refund
+                LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.product_id = refund.F11
+                WHERE
+                    refund.F04 = #{userId}
+                AND refund.F05 = '7001'
+                AND refund.F09 = 'WH'
+                AND t_user_plan_product.id IS NULL
+                GROUP BY
+                    refund.F04
+                    -- 新计划
+                UNION ALL
+                    SELECT
+                        up.user_id investUserId,
+                        SUM(up.invest_amount) userInvestSum
+                    FROM
+                        flb.t_user_plan up
+                    WHERE
+                        up.user_id = #{userId}
+                    AND up.`status` IN (1, 2, 4)
+                    GROUP BY
+                        up.user_id
+        ) bid_record
+        GROUP BY
+	bid_record.investUserId
+    </select>
+
+</mapper>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.reward.rateCoupon.UserRateCouponMapper">
+    <update id="batchUpdateUserRateCoupon" parameterType="java.util.List">
+        update flb.t_user_coupon
+
+        <trim prefix="set" suffixOverrides=",">
+            <trim prefix=" valid_time = case " suffix=" end,">
+                <foreach collection="list" item="i" index="index">
+                    <if test="i.validTime!=null">
+                        when id= #{i.id} then #{i.validTime}
+                    </if>
+                </foreach>
+            </trim>
+            <trim prefix=" grant_status = case " suffix=" end,">
+                <foreach collection="list" item="i" index="index">
+                    <if test="i.grantStatus!=null">
+                        when id= #{i.id} then #{i.grantStatus}
+                    </if>
+                </foreach>
+            </trim>
+        </trim>
+        where
+        id IN <foreach collection="list" item="item" index="index" open="(" separator="," close=")">#{item.id}</foreach>
+    </update>
+
+    <select id="getUserRateCouponByGrantIdAndPhone" parameterType="UserRateCoupon" resultType="UserRateCoupon">
+        SELECT
+            flb.t_user_coupon.id id,
+            flb.t_user_coupon.user_id userId,
+            flb.t_user_coupon.grant_status grantStatus,
+            s61.t6110.F04 phone,
+            flb.t_coupon.coupon_code couponCode,
+            pms.da_reward_record.grant_name grantName
+        FROM
+            flb.t_user_coupon
+        JOIN flb.t_coupon ON (flb.t_coupon.id = flb.t_user_coupon.coupon_id)
+        JOIN pms.da_reward_record ON (pms.da_reward_record.id = flb.t_user_coupon.grant_id)
+        JOIN s61.t6110 ON (s61.t6110.F01 = flb.t_user_coupon.user_id)
+        WHERE
+            pms.da_reward_record.id = #{grantId} /*导入记录id*/
+        AND s61.t6110.F04 = #{phone}
+        ORDER BY flb.t_user_coupon.id DESC
+    </select>
+    
+    <select id="findAll" parameterType="RateCouponDetailForm" resultType="UserRateCoupon">
+        SELECT
+            flb.t_user_coupon.id id,
+            flb.t_user_coupon.user_id userId,
+            pms.da_reward_record.id grantId,
+            flb.t_user_coupon.grant_status grantStatus,
+            s61.t6110.F04 phone,
+            flb.t_coupon.coupon_code couponCode,
+            flb.t_coupon.scope
+        FROM
+            flb.t_user_coupon
+        JOIN flb.t_coupon ON (flb.t_coupon.id = flb.t_user_coupon.coupon_id)
+        JOIN pms.da_reward_record ON (pms.da_reward_record.id = flb.t_user_coupon.grant_id)
+        JOIN s61.t6110 ON (s61.t6110.F01 = flb.t_user_coupon.user_id)
+        WHERE
+            pms.da_reward_record.id = #{grantId} /*导入记录id*/
+        AND pms.da_reward_record.reward_type = #{rewardType} /*导入时记录类型，奖励类型(1:体验金，2：现金红包，3：返现券，4：加息券)*/
+        AND flb.t_coupon.coupon_type_id = 1
+        <if test="grantStatus != null">
+            AND flb.t_user_coupon.grant_status = #{grantStatus} /*-- 发放状态*/
+        </if>
+        ORDER BY s61.t6110.F01, flb.t_coupon.scope DESC
+    </select>
+
+    <select id="getRateCouponGrantStatistics" parameterType="int" resultType="RateCouponGrantStatistics">
+        SELECT flb.t_coupon.coupon_code couponCode,count(1) grantCount
+        FROM flb.t_user_coupon
+        LEFT JOIN flb.t_coupon ON (flb.t_coupon.id = flb.t_user_coupon.coupon_id)
+        where
+        flb.t_user_coupon.grant_id = #{grantId}
+        AND flb.t_user_coupon.grant_status = 1
+        GROUP BY
+        flb.t_coupon.coupon_code
+    </select>
+
+    <select id="findPager" resultMap="BaseResultMap">
+        SELECT
+        flb.t_user_coupon.id id,
+        flb.t_user_coupon.grant_status grantStatus,
+        s61.t6110.F04 phone,
+        flb.t_coupon.coupon_code couponCode
+        FROM
+        flb.t_user_coupon
+        JOIN flb.t_coupon ON (flb.t_coupon.id = flb.t_user_coupon.coupon_id)
+        JOIN pms.da_reward_record ON (pms.da_reward_record.id = flb.t_user_coupon.grant_id)
+        JOIN s61.t6110 ON (s61.t6110.F01 = flb.t_user_coupon.user_id)
+        WHERE
+        pms.da_reward_record.id = #{grantId} /*导入记录id*/
+        AND pms.da_reward_record.reward_type = #{rewardType} /*导入时记录类型，奖励类型(1:体验金，2：现金红包，3：返现券)*/
+        AND flb.t_coupon.coupon_type_id = 1
+        <if test="grantStatus != null">
+            AND flb.t_user_coupon.grant_status = #{grantStatus} /*-- 发放状态*/
+        </if>
+        ORDER BY flb.t_user_coupon.id DESC
+    </select>
+
+    <resultMap id="BaseResultMap" type="com.fenlibao.model.pms.da.reward.UserRateCoupon">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="user_id" property="userId" jdbcType="INTEGER"/>
+        <result column="coupon_id" property="rateCouponId" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="TINYINT"/>
+        <result column="bid_id" property="bidId" jdbcType="INTEGER"/>
+        <result column="valid_time" property="validTime" jdbcType="TIMESTAMP"/>
+        <result column="grant_id" property="grantId" jdbcType="INTEGER"/>
+        <result column="grant_status" property="grantStatus" jdbcType="TINYINT"/>
+        <result column="grant_name" property="grantName" jdbcType="VARCHAR"/>
+    </resultMap>
+
+
+    <insert id="batchInsert" useGeneratedKeys="true" parameterType="java.util.Set">
+        insert into flb.t_user_coupon (user_id,coupon_id,activity_id,grant_id,grant_status,coupon_status)
+        values
+        <foreach collection="collection" item= "item" index ="index" separator=",">
+            (#{item.userId},#{item.rateCouponId},#{item.activityId},#{item.grantId},#{item.grantStatus},#{item.couponStatus})
+        </foreach>
+    </insert>
+
+    <select id="getUserCouponCountByCouponId" resultType="int">
+        SELECT
+          COUNT(1)
+        FROM flb.t_user_coupon
+        WHERE coupon_id = #{couponId}
+    </select>
+</mapper>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<!-- 自动购买随时退出标债权 -->
+	<bean id="purchaseQuitAssignmentJob"
+		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.PurchaseQuitAssignmentJob" />
+		<property name="durability" value="true" />
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+
+	<bean id="purchaseQuitAssignmentJobTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="purchaseQuitAssignmentJob" />
+		<!-- 每天0点每隔5分 -->
+		<property name="cronExpression" value="0 0/5 0 * * ?" />
+	</bean>
+
+</beans>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<!-- 9月名创会员活动 -->
+	<bean id="autoGrantAwardJob"
+		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.AutoGrantAwardJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler 
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to 
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+
+	<bean id="autoGrantAwardJobTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="autoGrantAwardJob" />
+		<!-- 名创会员活动线上设置活动时间：2017年3月1日-4月30日 value="0/60 * * 1-31 3-4 ?" -->
+		<property name="cronExpression" value="0/60 * * 1-31 5-7 ? 2017" />
+	</bean>
+
+
+
+	<!-- 地铁报活动 -->
+	<bean id="dtbAutoGrantAwardJob"
+		  class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.DtbAutoGrantAwardJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="dtbAutoGrantAwardJobTrigger"
+		  class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="dtbAutoGrantAwardJob" />
+		<!--活动时间：2016年10月17日-2016年10月31日 重新启动至11-13-->
+		<property name="cronExpression" value="59 * * 3-13 11 ?" />
+	</bean>
+
+</beans>

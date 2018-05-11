@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.producttype.ProductTypeMapper">
+	<select id="getProductType" parameterType="String" resultType="ProductType">
+		SELECT
+			F01 id,
+			F02 name,
+			F05 code
+		FROM
+			s62.`t6211`
+		WHERE
+			F03 = 'QY'
+		AND F05 = #{code}
+	</select>
+
+	<select id="getProductTypes" resultType="KV">
+		SELECT
+			F01 `key`,
+			F02 `value`
+		FROM
+			s62.`t6211`
+		WHERE
+			F03 = 'QY'
+	</select>
+</mapper>

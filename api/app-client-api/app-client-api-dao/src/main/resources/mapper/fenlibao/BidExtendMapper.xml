@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BidExtendMapper">
+    <select id="getHqbUserEarnByDate" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT
+			IFNULL(SUM(T6252.F07),0)
+		FROM
+			s62.T6252,
+			s62.T6230,
+			s61.T6110,
+			s62.T6211
+		WHERE
+			T6211.F05 = 'HQB'
+		AND T6211.F01 = T6230.F04
+		AND T6252.F02 = T6230.F01
+		AND T6252.F04 = T6110.F01
+		AND T6110.F01 = #{userId}
+        AND T6252.F05 IN <foreach collection="feeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND T6252.F09 = #{status}
+		AND T6230.F27 = 'F'
+		AND T6110.F06 = #{userType}
+		AND (DATEDIFF(T6252.F10, DATE(#{earnDate})) = 0)
+    </select>
+
+    <select id="getHqbInvestSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+        SELECT
+            IFNULL(SUM(tender.F04), 0)
+        FROM s62.t6230 bid
+        LEFT JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+        LEFT JOIN s62.t6250 tender ON bid.F01 = tender.F02
+        WHERE bid_type.F05 = 'HQB'
+        AND bid_type.F03 = 'QY'
+        AND bid.F20 = 'HKZ'
+        AND tender.F03 = #{userId}
+    </select>
+
+    <select id="getKdbInvestSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+        SELECT 
+        	IFNULL(SUM(r.F05),0) 
+        FROM 
+        	s62.t6251 r INNER JOIN s62.t6252 h ON r.F01 = h.F11 
+        LEFT JOIN 
+        	s62.t6230 b ON r.F03 = b.F01 LEFT JOIN s62.t6211 t ON b.F04 = t.F01 
+        WHERE 
+        	t.F05 = 'KDB' AND H.F09 = 'WH' AND r.F12 = 0 AND h.F05 = 7001 AND h.F04 = #{userId}
+    </select>
+
+    <select id="getBidInvestRecords" parameterType="java.util.Map" resultType="InvestRecordsVO">
+        SELECT
+            invest.F01 AS id,
+            invest.F02 AS bid,
+            invest.F03 AS investId,
+            invest.F04 AS price,
+            invest.F05 AS creditorAmount,
+            invest.F06 AS timestamp,
+            invest.F07 AS status,
+            bidinfo.F38 AS isCG
+            FROM S62.T6250 AS invest INNER JOIN S62.T6230 AS bidinfo on invest.F02 = bidinfo.F01
+            <where>
+                invest.F02 = #{bid, jdbcType=INTEGER}
+                AND  invest.F07 = #{status}
+                <if test="isUp == 0">
+                    order by invest.F06 desc limit 30
+                </if>
+                <if test="isUp == 1">
+                    <![CDATA[AND invest.F06 < #{time}]]>  order by invest.F06 desc limit 30
+                </if>
+            </where>
+    </select>
+
+    <select id="getBidInvestAllRecords" parameterType="java.util.Map" resultType="InvestRecordsVO">
+        SELECT
+        invest.F01 AS id,
+        invest.F02 AS bid,
+        invest.F03 AS investId,
+        invest.F04 AS price,
+        invest.F05 AS creditorAmount,
+        invest.F06 AS timestamp,
+        invest.F07 AS status,
+        CONCAT(SUBSTRING(t6110.F04,1,3),'****',SUBSTRING(t6110.F04,-4)) AS phone
+        FROM S62.T6250 AS invest
+        INNER JOIN s61.t6110 on invest.f03=t6110.f01
+        where
+        invest.F02 = #{bid}
+        ORDER BY id desc
+    </select>
+
+    <select id="getTenderFreezeSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+        SELECT
+            IFNULL(SUM(tender.F04), 0)
+        FROM
+            s62.t6230 bid
+        LEFT JOIN s62.t6250 tender ON bid.F01 = tender.F02
+        WHERE
+            bid.F20 IN('TBZ', 'DFK')
+        AND tender.F03 = #{userId} LIMIT 1
+    </select>
+    <!-- 开店宝投资冻结总额 -->
+    <select id="getKdbTenderFreezeSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+        SELECT
+            IFNULL(SUM(tender.F04), 0)
+        FROM s62.t6230 bid
+        LEFT JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+        LEFT JOIN s62.t6250 tender ON bid.F01 = tender.F02
+        WHERE bid_type.F05 = 'KDB'
+        AND bid_type.F03 = 'QY'
+        AND bid.F20 IN('TBZ', 'DFK')
+        AND tender.F03 = #{userId}
+    </select>
+    <!-- 活期宝投资冻结总额 -->
+    <select id="getHqbTenderFreezeSum" parameterType="java.lang.String" resultType="java.math.BigDecimal">
+        SELECT
+        IFNULL(SUM(tender.F04), 0)
+        FROM s62.t6230 bid
+        LEFT JOIN s62.t6211 bid_type ON bid_type.F01 = bid.F04
+        LEFT JOIN s62.t6250 tender ON bid.F01 = tender.F02
+        WHERE bid_type.F05 = 'HQB'
+        AND bid_type.F03 = 'QY'
+        AND bid.F20 IN('TBZ', 'DFK')
+        AND tender.F03 = #{userId}
+    </select>
+
+    <!-- 获取我的红包 -->
+    <select id="getRedPackets" parameterType="java.util.Map" resultType="RedPacketVO">
+        SELECT
+        redPacket.id AS id,
+        redPacket.red_type AS bid,
+        redPacket.F03 AS investId,
+        redPacket.F04 AS price,
+        redPacket.F05 AS creditorAmount,
+        redPacket.F06 AS timestamp,
+        redPacket.F07 AS status
+        FROM flb.t_red_packet AS redPacket
+        <where>
+            invest.F02 = #{userId, jdbcType=INTEGER}
+            AND  invest.F07 = #{status}
+            AND
+            <if test="isUp == 0">
+                order by invest.F06 desc limit 30
+            </if>
+            <if test="isUp == 1">
+                <![CDATA[AND invest.F06 < #{time}]]>  order by invest.F06 desc limit 30
+            </if>
+        </where>
+    </select>
+    
+    
+    <!-- 获取标的扩展组信息-->
+    <select id="getBidExtendGroupInfo" parameterType="java.util.Map" resultType="BidExtendGroupInfo">
+        SELECT i.id groupId,
+	        i.ext_name groupName,
+	        i.ext_code groupCode
+		FROM flb.t_bid_ext_info i
+		INNER JOIN s62.t6230 t ON i.bid_type = t.F04
+		WHERE i.pid = 0 
+		AND t.F01 = #{bidId} 
+		AND i.ext_code = #{groupCode}
+		AND i.display = 1
+		ORDER BY i.priority ASC
+    </select>
+    
+    <!-- 获取标的扩展组每项信息-->
+    <select id="getBidExtendGroupItemInfo" parameterType="java.util.Map" resultType="BidExtendGroupItemInfo">
+        SELECT i.ext_name itemName,
+        	d.ext_data itemValue,
+        	i.ext_code itemCode,
+        	i.data_type itemType
+		FROM flb.t_bid_ext_info i
+		INNER JOIN flb.t_bid_ext_data d ON d.ext_id = i.id
+		WHERE d.bid = #{bidId}
+		<if test="extCode != null ">
+            AND i.ext_code = #{extCode}
+        </if>
+        <if test="groupId != null">
+            AND i.pid = #{groupId}
+        </if>
+        AND d.remark != 'thumb_pics'
+        AND i.display = 1
+		ORDER BY i.priority ASC
+    </select>
+    
+    <select id="getInvestmentAssets" parameterType="java.lang.Integer" resultType="AccountAssetsForm">
+    	SELECT
+			t.F02 name,
+			IFNULL(a.amount, 0) amount
+		FROM
+			s62.t6211 t
+		LEFT JOIN (
+			SELECT
+				b.F04 typeId,
+				SUM(h.F07) amount
+			FROM
+				s62.t6251 r
+			INNER JOIN s62.t6252 h ON r.F01 = h.F11
+			LEFT JOIN s62.t6230 b ON r.F03 = b.F01
+			WHERE
+				h.F09 = 'WH'
+			AND r.F12 = 0
+			AND h.F05 = 7001
+			AND h.F04 = #{userId}
+			GROUP BY
+				b.F04
+		) a ON t.F01 = a.typeId WHERE t.F03 = 'QY'
+    </select>
+</mapper>

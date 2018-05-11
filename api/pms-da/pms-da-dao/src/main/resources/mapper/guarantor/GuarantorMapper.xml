@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.guarantor.GuarantorMapper">
+    <select id="getGuarantorList" resultType="Guarantor">
+        SELECT * FROM (
+            SELECT
+            xw.id,
+            t6110.F01 userId,
+            t6110.F02 account,
+            CASE xw.audit_status
+              WHEN 'AUDIT' THEN 2
+              WHEN 'BACK' THEN 3
+              WHEN 'REFUSED' THEN 4
+              WHEN 'PASSED' THEN 5
+            END tempsort,
+            CASE
+              WHEN xw.user_type = 'PERSONAL' THEN t6141.F02
+              WHEN xw.user_type = 'ORGANIZATION' THEN t6161.F04
+            END name,
+            xw.user_type userType,
+            xw.user_role accountType,
+            xw.audit_status auditStatus
+            from
+            flb.t_xw_account xw
+            INNER JOIN s61.t6110 t6110 ON xw.user_id = t6110.F01
+            LEFT JOIN s61.t6141 t6141 ON t6110.F01 = t6141.F01
+            LEFT JOIN s61.t6161 t6161 ON t6110.F01 = t6161.F01
+            WHERE xw.user_role = 'BORROWERS' OR xw.user_role = 'GUARANTEECORP'
+            UNION ALL
+            SELECT
+            NULL id,
+            t6110.F01 userId,
+            t6110.F02 account,
+            1 tempsort,
+            t6161.F04 name,
+            'ORGANIZATION' userType,
+            'GUARANTEECORP'  accountType,
+            'WAIT' auditStatus
+            FROM s61.t6161 t6161
+            INNER JOIN s61.t6110 t6110 ON t6110.F01 = t6161.F01
+            WHERE t6161.audit_status = 'WAIT'
+        ) t_temp
+        <where>
+            <if test="account != null and account != ''">
+                AND t_temp.account = trim(#{account})
+            </if>
+            <if test="name != null and name != ''">
+                AND t_temp.name LIKE concat(concat('%',#{name}),'%')
+            </if>
+            <if test="auditStatus != null and auditStatus != ''">
+                AND t_temp.auditStatus = #{auditStatus}
+            </if>
+            <if test="userType != null and userType != ''">
+                AND t_temp.userType = #{userType}
+            </if>
+            <if test="accountType != null and accountType != ''">
+                AND t_temp.accountType = #{accountType}
+            </if>
+        </where>
+        ORDER BY t_temp.tempSort ASC, t_temp.id DESC
+    </select>
+
+    <select id="getBussinessInfoByUserId" resultType="BussinessInfo">
+        SELECT
+            t6161.F01 userId,
+            t6161.F03 businessLicenseNumber,
+            t6161.F04 businessName,
+            t6161.F05 taxID,
+            t6161.F06 organizationCode,
+            t6161.F11 corporateJurisdicalPersonalName,
+           (SELECT xw.audit_status FROM flb.t_xw_account xw WHERE xw.user_id = #{userId} AND xw.user_role = #{accountType} AND  xw.user_type = 'ORGANIZATION')
+            AS auditStatus,
+            AES_DECRYPT(FROM_BASE64 (t6161.F13), '80e36e39f34e678c') identification,
+            CASE t6161.audit_status
+              WHEN 'WAIT' THEN AES_DECRYPT(FROM_BASE64 (t6161.F19), '80e36e39f34e678c')
+              ELSE AES_DECRYPT(FROM_BASE64 (xw.bankcard_no), '80e36e39f34e678c')
+            END publicAccount,
+            t6164.F04 phone,
+            t6164.F07 linkman,
+            t6161.unified_code uniformSocialCreditCode,
+            t6161.bank_license bankLicenseNumber,
+            xw.bankcode bankCode,
+            t6161.credit_code creditCode
+        FROM
+            s61.t6161 t6161
+         LEFT JOIN s61.t6164 t6164 ON t6161.F01 = t6164.F01
+         LEFT JOIN flb.t_xw_account xw ON t6161.F01 = xw.user_id
+        <where>
+          <choose>
+              <when test="auditStatus !=null and auditStatus != '' and auditStatus == 'WAIT' ">
+                  t6161.F01 = #{userId}
+              </when>
+              <otherwise>
+                  xw.user_type = 'ORGANIZATION'
+                  AND xw.user_role = #{accountType}
+                  AND t6161.F01 = #{userId}
+              </otherwise>
+          </choose>
+        </where>
+    </select>
+
+    <select id="validAccount" resultType="UserDetailInfo">
+        SELECT
+          t6110.F01 userId,
+          CASE t6110.F06
+            WHEN 'ZRR' THEN t6141.F02
+            WHEN 'FZRR' THEN t6161.F04
+          END name
+        FROM
+           s61.t6110 t6110
+          LEFT JOIN s61.t6141 t6141 ON t6110.F01 = t6141.F01
+          LEFT JOIN s61.t6161 t6161 ON t6110.F01 = t6161.F01
+        WHERE
+          t6110.F02 = #{account} AND t6110.F06 = #{accountType}
+    </select>
+
+    <update id="updateEnterpriseContactInfo" parameterType="BussinessInfo">
+        UPDATE `s61`.`t6164`
+        SET
+        F04 = #{phone},
+        F07 = #{linkman}
+        WHERE
+        F01 = #{userId}
+    </update>
+
+    <update id="updateEnterpriseBaseInfo" parameterType="BussinessInfo">
+        UPDATE `s61`.`t6161`
+        SET
+        F03 = #{businessLicenseNumber},
+        F04 = #{businessName},
+        F05 = #{taxID},
+        F06 = #{organizationCode},
+        F11 = #{corporateJurisdicalPersonalName},
+        F12 = #{identificationAsterisk},
+        F13 = #{identification},
+        F19 = #{publicAccount},
+        unified_code = #{uniformSocialCreditCode},
+        bank_license = #{bankLicenseNumber},
+        credit_code = #{creditCode},
+        audit_status = #{auditStatus}
+        WHERE
+        F01 = #{userId}
+    </update>
+
+    <insert id="insertEnterpriseContactInfo" parameterType="BussinessInfo">
+        INSERT INTO `s61`.`t6164`
+        SET F01 = #{userId},
+        F04 = #{phone},
+        F07 = #{linkman},
+    </insert>
+
+    <insert id="insertEnterpriseBaseInfo" parameterType="BussinessInfo">
+        INSERT INTO `s61`.`t6161`
+        SET F01 = #{userId},
+        F02 = #{businessNo},
+        F03 = #{businessLicenseNumber},
+        F04 = #{businessName},
+        F05 = #{taxID},
+        F06 = #{organizationCode},
+        F11 = #{corporateJurisdicalPersonalName},
+        F12 = #{identificationAsterisk},
+        F13 = #{identification},
+        F19 = #{publicAccount},
+        unified_code = #{uniformSocialCreditCode},
+        bank_license = #{bankLicenseNumber},
+        credit_code = #{creditCode},
+        audit_status = #{auditStatus}
+    </insert>
+
+    <select id="isExitsEnterprise" parameterType="int" resultType="boolean">
+        <![CDATA[select count(*) from s61.t6161 t6161 where t6161.F01 = #{userId}]]>
+    </select>
+
+    <select id="validAccountIsRegXw" resultType="String">
+        select
+          xw.audit_status
+        from flb.t_xw_account xw
+         where xw.user_id = #{userId}
+         AND xw.user_type = #{accountType}
+         AND user_role = 'GUARANTEECORP'
+    </select>
+
+    <select id="getBankCodes" resultType="BankCodeInfo">
+        SELECT
+         t5020.F01 id,
+         t5020.F02 name,
+         t5020.F07 code
+        FROM s50.t5020 t5020
+         WHERE
+           t5020.F03 = 'QY' AND t5020.F07 IS NOT NULL
+    </select>
+
+    <update id="updateXWAuditStatusToAudit">
+        UPDATE flb.t_xw_account xw SET audit_status = 'AUDIT' WHERE xw.platform_user_no = #{platformUserNo}
+    </update>
+
+    <update id="updateT61AuditStatusToAudit">
+        UPDATE s61.t6161 t6161 SET audit_status = 'AUDIT' WHERE t6161.F01 = #{userId}
+    </update>
+
+</mapper>

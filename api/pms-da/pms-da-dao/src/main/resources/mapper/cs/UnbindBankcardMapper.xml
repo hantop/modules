@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.UnbindBankcardMapper">
+    <insert id="addUnbindBankCard" parameterType="UnbindBankcardInfo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms.da_unbind_bankcard(user_id, user_account, bankcard_no, operator, unbind_time, unbind_status)
+        VALUE(#{userId}, #{userAccount}, #{bankcardNo}, #{operator}, #{unbindTime}, #{unbindStatus})
+    </insert>
+
+    <insert id="addUnbindBankcardAuditRecord">
+        INSERT INTO pms.da_unbind_bankcard_audit
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="unbindBankcardId != null">
+                unbind_bankcard_id,
+            </if>
+            <if test="userId != null">
+                user_id,
+            </if>
+            <if test="userRole != null">
+                user_role,
+            </if>
+            <if test="auditStatus != null">
+                audit_status,
+            </if>
+                create_time,
+                update_time,
+            <if test="expiryTime != null">
+                expiry_time,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="unbindBankcardId != null">
+                #{unbindBankcardId,jdbcType=INTEGER},
+            </if>
+            <if test="userId != null">
+                #{userId,jdbcType=INTEGER},
+            </if>
+            <if test="userRole != null">
+                #{userRole,jdbcType=VARCHAR},
+            </if>
+            <if test="auditStatus != null">
+                #{auditStatus,jdbcType=VARCHAR},
+            </if>
+                SYSDATE(),
+                SYSDATE(),
+            <if test="expiryTime != null">
+                DATE_ADD(SYSDATE(),INTERVAL 72 HOUR)
+            </if>
+        </trim>
+    </insert>
+
+    <delete id="deletePayExtend" parameterType="java.lang.Integer">
+        DELETE FROM
+          flb.t_pay_extend
+        WHERE
+          id = #{userId}
+    </delete>
+
+    <!--将连连还有宝付支付的协议号清空-->
+    <update id="setPayExtendNull" parameterType="java.lang.Integer">
+        UPDATE
+        flb.t_pay_extend
+        SET no_agree = NULL, baofoo_bind_id = NULL
+        WHERE
+        id = #{userId}
+    </update>
+    
+    <update id="updateUserBankcardStatus" parameterType="java.lang.Integer">
+        UPDATE s61.t6114
+        SET F13 = 'WRZ'
+        WHERE F02 = #{userId}
+    </update>
+    
+    <select id="getUserBankCard" parameterType="java.lang.Integer" resultType="UserBankcard">
+        SELECT
+            bank_card.F02 userId,
+            bank_card.F01 AS bankCardId,
+            bank_card.F06 AS bankNum,
+            extend.baofoo_bind_id,
+            0 userRole,
+            0 auditStatus,
+            0 unbindStatus,
+            null expiryTime
+        FROM
+            S61.T6114 bank_card
+        LEFT JOIN s50.T5020 bank ON bank.F01 = bank_card.F03
+        LEFT JOIN flb.t_pay_extend extend ON extend.id = bank_card.F02
+        WHERE
+            extend.baofoo_bind_id IS NOT NULL
+        AND bank_card.F02 = #{userId}
+        UNION ALL
+        SELECT
+            xw.user_id userId,
+            0 bankCardId,
+            AES_DECRYPT(
+                FROM_BASE64 (xw.bankcard_no),
+                '80e36e39f34e678c'
+            ) AS bankNum,
+            0 baofoo_bind_id,
+            xw.user_role userRole,
+            audit.auditStatus auditStatus,
+            audit.unbindStatus,
+            audit.expiryTime
+        FROM
+            flb.t_xw_account xw
+        LEFT JOIN s61.t6161 org ON org.F01 = xw.user_id
+        LEFT JOIN (
+            SELECT
+                *
+            FROM
+                (
+                    SELECT
+                        audit.user_id userId,
+                        audit.user_role userRole,
+                        audit.audit_status auditStatus,
+                        unbind.unbind_status unbindStatus,
+                        audit.expiry_time expiryTime
+                    FROM
+                        pms.da_unbind_bankcard_audit audit
+                    LEFT JOIN
+                        pms.da_unbind_bankcard unbind ON unbind.id = audit.unbind_bankcard_id
+                    WHERE
+                        audit.user_id = #{userId}
+                    ORDER BY
+                        update_time DESC
+                ) temp
+            GROUP BY
+                temp.userId, temp.userRole
+        ) audit ON xw.user_id = audit.userId
+        AND xw.user_role = audit.userRole
+        WHERE
+            xw.user_id = #{userId}
+            AND xw.bankcard_no IS NOT NULL
+    </select>
+
+    <!--存管版本开始更改,个人可绑定多张银行卡(普通/存管)-->
+    <select id="getUserAuthInfo" resultType="UserAuthInfo">
+        SELECT
+            u.F01 userId,
+            u.F02 userAccount,
+            auth.F02 userName
+        FROM
+            s61.t6110 u
+        INNER JOIN s61.t6141 auth ON auth.F01 = u.F01
+        WHERE
+            u.F06 = 'ZRR'
+            AND auth.F04 = 'TG'
+            <if test="userAccount != null and userAccount != ''">
+            AND u.F02 = #{userAccount}
+            </if>
+            <if test="uid != null and uid != ''">
+            AND auth.F07 = #{uid}
+            </if>
+        UNION ALL
+        SELECT
+            xw.user_id userId,
+            user_info.F02 userAccount,
+            user_base.F02 userName
+        FROM
+            flb.t_xw_account xw
+        LEFT JOIN s61.t6110 user_info ON xw.user_id = user_info.F01
+        LEFT JOIN s61.t6141 user_base ON xw.user_id = user_base.F01
+        <where>
+            xw.bankcard_no IS NOT NULL
+            <if test="userAccount != null and userAccount != ''">
+            AND user_info.F02 = #{userAccount}
+            </if>
+            <if test="uid != null and uid != ''">
+            AND user_base.F07 = #{uid}
+            </if>
+        </where>
+    </select>
+
+    <select id="getOrgAuthInfo" resultType="OrgAuthInfo">
+        SELECT
+            org.F01 userId,
+            user_base.F02 userAccount,
+            org.F04 userName
+        FROM
+            s61.t6161 org
+        LEFT JOIN s61.t6110 user_base ON org.F01 = user_base.F01
+        LEFT JOIN flb.t_xw_account xw ON org.F01 = xw.user_id
+        WHERE
+            xw.user_type = 'ORGANIZATION'
+            AND user_base.F07 = 'QY'
+            AND xw.bankcard_no IS NOT NULL
+            <if test="userAccount != null and userAccount != ''">
+            AND user_base.F02 = #{userAccount}
+            </if>
+            <if test="uid != null and uid != ''">
+            AND (
+                org.F03 = #{uid}
+                OR org.unified_code = #{uid}
+            )
+            </if>
+    </select>
+
+    <select id="getUnbindBankcardInfos" parameterType="java.util.Map" resultType="UnbindBankcardInfo">
+        SELECT
+            unbind.user_id userId,
+            unbind.user_account userAccount,
+            unbind.bankcard_no bankcardNo,
+            unbind.operator,
+            unbind.description,
+            unbind.unbind_time unbindTime,
+            xw.user_role userRole
+        FROM
+            pms.da_unbind_bankcard unbind
+        LEFT JOIN pms.da_unbind_bankcard_audit audit ON audit.unbind_bankcard_id = unbind.id
+        LEFT JOIN flb.t_xw_account xw ON unbind.user_id = xw.user_id AND audit.user_role = xw.user_role
+        <where>
+            unbind.unbind_status = 1
+            <if test="userAccount != null and userAccount != ''">
+                AND unbind.user_account like '%${userAccount}%'
+            </if>
+            <if test="operator != null and operator != ''">
+                AND unbind.operator like '%${operator}%'
+            </if>
+            <if test="unbindStartTime != null">
+                <![CDATA[AND unbind.unbind_time >= #{unbindStartTime}]]>
+            </if>
+            <if test="unbindEndTime != null">
+                <![CDATA[AND unbind.unbind_time <= #{unbindEndTime}]]>
+            </if>
+        </where>
+        ORDER BY unbind.unbind_time DESC
+    </select>
+
+    <select id="getPhoneNumByUserId" resultType="string">
+        SELECT
+        F04 phoneNum
+        FROM s61.t6110 WHERE F01 = #{userId} AND F06 = 'ZRR'
+    </select>
+
+</mapper>

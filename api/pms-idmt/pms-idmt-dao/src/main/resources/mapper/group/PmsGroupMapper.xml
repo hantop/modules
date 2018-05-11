@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.idmt.group.PmsGroupMapper">
+    <select id="findAll" parameterType="java.lang.Integer" resultType="PmsGroup">
+      SELECT id, NAME, parent_id AS parentId, orderid, marks AS mark, available FROM pms.`idmt_group` WHERE idmt_group.id=#{groupId}
+      UNION ALL
+      SELECT id, NAME, parent_id AS parentId, orderid, marks AS mark, available  FROM pms.`idmt_group`
+      WHERE idmt_group.`parent_ids` LIKE '%${groupId}%'
+    </select>
+
+    <insert id="addPmsGroup" parameterType="PmsGroup">
+        insert into pms.`idmt_group`( name, parent_id, parent_ids, orderid, STATUS, marks,available) values (#{name},#{parentId},#{parentIds},#{orderid},#{status},#{mark},1)
+    </insert>
+
+    <update id="updatePmsGroup" parameterType="PmsGroupForm">
+       UPDATE pms.`idmt_group` SET name=#{deptName}, orderid=#{deptSort}, marks=#{deptMark} where id=#{nodeId}
+    </update>
+
+    <select id="deletePmsGroupRelation" parameterType="java.util.Map">
+        DELETE FROM pms.`idmt_group` WHERE parent_ids like '${condition}%'
+    </select>
+
+    <select id="deletePmsGroup" parameterType="java.lang.Integer">
+        DELETE FROM pms.`idmt_group` WHERE id = #{id}
+    </select>
+
+    <select id="findGroupUsers" parameterType="java.util.Map" resultType="PmsUser">
+        SELECT uu.`id`,uu.`username`,uu.`realname`,uu.`email`,uu.`create_time` AS createTime FROM pms.`idmt_user` uu
+        INNER JOIN pms.`idmt_user_group` ug ON uu.`id` = ug.`userid`
+        <where>
+            ug.`groupid` IN
+            <foreach collection="list" item="item" index="index" open="(" separator="," close=")">
+                #{item.id}
+            </foreach>
+            <if test="dimission != null" >
+                AND uu.dimission = #{dimission}
+            </if>
+        </where>
+    </select>
+
+    <select id="findNode" parameterType="java.lang.Integer" resultType="PmsGroup">
+        select id, name, parent_id AS parentId,parent_ids AS parentIds, available from pms.`idmt_group` where id= #{nodeId}
+    </select>
+
+    <select id="getGroupByUserId" parameterType="java.lang.Integer" resultType="PmsGroup">
+        SELECT idmt_group.`id`,idmt_group.`NAME` FROM pms.`idmt_user`
+        LEFT JOIN pms.`idmt_user_group`
+        ON idmt_user.`id` = idmt_user_group.`userid`
+        LEFT JOIN pms.`idmt_group`
+        ON idmt_user_group.`groupid` = idmt_group.`id`
+        WHERE idmt_user.`id` = #{uid}
+    </select>
+
+    <resultMap id="BaseResultMap" type="PmsGroup">
+        <id column="id" property="id" jdbcType="INTEGER" />
+        <result column="name" property="name" jdbcType="VARCHAR" />
+        <result column="ename" property="ename" jdbcType="VARCHAR" />
+        <result column="grouptype" property="grouptype" jdbcType="VARCHAR" />
+        <result column="status" property="status" jdbcType="VARCHAR" />
+        <result column="orderid" property="orderid" jdbcType="INTEGER"/>
+        <result column="parentId" property="parentId" jdbcType="INTEGER" />
+        <result column="parentIds" property="parentIds" jdbcType="VARCHAR" />
+        <result column="marks" property="mark" jdbcType="VARCHAR" />
+        <result column="available" property="available" jdbcType="VARCHAR" />
+    </resultMap>
+
+    <resultMap type="PmsGroup" id="treeResultMap" extends="BaseResultMap">
+        <collection property="children" column="id" javaType="list" ofType="PmsGroup" select="children"></collection>
+    </resultMap>
+
+    <select id="findGroupByUsername" parameterType="java.lang.String" resultMap="treeResultMap">
+        SELECT
+            pms.idmt_group.id id,
+            pms.idmt_group.NAME name,
+            pms.idmt_group.enname ename,
+            pms.idmt_group.grouptype grouptype,
+            pms.idmt_group.STATUS status,
+            pms.idmt_group.orderid orderid,
+            pms.idmt_group.parent_id parentId,
+            pms.idmt_group.parent_ids parentIds,
+            pms.idmt_group.marks marks,
+            pms.idmt_group.available available
+        FROM
+        pms.idmt_group
+        LEFT JOIN pms.idmt_user_group ON (pms.idmt_group.id = pms.idmt_user_group.groupid)
+        LEFT JOIN pms.idmt_user ON (pms.idmt_user.id = pms.idmt_user_group.userid)
+        WHERE pms.idmt_user.username = #{username}
+        ORDER BY pms.idmt_group.orderid DESC
+        LIMIT 1
+    </select>
+
+    <select id="children" parameterType="java.lang.Integer" resultMap="treeResultMap">
+       SELECT
+            pms.idmt_group.id id,
+            pms.idmt_group.NAME name,
+            pms.idmt_group.enname enname,
+            pms.idmt_group.grouptype grouptype,
+            pms.idmt_group.STATUS status,
+            pms.idmt_group.orderid orderid,
+            pms.idmt_group.parent_id parentId,
+            pms.idmt_group.parent_ids parentIds,
+            pms.idmt_group.marks marks,
+            pms.idmt_group.available available
+        FROM
+        pms.idmt_group
+        LEFT JOIN pms.idmt_user_group ON (pms.idmt_group.id = pms.idmt_user_group.userid)
+        LEFT JOIN pms.idmt_user ON (pms.idmt_user.id = pms.idmt_user_group.userid)
+        WHERE pms.idmt_group.parent_id = #{id}
+        ORDER BY pms.idmt_group.orderid DESC
+    </select>
+
+
+    <insert id="addUserDepartment" parameterType="PmsUserGroup" >
+        insert into pms.idmt_user_group (userId,groupId)
+        values (#{userId,jdbcType=INTEGER}, #{groupId,jdbcType=INTEGER})
+    </insert>
+
+    <delete id="deleteUserDepartment" parameterType="java.lang.Integer" >
+        delete from pms.idmt_user_group
+        where userid = #{userId,jdbcType=INTEGER}
+    </delete>
+</mapper>

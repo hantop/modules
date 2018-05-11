@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CreditassignmentMapper">
+    <!-- 债权转让申请列表 -->
+	<select id="getCreditassignmentApplyforList" parameterType="java.util.Map" resultType="Zqzrlb">
+		SELECT T6260.F02 AS F01, T6260.F03 AS F02, T6260.F04 AS F03, T6260.F05 AS F04, DATE_ADD(T6251.F10, INTERVAL T6230.F09 MONTH) AS F05, T6260.F07 AS F06, 
+		T6260.F08 AS F07, T6251.F04 AS F08, T6251.F05 AS F09, T6251.F06 AS F10, T6251.F07 AS F11, T6230.F03 AS F12, T6230.F04 AS F13, 
+		T6230.F06 AS F14, T6230.F09 AS F15, T6230.F23 AS F16,T6230.F31 AS F17,T6251.F02 AS F18,T6260.F09 AS F19,T6231.F12 AS F20,T6231.F02 AS F22,
+		T6231.F03 AS F23,T6251.F03 AS F24,T6260.F01 AS F25, T6230.F33 AS F26, T6231.F09 AS F27 FROM S62.T6260 INNER JOIN S62.T6251 ON T6260.F02 = T6251.F01 
+		INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01 INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+		where T6260.F07 = #{status} AND T6251.F08 = #{isTransfer}
+		<if test="applyforId != null">
+			AND T6260.F01 = #{applyforId}
+		</if>
+		<if test="timestamp != null">
+		    <![CDATA[AND T6260.F05 < #{timestamp}]]> 
+		</if>
+		order by F19 desc
+		<if test="start != null and limit != null">
+		    limit #{start},#{limit}
+		</if>
+	</select>
+	
+	<!-- 债权转让列表记录数 -->
+	<select id="getCreditassignmentApplyforCount" parameterType="java.util.Map" resultType="int">
+		SELECT count(T6260.F01) FROM S62.T6260 INNER JOIN S62.T6251 ON T6260.F02 = T6251.F01 
+		INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01 INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+		where T6260.F07 = #{status} AND T6251.F08 = #{isTransfer}
+		<if test="timestamp != null">
+		    <![CDATA[AND T6260.F05 < #{timestamp}]]> 
+		</if>
+	</select>
+	
+	<!-- 债权申请转让次数 -->
+	<select id="getCreditassignmentCount" parameterType="java.util.Map" resultType="int">
+		SELECT count(T6260.F01) FROM S62.T6260 
+		where T6260.F02 = #{zqId} 
+	</select>
+
+    <!-- 转入债权列表 -->
+    <select id="getTransferInList" parameterType="java.util.Map" resultType="TransferInList">
+
+        SELECT
+        t.F01 creditId,
+        t.F02 creditTitle,
+        s.F06 purchaseTime,
+        t.F05 investAmount,
+        m.F06 annualYield,
+        DATEDIFF(h.F08, t.F09) remainDays,
+        h.F07 exceptEarnings,
+        h.F09 creditStatus,
+        t.F08 isTransfer
+        FROM
+        s62.t6251 t
+        INNER JOIN s65.t6501 s ON s.F01 = t.F12
+        INNER JOIN s62.t6230 m ON m.F01 = t.F03
+        INNER JOIN s62.t6252 h on h.F11 = t.F01
+        where t.F04 =  #{userId} and s.F03='CG' and h.F05 = 7002
+        <if test="timestamp != null">
+            <![CDATA[AND s.F06 < #{timestamp}]]>
+        </if>
+        order by s.F06 desc limit 10
+    </select>
+
+	<!-- 转入债权列表 1.4.0 接口以上适用-->
+	<select id="getTransferInInfoList" parameterType="java.util.Map" resultType="TransferInInfo">
+		SELECT
+			tif.*,
+			tif.yearYieldTemp + IFNULL(tcc.scope,0) yearYield,
+			(
+				CASE
+					WHEN IFNULL(tcc.scope,0) = 0 THEN FALSE
+					ELSE TRUE
+				END
+			) AS jxFlag
+		FROM
+		(
+			SELECT
+				T6251.F01 creditId,
+				T6251.F02 creditCode,
+				T6251.F08 isTransfer,
+				T6230.F06 yearYieldTemp,
+				T6230.F20 bidStatus,
+				T6231.F19 isYq,
+				T6251.F05 investAmount,
+				T6501.F06 purchaseTime,
+				DATEDIFF(T6231.F18,sysdate()) surplusDays,
+				IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7002,7004,7005,7022)),0) expectedProfit,
+				IFNULL(T6262.F01,0) transferOutId,
+				IFNULL(arrival.amount,0) arrivalProfit,
+
+				T6251.F11 AS T6251F11Temp
+
+			FROM
+				S62.T6251
+			INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+			INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+			INNER JOIN s65.t6501 ON t6501.F01 = T6251.F12
+			LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+			LEFT  JOIN flb.t_arrival_earnings arrival ON arrival.zq_id = T6251.F01
+			WHERE T6251.F04 = #{userId}
+			AND T6501.F03='CG'
+			<if test="timestamp != null">
+				<![CDATA[AND T6501.F06 < #{timestamp}]]>
+			</if>
+			order by T6501.F06 desc
+			limit 10
+		) tif
+		LEFT JOIN
+		(
+			SELECT
+				flb.t_coupon.scope AS scope,
+				flb.t_user_coupon.tender_id AS tender_id
+			FROM
+				flb.t_user_coupon
+			LEFT JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+		) tcc
+		ON tif.T6251F11Temp = tcc.tender_id
+	</select>
+
+	<!-- 转入债权详情-->
+	<select id="transferInDetail" parameterType="java.util.Map" resultType="TransferInDetail">
+		SELECT
+			t.F01 creditId,
+			t.F03 bidId,
+			t.F02 creditTitle,
+			s.F06 purchaseTime,
+			t.F05 investAmount,
+			m.F06 annualYield,
+			DATEDIFF(h.F08, t.F09) remainDays,
+			h.F07 exceptEarnings,
+			t.F08 isTransfer,
+			h.F09 creditStatus,
+			t.F09 investDay,
+			date_add(t.F09, INTERVAL 1 DAY) interestDay,
+			h.F08 expireDay,
+			f.F09 remark
+		FROM
+			s62.t6251 t
+		INNER JOIN s65.t6501 s ON s.F01 = t.F12
+		INNER JOIN s62.t6230 m ON m.F01 = t.F03
+		INNER JOIN s62.t6231 f ON f.F01 = t.F03 
+		INNER JOIN s62.t6252 h on h.F11 = t.F01
+		WHERE t.F01 = #{zqId}
+		AND t.F04 = #{userId}
+		AND h.F05 = 7002
+		AND s.F03 = 'CG'
+
+	</select>
+
+    <!-- 转入债权详情 1.4.0 接口以上适用-->
+    <select id="getTransferInInfoDetail" parameterType="java.util.Map" resultType="TransferInInfo">
+		SELECT
+ 			tif.*,
+ 			tif.yearYieldTemp yearYield
+  		FROM
+  		(
+ 			SELECT
+			T6251.F01 creditId,
+			T6251.F03 bidId,
+			T6251.F02 creditCode,
+			T6251.F08 isTransfer,
+			T6230.F06 yearYieldTemp,
+			T6230.F20 bidStatus,
+			T6230.F10 AS repaymentMode,
+			T6230.F33 assetTypes,
+			T6230.F17 AS interestPaymentType,
+			T6231.F06 AS nextRepaymentDate,
+			T6231.F17 AS interestDate,
+			T6231.F09 remark,
+			T6231.F19 isYq,
+			T6231.F18 expireDate,
+			T6251.F05 investAmount,
+			T6251.F06 creditAmount,
+			T6501.F06 purchaseTime,
+			DATEDIFF(T6231.F18,sysdate()) surplusDays,
+			T6251.F09 investDate,
+			IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7002,7004,7005,7022)),0) expectedProfit,
+			IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7002,7022)),0) interest,
+
+			IFNULL(T6262.F01,0) transferOutId,
+			IFNULL(arrival.amount,0) arrivalProfit,
+			tab6260.applyTime,
+			s62.t6262.F07 AS successTime,
+			tab6252.actualRepaymentDate,
+
+			T6251.F11 AS T6251F11Temp,
+            T6238.F09 AS bidInterestRise
+
+			FROM
+			S62.T6251
+			INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+			INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+			LEFT JOIN s65.t6501 ON t6501.F01 = T6251.F12
+			LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+			LEFT  JOIN flb.t_arrival_earnings arrival ON arrival.zq_id = T6251.F01
+			LEFT  JOIN (SELECT s62.t6260.F02,s62.t6260.F05 AS applyTime from s62.t6260 WHERE t6260.F02 = #{creditId} GROUP BY s62.t6260.F02 ORDER BY s62.t6260.F05 DESC ) tab6260 ON s62.t6251.F01 = tab6260.F02
+			LEFT JOIN (SELECT s62.t6252.F11,s62.t6252.F10 AS actualRepaymentDate from s62.t6252 WHERE t6252.F11 = #{creditId} GROUP BY s62.t6252.F11 ORDER BY s62.t6252.F10 DESC ) tab6252 ON s62.t6251.F01 = tab6252.F11
+            LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+			WHERE T6251.F04 =  #{userId}
+			AND T6501.F03='CG'
+			AND T6251.F01=#{creditId}
+			limit 1
+ 		) tif
+    </select>
+	
+	<!-- 查询转让成功记录 -->
+	<select id="getRecord"  parameterType="java.util.Map" resultType="int">
+	   SELECT count(T6262.F01) FROM S62.T6262 
+	   <where>
+	      <if test="applyforId != null">
+	        and T6262.F02 = #{applyforId} 
+	      </if>
+	   </where>
+	</select>
+
+	<!-- 债权 转出列表-->
+	<select id="getTransferOutList"  parameterType="java.util.Map" resultType="TransferOutInfo">
+		SELECT
+			tif.*,
+			tif.yearYieldTemp  yearYield
+		FROM
+		(
+			SELECT
+				T6260.F01 applyforId,
+				T6251.F02 creditCode,
+				T6230.F06 yearYieldTemp,
+				T6230.F33 assetTypes,
+				T6260.F03 transferOutPrice,
+				T6260.F05 transferApplyforTime,
+				DATEDIFF(T6231.F18,sysdate()) surplusDays,
+		        T6230.F10 AS repaymentMode,
+				T6260.F09 discountRate,
+				IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND t6252.F09='WH' AND T6252.F05 in (7001,7002,7004,7005,7022)),0) AS collectInterest,
+		        T6251.F11 AS recordId,
+				T6238.F09 AS bidInterestRise
+			FROM
+				S62.T6260
+			INNER JOIN S62.T6251 ON T6260.F02 = T6251.F01
+			INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+			INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+			LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+			LEFT JOIN flb.t_user_plan_product upp ON upp.product_id = T6251.F01
+			WHERE T6260.F07 = #{transferStatus}
+				AND T6251.F08 = #{isTransfer}
+				AND T6230.F20 = 'HKZ'
+				AND DATEDIFF(T6231.F18,sysdate())>0
+				AND upp.product_id  IS null
+			<if test="zqDayMin!=null">
+				AND DATEDIFF(T6231.F18,sysdate())<![CDATA[>=]]> #{zqDayMin}
+			</if>
+			<if test="zqDayMax!=null">
+				AND DATEDIFF(T6231.F18,sysdate()) <![CDATA[<=]]>#{zqDayMax}
+			</if>
+			<if test="transferValueMin!=null">
+				AND T6260.F03<![CDATA[>=]]> #{transferValueMin}
+			</if>
+			<if test="transferValueMax!=null">
+				AND T6260.F03 <![CDATA[<=]]>#{transferValueMax}
+			</if>
+		    <if test="cgNum!=null">
+			    AND T6230.F38 = #{cgNum}
+		    </if>
+			<if test="sortType==1">
+				<if test="orderType!=2">
+					ORDER BY DATEDIFF(T6231.F18,sysdate()) asc
+				</if>
+				<if test="orderType==2">
+					ORDER BY DATEDIFF(T6231.F18,sysdate()) desc
+				</if>
+			</if>
+
+			<if test="sortType==2">
+				<if test="orderType!=2">
+					ORDER BY T6260.F03 asc
+				</if>
+				<if test="orderType==2">
+					ORDER BY T6260.F03 desc
+				</if>
+			</if>
+
+
+			<if test="sortType!=1 and sortType!=2">
+				<if test="orderType!=2">
+					ORDER BY T6260.F01 asc
+				</if>
+				<if test="orderType==2">
+					ORDER BY T6260.F01 desc
+				</if>
+			</if>
+		) tif
+	</select>
+	
+	<!-- <select id="getTransferOutList"  parameterType="java.util.Map" resultType="TransferOutInfo">
+		SELECT
+            T6260.F01 applyforId,
+            T6251.F02 creditCode,
+            T6230.F06 yearYield,
+            T6230.F33 assetTypes,
+            T6260.F03 transferOutPrice,
+            T6260.F05 transferApplyforTime,
+            DATEDIFF(T6231.F18,sysdate()) surplusDays,
+            T6260.F09 discountRate
+        FROM
+            S62.T6260
+        INNER JOIN S62.T6251 ON T6260.F02 = T6251.F01
+        INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+        INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+        WHERE T6260.F07 = #{transferStatus}
+        AND T6251.F08 = #{isTransfer}
+        AND T6230.F20 = 'HKZ'
+        <if test="transferApplyforTime!=null">
+            <![CDATA[AND T6260.F05 < #{transferApplyforTime}]]>
+        </if>
+        ORDER BY T6260.F09 DESC
+        LIMIT #{start},#{limit}
+	</select> -->
+
+    <select id="getTransferOutListTotalPages"  parameterType="java.util.Map" resultType="int">
+        SELECT
+          count(T6260.F01)
+        FROM
+          S62.T6260
+        INNER JOIN S62.T6251 ON T6260.F02 = T6251.F01
+        INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+        WHERE T6260.F07 = #{transferStatus}
+        AND T6251.F08 = #{isTransfer}
+        AND T6230.F20 = 'HKZ'
+        ORDER BY T6260.F09 DESC
+    </select>
+
+    <!-- 债权可转出详情-->
+    <select id="getTransferOutDetail"  parameterType="java.util.Map" resultType="TransferOutInfo">
+		SELECT
+			tif.*,
+			tif.yearYieldTemp  yearYield
+		FROM
+		(
+			SELECT
+				T6260.F01 applyforId,
+				T6230.F01 bidId,
+				T6251.F02 creditCode,
+				T6230.F06 yearYieldTemp,
+				T6230.F10 repaymentMode,
+				T6231.F09 remark,
+				T6230.F33 assetTypes,
+				T6260.F03 transferOutPrice,
+				T6251.F06 originalCreditAmount,
+				DATEDIFF(T6231.F18,sysdate()) surplusDays,
+				T6260.F09 discountRate,
+				IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND t6252.F09='WH' AND T6252.F05 in (7001,7002,7004,7005,7022)),0) AS collectInterest,
+                T6251.F11 AS recordId,
+				T6251.F11 AS T6251F11Temp,
+				T6238.F09 AS bidInterestRise
+
+			FROM
+			  S62.T6260
+			INNER JOIN S62.T6251 ON T6260.F02 = T6251.F01
+			INNER JOIN S62.T6230 ON T6251.F03 = T6230.F01
+			INNER JOIN S62.T6231 ON T6251.F03 = T6231.F01
+			LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+			WHERE T6260.F07 = #{transferStatus}
+			AND T6251.F08 = #{isTransfer}
+			AND T6230.F20 = 'HKZ'
+			And T6260.F01 = #{applyforId}
+			limit 1
+		) tif
+    </select>
+
+   <!-- 债权可转出列表-->
+    <select id="getAllowTransferInInfoList"  parameterType="java.util.Map" resultType="TransferInInfo">
+		SELECT
+			tif.*,
+			tif.yearYieldTemp + IFNULL(tcc.scope,0) + tif.bidInterestRise yearYield,
+			(
+				CASE
+					WHEN IFNULL(tcc.scope,0) = 0 THEN FALSE
+					ELSE TRUE
+				END
+			) AS jxFlag
+		FROM
+		(
+			SELECT
+				T6230.F01 AS bidId,
+				T6230.F03 AS bidTitle,
+				T6251.F12 AS zrId,
+				T6251.F01 AS creditId,
+				T6251.F02 AS creditCode,
+				T6250.F05 AS investAmount,
+				T6230.F09 AS loanMonths,
+				T6230.F32 AS loanDays,
+				T6230.F06 AS yearYieldTemp,
+				T6230.F10 AS repaymentMode,
+				T6230.F20 AS bidStatus,
+				T6231.F19 AS isYq,
+				T6231.F06 AS nextRepaymentDate,
+				T6231.F18 AS expireDate,
+				T6250.F06 AS holdTime,
+				DATEDIFF(T6231.F18, T6251.F09) periodDates,
+				IFNULL(t6251.F08, 'F') AS isTransfer,
+				IFNULL(T6262.F01, 0) AS transferOrderId,
+				IFNULL((select sum(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7002,7004,7005,7022,7023)),0) AS expectedProfit,
+				T6251.F11 AS T6251F11Temp,
+				T6238.F09 AS bidInterestRise,
+		        IFNULL(T6230.F39,0) AS anytimeQuit
+			FROM
+				(SELECT * FROM S62.T6251 WHERE s62.T6251.F04=#{userId} AND t6251.F08='F' ) T6251
+			INNER JOIN
+				(
+					SELECT *
+					FROM S62.t6230
+					WHERE NOT EXISTS (SELECT 1 FROM flb.t_plan_bid WHERE t_plan_bid.bid_id = t6230.F01)
+					<if test="bidStatus!=null">
+						AND T6230.F20 in <foreach collection="bidStatus" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+					</if>
+		            AND T6230.F36 = '0001'
+				) T6230 ON T6230.F01 = T6251.F03
+			INNER JOIN S62.T6231 ON T6231.F01 = T6251.F03
+			LEFT  JOIN s62.T6250 ON T6251.F11 = T6250.F01
+			LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+			LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+			LEFT JOIN (SELECT count(T6260.F01) as zrcs,F02 FROM S62.T6260 GROUP BY F02) tab6260	ON tab6260.F02 = T6251.F01
+			LEFT JOIN (SELECT * from s62.t6252 WHERE t6252.F04 = #{userId} AND  t6252.F09='WH' GROUP BY t6252.f11)t6252 ON t6252.f11=T6251.F01
+			WHERE T6231.F19='F'
+			AND T6262.F01 is null
+
+			AND (T6230.f39 = 1
+		OR  (
+		IFNULL(tab6260.zrcs, 0) <![CDATA[<]]> #{zqzrcs}
+		<if test="zqHoldDayMin!=null">
+			AND DATEDIFF(SYSDATE(),T6251.F09) <![CDATA[>]]> #{zqHoldDayMin}
+		</if>
+		<if test="zqHoldDayLast!=null">
+			AND DATEDIFF(t6252.F08,SYSDATE()) <![CDATA[>]]> #{zqHoldDayLast}
+		</if>
+		)
+			)
+		  <if test="cgNum!=null">
+		   AND T6230.F38 = #{cgNum}
+		  </if>
+			AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			ORDER BY
+				T6250.F06 DESC
+		) tif
+		LEFT JOIN
+		(
+			SELECT
+				flb.t_coupon.scope AS scope,
+				flb.t_user_coupon.tender_id AS tender_id
+			FROM
+				flb.t_user_coupon
+			LEFT JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+			WHERE flb.t_user_coupon.tender_id IN (
+				SELECT
+					T6251.F11
+				FROM
+					S62.T6251
+				INNER JOIN S62.T6230 ON T6230.F01 = T6251.F03
+				INNER JOIN S62.T6231 ON T6231.F01 = T6251.F03
+				WHERE s62.T6251.F04=#{userId}
+					AND t6251.F08=#{isTransfer}
+		            <if test="cgNum!=null">
+			        AND T6230.F38 = #{cgNum}
+		            </if>
+					<if test="bidStatus!=null">
+						and T6230.F20 in <foreach collection="bidStatus" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+					</if>
+					AND T6231.F19='F'
+					AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			)
+		) tcc
+		ON tif.T6251F11Temp = tcc.tender_id
+	</select>
+	
+	
+	<!-- 债权转让中列表-->
+    <select id="getInTransferInInfoList"  parameterType="java.util.Map" resultType="TransferInInfo">
+		SELECT
+			tif.*,
+			tif.yearYieldTemp + IFNULL(tcc.scope,0) + tif.bidInterestRise yearYield,
+			(
+				CASE
+					WHEN IFNULL(tcc.scope,0) = 0 THEN FALSE
+					ELSE TRUE
+				END
+			) AS jxFlag
+		FROM
+		(
+			SELECT
+				T6230.F01 AS bidId,
+				T6230.F03 AS bidTitle,
+				T6251.F12 AS zrId,
+				T6251.F01 AS creditId,
+				T6251.F02 AS creditCode,
+				T6250.F05 AS investAmount,
+				T6230.F09 AS loanMonths,
+				T6230.F32 AS loanDays,
+				T6230.F06 AS yearYieldTemp,
+				T6230.F10 AS repaymentMode,
+				T6230.F20 AS bidStatus,
+				T6231.F19 AS isYq,
+				T6231.F18 AS expireDate,
+				T6251.F09 AS holdTime,
+				DATEDIFF(T6231.F18 ,sysdate()) surplusDays ,
+				tab6260.applyTime,
+				tab6260.transferAmount,
+
+				T6251.F11 AS T6251F11Temp,
+				T6238.F09 AS bidInterestRise,
+				IFNULL(T6230.F39,0) AS anytimeQuit
+			FROM
+				S62.T6251
+			INNER JOIN S62.T6230 ON T6230.F01 = T6251.F03
+			INNER JOIN S62.T6231 ON T6231.F01 = T6251.F03
+			LEFT  JOIN s62.T6250 ON T6251.F11 = T6250.F01
+			LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+			LEFT  JOIN flb.t_arrival_earnings arrival ON arrival.zq_id = T6251.F01
+			LEFT JOIN (SELECT F02,transferAmount,applyTime FROM (SELECT s62.t6260.F02,s62.t6260.F03 as transferAmount,s62.t6260.F05 AS applyTime  FROM s62.t6260 ORDER BY s62.t6260.F05 DESC)tt6260 GROUP BY tt6260.F02 ) tab6260 ON s62.t6251.F01 = tab6260.F02
+
+			WHERE
+				s62.T6251.F04=#{userId}
+				<if test="cgNum!=null">
+				 AND T6230.F38 = #{cgNum}
+				</if>
+			AND
+				t6251.F08='S'
+			AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			ORDER BY
+				T6251.F09 DESC
+		) tif
+		LEFT JOIN
+		(
+			SELECT
+				flb.t_coupon.scope AS scope,
+				flb.t_user_coupon.tender_id AS tender_id
+			FROM
+				flb.t_user_coupon
+			LEFT JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+			WHERE flb.t_user_coupon.tender_id IN (
+				SELECT
+					T6251.F11
+				FROM
+					S62.T6251
+				INNER JOIN S62.T6230 ON T6230.F01 = T6251.F03
+				INNER JOIN S62.T6231 ON T6231.F01 = T6251.F03
+
+				LEFT  JOIN flb.t_arrival_earnings arrival ON arrival.zq_id = T6251.F01
+				LEFT JOIN (SELECT F02,transferAmount,applyTime FROM (SELECT s62.t6260.F02,s62.t6260.F03 as transferAmount,s62.t6260.F05 AS applyTime  FROM s62.t6260 ORDER BY s62.t6260.F05 DESC)tt6260 GROUP BY tt6260.F02 ) tab6260 ON s62.t6251.F01 = tab6260.F02
+				WHERE
+					s62.T6251.F04=#{userId}
+				AND
+					t6251.F08='S'
+		       <if test="cgNum!=null">
+			   AND T6230.F38 = #{cgNum}
+		       </if>
+				AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+				)
+		) tcc
+		ON tif.T6251F11Temp = tcc.tender_id
+	</select>
+	
+	<!-- 债权已转让列表-->
+    <select id="getSuccessTransferInInfoList"  parameterType="java.util.Map" resultType="TransferInInfo">
+		SELECT
+			tif.*,
+			tif.yearYieldTemp + IFNULL(tcc.scope,0) + tif.bidInterestRise yearYield,
+			(
+				CASE
+					WHEN IFNULL(tcc.scope,0) = 0 THEN FALSE
+					ELSE TRUE
+				END
+			) AS jxFlag
+		FROM
+		(
+			SELECT
+				T6230.F01 AS bidId,
+				T6230.F03 AS bidTitle,
+				T6251.F12 AS zrId,
+				T6251.F01 AS creditId,
+				T6251.F02 AS creditCode,
+				T6230.F06 AS yearYieldTemp,
+				T6230.F10 AS repaymentMode,
+				T6230.F20 AS bidStatus,
+				T6231.F06 AS nextRepaymentDate,
+				T6231.F18 AS expireDate,
+				T6251.F09 AS holdTime,
+				IFNULL(arrival.amount,0) arrivalProfit,
+				DATEDIFF(T6231.F18 ,sysdate()) surplusDays,
+				tab6260.transferAmount,
+				s62.t6262.F07 AS successTime,
+
+				T6251.F11 AS T6251F11Temp,
+				T6238.F09 AS bidInterestRise,
+                IFNULL(T6230.F39,0) AS anytimeQuit
+			FROM
+				S62.T6251
+			INNER JOIN S62.T6230 ON T6230.F01 = T6251.F03
+			INNER JOIN S62.T6231 ON T6231.F01 = T6251.F03
+			LEFT  JOIN s62.T6250 ON T6251.F11 = T6250.F01
+			LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+			LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+			LEFT  JOIN flb.t_arrival_earnings arrival ON arrival.zq_id = T6251.F01
+			LEFT JOIN (SELECT F02,transferAmount FROM (SELECT s62.t6260.F02,s62.t6260.F03 as transferAmount FROM s62.t6260 ORDER BY s62.t6260.F05 DESC)tt6260 GROUP BY tt6260.F02 ) tab6260 ON s62.t6251.F01 = tab6260.F02
+			WHERE
+				s62.T6251.F04=#{userId}
+			AND
+				T6262.F01 is not null
+				<if test="cgNum!=null">
+					AND T6230.F38 = #{cgNum}
+				</if>
+			AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			ORDER BY
+				T6251.F09 DESC
+		) tif
+		LEFT JOIN
+		(
+			SELECT
+				flb.t_coupon.scope AS scope,
+				flb.t_user_coupon.tender_id AS tender_id
+			FROM
+				flb.t_user_coupon
+			LEFT JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+			WHERE flb.t_user_coupon.tender_id IN (
+				SELECT
+					T6251.F11
+				FROM
+					S62.T6251
+				INNER JOIN S62.T6230 ON T6230.F01 = T6251.F03
+				LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+				LEFT  JOIN flb.t_arrival_earnings arrival ON arrival.zq_id = T6251.F01
+				LEFT JOIN (SELECT F02,transferAmount FROM (SELECT s62.t6260.F02,s62.t6260.F03 as transferAmount FROM s62.t6260 ORDER BY s62.t6260.F05 DESC)tt6260 GROUP BY tt6260.F02 ) tab6260 ON s62.t6251.F01 = tab6260.F02
+				WHERE
+					s62.T6251.F04=#{userId}
+		        <if test="cgNum!=null">
+			    AND T6230.F38 = #{cgNum}
+		        </if>
+				AND
+					T6262.F01 is not null
+				AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			)
+		) tcc
+		ON tif.T6251F11Temp = tcc.tender_id
+	</select>
+	
+	<!-- 已购买债权列表，还不能转让的债权-->
+    <select id="getBuyedTransferList"  parameterType="String" resultType="TransferInInfo">
+		SELECT
+			tif.*,
+			tif.yearYieldTemp + IFNULL(tcc.scope,0) + tif.bidInterestRise yearYield,
+			(
+				CASE
+					WHEN IFNULL(tcc.scope,0) = 0 THEN FALSE
+					ELSE TRUE
+				END
+			) AS jxFlag
+		FROM
+		(
+			SELECT
+				T6230.F01 AS bidId,
+				T6230.F03 AS bidTitle,
+				T6251.F12 AS zrId,
+				T6251.F01 AS creditId,
+				T6251.F02 AS creditCode,
+				T6251.F06 AS investAmount,
+				T6230.F09 AS loanMonths,
+				T6230.F32 AS loanDays,
+				T6230.F06 AS yearYieldTemp,
+				T6230.F10 AS repaymentMode,
+				T6230.F20 AS bidStatus,
+				T6231.F19 AS isYq,
+				T6231.F06 AS nextRepaymentDate,
+				T6231.F18 AS expireDate,
+				T6251.F09 AS holdTime,
+				DATEDIFF(T6231.F18 ,SYSDATE()) surplusDays ,
+				IFNULL(t6251.F08, 'F') AS isTransfer,
+				IFNULL(T6262.F01, 0) AS transferOrderId,
+				IFNULL((SELECT SUM(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01 AND T6252.F05 IN (7002,7004,7005,7022)),0) AS expectedProfit,
+				s62.t6262.F07 AS successTime,
+
+				T6251.F11 AS T6251F11Temp,
+				T6238.F09 AS bidInterestRise,
+				IFNULL(T6230.F39,0) AS anytimeQuit
+			FROM
+				S62.T6251
+			INNER JOIN S62.T6230 ON T6230.F01 = T6251.F03
+			INNER JOIN S62.T6231 ON T6231.F01 = T6251.F03
+			INNER JOIN s62.T6262 ON T6262.F12 = T6251.F01
+			INNER JOIN s62.t6252 ON T6252.F11 = T6251.F01
+			LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+			WHERE
+				T6252.F05 = 7001
+			AND T6251.F04 = #{userId}
+			AND t6251.F08 = 'F'
+			AND T6230.F20 = 'HKZ'
+			<if test="cgNum !=null">
+			AND T6230.F38 = #{cgNum}
+			AND T6262.F03 = #{userId}
+			</if>
+			AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			GROUP BY T6252.F11
+			ORDER BY T6251.F09 DESC
+		) tif
+		LEFT JOIN
+		(
+			SELECT
+				flb.t_coupon.scope AS scope,
+				flb.t_user_coupon.tender_id AS tender_id
+			FROM
+				flb.t_user_coupon
+			LEFT JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+			WHERE flb.t_user_coupon.tender_id IN (
+				SELECT
+					T6251.F11
+				FROM
+					S62.T6251
+				INNER JOIN S62.T6230 ON T6230.F01 = T6251.F03
+				INNER JOIN s62.T6262 ON T6262.F12 = T6251.F01
+				INNER JOIN s62.t6252 ON T6252.F11 = T6251.F01
+				WHERE
+					T6252.F05 = 7001
+				AND T6251.F04 = #{userId}
+				AND t6251.F08 = 'F'
+				AND T6230.F20 = 'HKZ'
+		       <if test="cgNum !=null">
+			    AND T6230.F38 = #{cgNum}
+		       </if>
+		        AND T6262.F03 = #{userId}
+				AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+				GROUP BY T6252.F11
+			)
+		) tcc
+		ON tif.T6251F11Temp = tcc.tender_id
+	</select>
+
+	<select id="userCoupus"  parameterType="java.util.Map" resultType="UserCoupons">
+		SELECT
+        flb.t_coupon.scope AS scope,
+		flb.t_user_coupon.tender_id AS tenderId
+	FROM
+		flb.t_user_coupon
+	LEFT JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+	WHERE flb.t_user_coupon.tender_id in  <foreach collection="list" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+	</select>
+
+	<!-- 3.1 预期收益包含差价：预期收益 = 预期本息 — 转让金额-->
+	<select id="getExpectedProfit" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+		(CASE WHEN (SELECT SUM(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01)>0
+		THEN (IFNULL((SELECT SUM(T6252.F07) FROM s62.T6252 WHERE T6252.F11 = t6251.F01),0) - IFNULL(T6262.F05,0))
+		ELSE 0 END) AS expectedProfit
+		FROM
+		S62.T6251
+		LEFT JOIN s62.T6262 ON  T6262.F12 = T6251.F01
+		WHERE
+		T6251.f01= #{zqId}
+	</select>
+
+	<!--获取投资记录id-->
+	<select id="getBidRecordId" parameterType="java.util.Map" resultType="Integer">
+		SELECT
+        T6251.F11
+		FROM
+		S62.T6251
+		WHERE
+		T6251.f01= #{creditId}
+	</select>
+
+	<!-- 6260 中的债权在产品库中-->
+	<select id="getProductCount" parameterType="java.util.Map" resultType="Integer">
+		SELECT
+		COUNT(1)
+		FROM flb.t_user_plan_product upp
+		LEFT JOIN s62.t6251 zq ON zq.F01 = upp.product_id AND upp.product_id IS NOT NULL
+		LEFT JOIN s62.t6260 apply ON apply.F02 = zq.F01
+		WHERE apply.F01= #{appforId}
+	</select>
+
+	<select id="getSuccessTransferDetail" parameterType="java.util.Map" resultType="java.lang.String">
+		SELECT
+		IFNULL(COUNT(1),0)
+		FROM s62.T6251
+		LEFT  JOIN s62.T6262 ON T6262.F11 = T6251.F01
+		WHERE T6251.F01= #{creditId} AND T6251.F04 =  #{userId} AND  T6262.F01 is not null
+	</select>
+</mapper>

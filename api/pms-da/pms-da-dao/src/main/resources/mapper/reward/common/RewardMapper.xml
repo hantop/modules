@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.reward.common.RewardMapper">
+    <select id="getIsGrantedById" resultType="Byte" parameterType="Integer">
+        SELECT
+            pms.da_reward_record.is_granted
+        FROM
+            pms.da_reward_record
+        WHERE pms.da_reward_record.id = #{id}
+    </select>
+
+    <select id="getInServiceRewards" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM pms.`da_reward_record` WHERE in_service > 0
+    </select>
+
+    <select id="getRewardRecords" resultType="com.fenlibao.model.pms.da.reward.RewardRecord" parameterType="com.fenlibao.model.pms.da.reward.RewardRecordCondition">
+        SELECT
+        id, grant_time grantTime, grant_name grantName, operator, is_granted granted, reward_type rewardType,
+        grant_count grantCount, grant_sum grantSum, in_service inService, sys_type
+        FROM pms.da_reward_record
+        <where>
+            <if test="rewardType != null">
+                AND reward_type = #{rewardType}
+            </if>
+            <if test="startDate != null and startDate !=''">
+                AND grant_time >= #{startDate}
+            </if>
+            <if test="endDate != null and endDate !=''">
+                <![CDATA[AND grant_time <= #{endDate}]]>
+            </if>
+            <if test="grantName != null and grantName !=''">
+                AND grant_name like '%${grantName}%' 
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+    
+    <select id="getRewardRecordById" resultType="RewardRecord">
+        SELECT id,grant_time grantTime,grant_name grantName,operator,is_granted granted,reward_type rewardType,grant_count grantCount,grant_sum grantSum, in_service inService  FROM pms.da_reward_record 
+        where id= #{id} FOR UPDATE
+    </select>
+
+    <select id="getUserIdbyPhone" resultType="Integer" parameterType="String">
+        select F01 from s61.t6110 where F04= #{phone} and F06='ZRR' limit 1
+    </select>
+
+    <select id="getUserXWUserId" resultType="Integer" parameterType="String">
+        SELECT
+            user_id
+        FROM
+            flb.t_xw_account account
+        WHERE
+            account.platform_user_no = #{platformUserNo}
+        AND account.audit_status = 'PASSED'
+        AND account.active_status = 'ACTIVATED'
+        AND account.bankcard_no IS NOT NULL
+        LIMIT 1
+    </select>
+
+    <select id="selectGrantedById" resultType="Byte" parameterType="Integer">
+        SELECT
+            pms.da_reward_record.is_granted
+        FROM
+          pms.da_reward_record
+        WHERE pms.da_reward_record.id = #{id}
+    </select>
+	
+	<insert id="insertRewardRecord" useGeneratedKeys="true" keyProperty="id"  parameterType="RewardRecord">
+        insert into pms.da_reward_record
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="grantName != null">
+                grant_name,
+            </if>
+            <if test="operator != null">
+                operator,
+            </if>
+            <if test="granted != null">
+                is_granted,
+            </if>
+            <if test="rewardType != null">
+                reward_type,
+            </if>
+            <if test="grantTime != null">
+                grant_time,
+            </if>
+            <if test="sysType != null">
+                sys_type,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="grantName != null">
+                #{grantName,jdbcType=VARCHAR},
+            </if>
+            <if test="operator != null">
+                #{operator,jdbcType=VARCHAR},
+            </if>
+            <if test="granted != null">
+                #{granted,jdbcType=TINYINT},
+            </if>
+            <if test="rewardType != null">
+                #{rewardType,jdbcType=TINYINT},
+            </if>
+            <if test="grantTime != null">
+                #{grantTime,jdbcType=TIMESTAMP},
+            </if>
+            <if test="sysType != null">
+                #{sysType,jdbcType=TINYINT},
+            </if>
+        </trim>
+    </insert>
+    
+    <update id="updateRewardRecord" parameterType="RewardRecord">
+        update pms.da_reward_record 
+        <set>
+             <if test="grantTime != null" >
+                grant_time = #{grantTime},
+             </if>
+             <if test="granted != null" >
+                is_granted = #{granted},
+             </if>
+             <if test="grantCount != null and grantCount > 0" >
+                grant_count = #{grantCount},
+             </if>
+             <if test="grantSum != null and grantSum > 0" >
+                grant_sum = #{grantSum},
+             </if>
+            <if test="inService != null" >
+                in_service = #{inService},
+            </if>
+        </set>
+        where id= #{id}
+    </update>
+
+    <update id="updateRewardRecordResult" parameterType="RewardRecord">
+        update pms.da_reward_record
+        <set>
+            <if test="grantTime != null" >
+                grant_time = #{grantTime},
+            </if>
+            <if test="granted != null" >
+                is_granted = #{granted},
+            </if>
+        </set>
+        where id= #{id}
+    </update>
+
+    <insert id="insertSelective" parameterType="com.fenlibao.model.pms.da.reward.RewardRecord" useGeneratedKeys="true" keyProperty="id">
+        insert into pms.da_reward_record
+        <trim prefix="(" suffix=")" suffixOverrides="," >
+            <if test="grantTime != null" >
+                grant_time,
+            </if>
+            <if test="grantName != null" >
+                grant_name,
+            </if>
+            <if test="operator != null" >
+                operator,
+            </if>
+            <if test="granted != null" >
+                is_granted,
+            </if>
+            <if test="rewardType != null" >
+                reward_type,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides="," >
+            <if test="grantTime != null" >
+                #{grantTime,jdbcType=TIMESTAMP},
+            </if>
+            <if test="grantName != null" >
+                #{grantName,jdbcType=VARCHAR},
+            </if>
+            <if test="operator != null" >
+                #{operator,jdbcType=VARCHAR},
+            </if>
+            <if test="granted != null" >
+                #{granted,jdbcType=TINYINT},
+            </if>
+            <if test="rewardType != null" >
+                #{rewardType,jdbcType=TINYINT},
+            </if>
+        </trim>
+    </insert>
+    
+    <select id="getSalaryAccountId" resultType="Integer">
+        select t1.F01 FROM s61.t6101 t1  WHERE t1.F05=(select F02 from s10._1010 where F01='SYSTEM.SALARY_ACCOUN' limit 1) AND t1.F03='WLZH'
+    </select>
+
+    <select id="getT6101ForUpdate" resultType="com.fenlibao.model.pms.da.reward.T6101" parameterType="com.fenlibao.model.pms.da.reward.T6101">
+        select F01,F02,F03,F04,F05,F06,F07 from s61.t6101
+        <where>
+			<if test="F01 != null">
+                    <![CDATA[AND F01 = #{F01}]]>
+			</if>
+			<if test="F02 != null">
+                    <![CDATA[AND F02 = #{F02}]]>
+			</if>
+			<if test="F03 != null">
+                    <![CDATA[AND F03 = #{F03}]]>
+			</if>
+		</where>
+		for update
+    </select>
+    
+    <update id="batchUpdateT6101" parameterType="java.util.List">
+		update s61.t6101
+		<trim prefix="set" suffixOverrides=",">
+			<trim prefix=" F06 = case " suffix=" end,">
+				<foreach collection="list" item="i" index="index">
+					<if test="i.F06!=null">
+						when F01= #{i.F01} then #{i.F06}
+					</if>
+				</foreach>
+			</trim>
+			<trim prefix=" F07 = case " suffix=" end,">
+				<foreach collection="list" item="i" index="index">
+					<if test="i.F07!=null">
+						when F01= #{i.F01} then #{i.F07}
+					</if>
+				</foreach>
+			</trim>
+		</trim>
+		where
+		<foreach collection="list" separator="or" item="i" index="index">
+			F01=#{i.F01}
+		</foreach>
+	</update>
+	
+	<insert id="batchInsertT6102" parameterType="java.util.List">
+		insert into s61.t6102
+		(F02,F03,F04,F05,F06,F07,F08,F09)
+		values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.F02},#{item.F03},#{item.F04},#{item.F05},#{item.F06},#{item.F07},#{item.F08},#{item.F09})
+		</foreach>
+	</insert>
+	
+	<insert id="insertT6123" parameterType="com.fenlibao.model.pms.da.reward.T6123" useGeneratedKeys="true" keyProperty="F01">
+		insert into s61.t6123
+		(F02,F03,F04,F05)
+		values
+	    (#{F02},#{F03},#{F04},#{F05})
+	</insert>
+	
+	<insert id="insertT1040" parameterType="com.fenlibao.model.pms.da.reward.T1040" useGeneratedKeys="true"  keyProperty="F01">
+		insert into s10._1040
+		(F02,F03,F04,F05)
+		values
+		(#{F02},#{F03},#{F04},#{F05})
+	</insert>
+	
+	<insert id="batchInsertT6124" parameterType="java.util.List">
+		insert into s61.t6124
+		(F01,F02)
+		values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.F01},#{item.F02})
+		</foreach>
+	</insert>
+	
+	<insert id="batchInsertT1041" parameterType="java.util.List">
+		insert into s10._1041
+		(F01,F02)
+		values
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			(#{item.F01},#{item.F02})
+		</foreach>
+	</insert>
+	
+	<delete id="deleteRewardRecord" parameterType="com.fenlibao.model.pms.da.reward.RewardRecord">
+	    delete from pms.da_reward_record where id= #{id}
+	</delete>
+
+    <update id="cumsumRewardRecord" parameterType="RewardRecord">
+        UPDATE pms.da_reward_record SET grant_count = IFNULL(grant_count, 0) + #{grantCount},grant_sum = IFNULL(grant_sum, 0) + #{grantSum} where id= #{id}
+    </update>
+
+    <select id="getCustodyAccount" resultType="com.fenlibao.model.pms.da.reward.T6101">
+        select * FROM s61.t6101 t1  WHERE t1.F02 = #{userId} AND t1.F03 = #{accountCode} LIMIT 1
+    </select>
+
+    <resultMap id="recordCountMap" type="java.util.Map">
+        <result property="recordId" column="recordId"/>
+        <result property="recordCount" column="recordCount"/>
+    </resultMap>
+
+    <select id="getRecordCount" resultMap="recordCountMap">
+        select t1.F09 recordId, IFNULL(COUNT(t1.F03), 0) recordCount FROM s61.t6195 t1
+        <where>
+            <if test="recordIds != null">
+                AND t1.F09 IN
+                <foreach collection="recordIds" item="recordId" open="(" separator="," close=")">
+                    #{recordId}
+                </foreach>
+            </if>
+        </where>
+        GROUP BY t1.F09
+    </select>
+
+    <resultMap id="recordSumMap" type="java.util.Map">
+        <result property="recordId" column="recordId"/>
+        <result property="recordSum" column="recordSum"/>
+    </resultMap>
+
+    <select id="getRecordSum" resultMap="recordSumMap">
+        select t1.F09 recordId, IFNULL(SUM(t1.F07), 0) recordSum FROM s61.t6195 t1
+        <where>
+            <if test="recordIds != null">
+                AND t1.F09 IN
+                <foreach collection="recordIds" item="recordId" open="(" separator="," close=")">
+                    #{recordId}
+                </foreach>
+            </if>
+        </where>
+        GROUP BY t1.F09
+    </select>
+
+
+    <resultMap id="xwRechargeStateMap" type="java.util.Map">
+        <result property="userId" column="userId"/>
+        <result property="state" column="state"/>
+    </resultMap>
+
+    <select id="getXwRechargeState" resultMap="xwRechargeStateMap">
+        SELECT
+        recharge.user_id userId,
+        request.state
+        FROM
+        pms.da_replacement_recharge recharge
+        INNER JOIN flb.t_xw_request request ON request.id = recharge.xw_request_id
+        WHERE
+        recharge.reward_record_id = #{recordId}
+    </select>
+</mapper>

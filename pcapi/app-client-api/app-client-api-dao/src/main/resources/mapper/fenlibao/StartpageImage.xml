@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="StartpageImageMapper">
+    <select id="getStartpageImage" parameterType="java.util.Map" resultType="TStartupImage">
+		SELECT
+		    f_server_path as imgServer,
+		    f_relative_path as imgName
+		FROM flb.t_startup_image
+		WHERE f_client_type=#{clientTypeId}
+            AND f_screen_type=#{screenTypeId}
+            AND f_status=1
+        ORDER BY id DESC limit 0,1
+	</select>
+</mapper>

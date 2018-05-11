@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SmsValidcodeMapper">
+	<select id="getSmsValidcode" parameterType="java.util.Map" resultType="SmsValidcode">
+		SELECT
+		    id,phone_num as phoneNum,valid_code as validCode,send_type as sendType,out_time as outTime
+		FROM flb.t_sms_validcode where phone_num=#{phoneNum} and send_type=#{type}
+		order by out_time desc limit 1 
+	</select>
+	
+	<insert id="insertSmsValidcode" parameterType="SmsValidcode">
+	  insert into flb.t_sms_validcode (phone_num, valid_code, send_type,out_time,user_ip)
+      values (#{phoneNum,jdbcType=VARCHAR}, #{validCode,jdbcType=VARCHAR}, #{sendType,jdbcType=INTEGER},#{outTime,jdbcType=TIMESTAMP},#{userIp,jdbcType=VARCHAR})
+	</insert>
+	
+	<select id="getSendSmsCount" resultType="Integer" parameterType="java.util.Map">
+	   select count(id) from flb.t_sms_validcode
+	   <where>
+	      <if test="null != userIp">
+    			user_ip = #{userIp}
+    	  </if>
+    	  <if test="null != phoneNum">
+    			and phone_num = #{phoneNum}
+    	  </if>
+    	  <if test="null != halfhour">
+    			and create_time between #{halfhour} and now()
+    	  </if>
+    	  <if test="null != day">
+    			and date(create_time) = #{day}
+    	  </if>
+	   </where>
+	</select>
+</mapper>

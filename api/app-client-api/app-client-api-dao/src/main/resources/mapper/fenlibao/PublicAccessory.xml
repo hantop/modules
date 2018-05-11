@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PublicAccessoryMapper">
+	<select id="getPublicAccessory" parameterType="java.util.Map" resultType="com.dimeng.p2p.S62.entities.T6232">
+		select F04 FROM s62.t6232 where F02=#{bidId} and F03=#{accessoryType}
+	</select>
+
+	<!-- note:typeId改为使用f03 -->
+	<select id="getPublicAccessoryFiles" parameterType="java.util.Map" resultMap="BidFilesMap">
+	SELECT
+		t6212.F03 as typeId,
+		t6232.F04 as FileCode,
+		t6212.F02 as typename
+	FROM
+		s62.t6232
+	INNER JOIN s62.t6212 ON t6232.F03 = t6212.F01
+	WHERE
+		t6232.F02 = #{bidId}
+	</select>
+	
+	<resultMap id="BidFilesMap" type="BidFiles" autoMapping="true">
+        <id property="typeId" column="typeId"></id>
+        <collection property="FileCodes" ofType="java.lang.String" column="FileCode" >
+        <result column="FileCode" />
+        </collection>
+    </resultMap>
+	
+</mapper>

@@ -1,0 +1,54 @@
+server:
+    port: 8887
+spring:
+    profiles:
+        active: prod
+    datasource:
+        url: jdbc:mysql://192.168.27.237:3306/new_weixin?characterEncoding=UTF-8&useUnicode=true&zeroDateTimeBehavior=convertToNull&rewriteBatchedStatements=true
+        username: test
+        privateKey: MIIBVAIBADANBgkqhkiG9w0BAQEFAASCAT4wggE6AgEAAkEAgMbijPeXy+AaNdxsCpK1xkXu93cJ1WhQbRSI9xGRetDwNCRt0eHovkItLKbkIi3oeY9dQRzNLMnommy5u1KgdwIDAQABAkAd8SBf8nmi97pgZ53fX3lQXpZPh6gLrLN2iV3HRJh026SayT43LmMI6Kwj+iGffE4lbhHeGA3cTBV6ZCGLBphAiEA6wuetmNzRtj/YNKy20XbFnJrDxCmrxu7ikRAFfOlp68CIQCMQe040ZOFlRiC9SXnb1NdPOa4k/lmEy7UfXRnCQR9uQIgJgUeKjCSEA6/2ICcj92P3+SoLqqp279nqaj6mNJtpF8CIErXpxkppBmk/KZs4CQGIKrhI5CczXlthRC4PRP6GN5pAiEAuYdVmMMhqdrUILtvBd4unszf/yqeWYwN9T6AYKzEYmA=
+        password: FJqyGS6bmoYTDETvOY/IfpsScCAUeXj7Ws/btsd4ygZ5iUTz9/lLMFLptcbg/v8uq5FD3LFvfd3dxmAu8GxvUg==
+        publickey: MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAIDG4oz3l8vgGjXcbAqStcZF7vd3CdVoUG0UiPcRkXrQ8DQkbdHh6L5CLSym5CIt6HmPXUEczSzJ6JpsubtSoHcCAwEAAQ==
+        connectionProperties: config.decrypt=true;config.decrypt.key=${spring.datasource.publickey}
+        initialSize: 0
+        maxActive: 20
+        minIdle: 0
+        maxWait: 60000
+        validationQuery: select 1 from dual
+        testOnBorrow: true
+        testOnReturn: false
+        testWhileIdle: true
+        timeBetweenEvictionRunsMillis: 3600000
+        minEvictableIdleTimeMillis: 25200000
+        removeAbandoned: true
+        removeAbandonedTimeout: 1800
+        logAbandoned: true
+        filters: config
+    jpa:
+        show-sql: true
+    weixin:
+        appId: wx21b7659ce16b13d9
+        appSecret: 94d77c7e9fce73dee94ff179e487caad
+        encodingAESKey: 8KWqNu4iS7Z7g1g8fUF1X2eKRR5gKx3WEMJy9tjS6Pf
+        tokenKey: fenlibao
+    redis:
+        database: 1
+        hostName: localhost
+        port: 6379
+    jedisPool:
+        testOnBorrow: true
+        testOnReturn: false
+        testWhileIdle: true
+        testOnCreate: true
+fenlibao:
+    version: 1.4.0
+    authorization: dEtOblZ0aTdmMGY3M2dNUE51SHlBZFRZOStLQ012ZUFCQkkvbUpnSjg5cUVJWS9GQkxkbER2QUJkUlQzalBMZQ
+    openAutoCs:true
+    #免登录授权成功调用php接口跳转到php
+    phpHome: http://teweixin.fenlibao.com/?fenlicore_c=User&fenlicore_a=getLogin&m=Fenlibao
+    #开启免登录接口页面
+    phpAutoLogin: http://teweixin.fenlibao.com/?fenlicore_c=User&fenlicore_a=freeLogin&m=Fenlibao
+    #取消免登录接口页面
+    phpCancelLogin: http://teweixin.fenlibao.com/?fenlicore_c=User&fenlicore_a=cancelFreeLogin&m=Fenlibao
+    #后台服务，检查是否开启免登录，如果开启免登录，返回可取消获取免登录进入页面，如未开启免登录返回开启免登录提示文字
+    serverBind: http://tem.fenlibao.com/weixin/isBind

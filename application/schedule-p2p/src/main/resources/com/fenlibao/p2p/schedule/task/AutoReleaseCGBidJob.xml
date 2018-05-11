@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- 将录入的存管消费信贷标调用存管接口进行发布 -->
+    <bean id="autoReleaseCGBidJob"
+          class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+        <property name="jobClass" value="com.fenlibao.p2p.schedule.task.AutoReleaseCGBidJob"/>
+        <property name="durability" value="true"/>
+        <property name="requestsRecovery" value="true"/>
+    </bean>
+
+
+    <bean id="autoReleaseCGBidJobTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+        <property name="jobDetail" ref="autoReleaseCGBidJob"/>
+        <property name="cronExpression" value="0 0/10 * * * ?"/>
+    </bean>
+
+</beans>

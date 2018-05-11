@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.BorrowerAccountMapper">
+    <select id="getBorrowerAccountInfoList" resultType="BorrowerAccountInfo">
+        SELECT
+        xw.id,
+        user_info.F01 userId,
+        xw.user_type userType,
+        user_info.F02 account,
+        CASE WHEN user_info.F06 = 'ZRR' THEN user_base.F02
+        WHEN user_info.F06 = 'FZRR' THEN org.F04 END AS NAME,
+        user_account.F06 balance,
+        xw.import_user_activate activeStatus
+        FROM
+        flb.t_xw_account xw
+        INNER JOIN s61.t6110 user_info ON xw.user_id = user_info.F01
+        LEFT JOIN s61.t6141 user_base ON xw.user_id = user_base.F01
+        LEFT JOIN s61.t6161 org ON org.F01 = xw.user_id
+        INNER JOIN s61.t6101 user_account ON xw.user_id = user_account.F02
+        <where>
+            xw.user_role = 'BORROWERS'
+            AND user_account.F03 = 'XW_BORROWERS_WLZH'
+            AND xw.audit_status = 'PASSED'
+            <if test="account != null and account != ''">
+                AND user_info.F02 = trim(#{account})
+            </if>
+            <if test="name != null and name != ''">
+                AND (user_base.F02 = trim(#{name}) OR org.F04 = trim(#{name}))
+            </if>
+            <if test="userType != null and userType != ''">
+                AND xw.user_type = #{userType}
+            </if>
+            <if test="activeStatus != null and activeStatus != ''">
+                AND xw.import_user_activate = #{activeStatus}
+            </if>
+        </where>
+        ORDER BY xw.id DESC
+    </select>
+
+    <resultMap id="amountToBePaidMap" type="java.util.Map">
+        <result property="userId" column="userId"/>
+        <result property="amountToBePaid" column="amountToBePaid"/>
+    </resultMap>
+
+    <!--用户待还金额-->
+    <select id="getAmountToBePaid" parameterType="map" resultMap="amountToBePaidMap">
+        SELECT
+        bid_repay.F03 userId,
+        SUM(bid_repay.F07) amountToBePaid
+        FROM
+        s62.t6252 bid_repay
+        LEFT JOIN s62.t6230 bid ON bid_repay.F02 = bid.F01
+        WHERE
+        bid.F38 = 2
+        AND bid_repay.F03 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        AND bid_repay.F09 = 'WH'
+        AND bid_repay.F05 IN (7001, 7002, 7004)
+        GROUP BY
+        bid_repay.F03
+    </select>
+
+    <resultMap id="numTobePaidMap" type="java.util.Map">
+        <result property="userId" column="userId"/>
+        <result property="numTobePaid" column="numTobePaid"/>
+    </resultMap>
+
+    <!--用户待还笔数-->
+    <select id="getNumTobePaid" parameterType="map" resultMap="numTobePaidMap">
+        SELECT
+        bid_repay.F03 userId,
+        COUNT(bid_repay.F02) numTobePaid
+        FROM
+        s62.t6252 bid_repay
+        LEFT JOIN s62.t6230 bid ON bid_repay.F02 = bid.F01
+        WHERE
+        bid.F38 = 2
+        AND bid_repay.F03 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        AND bid_repay.F09 = 'WH'
+        GROUP BY
+        bid_repay.F03
+    </select>
+
+    <resultMap id="overdueAmountMap" type="java.util.Map">
+        <result property="userId" column="userId"/>
+        <result property="overdueAmount" column="overdueAmount"/>
+    </resultMap>
+
+    <!--用户逾期金额-->
+    <select id="getOverdueAmount" parameterType="map" resultMap="overdueAmountMap">
+        SELECT
+        bid_repay.F03 userId,
+        SUM(bid_repay.F07) overdueAmount
+        FROM
+        (
+        SELECT
+        bid_repay.F11 tenderId,
+        bid_repay.F03 userId,
+        bid_repay.F02 bidId,
+        bid_repay.F06 issue
+        FROM
+        s62.t6252 bid_repay
+        WHERE
+        bid_repay.F03 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        AND bid_repay.F05 IN (7004)
+        ) overdue_detail
+        LEFT JOIN s62.t6252 bid_repay ON bid_repay.F11 = overdue_detail.tenderId
+        LEFT JOIN s62.t6230 bid ON bid_repay.F02 = bid.F01
+        WHERE
+        bid.F38 = 2
+        AND bid_repay.F05 IN (7001, 7002, 7004)
+        AND bid_repay.F03 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        GROUP BY
+        bid_repay.F03
+    </select>
+
+    <resultMap id="overdueNumMap" type="java.util.Map">
+        <result property="userId" column="userId"/>
+        <result property="overdueNum" column="overdueNum"/>
+    </resultMap>
+
+    <!--逾期笔数-->
+    <select id="getOverdueNum" parameterType="map" resultMap="overdueNumMap">
+        SELECT
+        bid_repay.F03 userId,
+        COUNT(bid_repay.F02) overdueNum
+        FROM
+        s62.t6252 bid_repay
+        LEFT JOIN s62.t6230 bid ON bid_repay.F02 = bid.F01
+        WHERE
+        bid.F38 = 2
+        AND bid_repay.F03 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        AND bid_repay.F05 IN (7004)
+        GROUP BY
+        bid_repay.F03
+    </select>
+
+    <!--企业借款人企业信息-->
+    <select id="getBussinessInfoByUserId" parameterType="int" resultType="BussinessInfo">
+        SELECT
+            business.F01,
+            business.F04 businessName,
+            business.unified_code uniformSocialCreditCode,
+            business.F03 businessLicenseNumber,
+            business.F05 taxID,
+            business.F06 organizationCode,
+            business.F11 corporateJurisdicalPersonalName,
+            AES_DECRYPT(FROM_BASE64 (business.F13), '80e36e39f34e678c') identification,
+            linkman_info.F07 linkman,
+            linkman_info.F06 phone,
+            business.bank_license bankLicenseNumber,
+            AES_DECRYPT(FROM_BASE64 (business.F19), '80e36e39f34e678c') publicAccount,
+            business.credit_code creditCode
+        FROM
+            s61.t6161 business
+        LEFT JOIN s61.t6164 linkman_info ON business.F01 = linkman_info.F01
+        LEFT JOIN flb.t_xw_account xw ON xw.user_id = business.F01
+        WHERE
+            business.F01 = #{userId}
+        AND xw.user_role = 'BORROWERS'
+        LIMIT 1
+    </select>
+</mapper>

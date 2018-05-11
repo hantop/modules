@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.finance.returncash.ReturncashRedpacketMapper">
+    <select id="findUsedTotalCostErr" resultType="BigDecimal">
+	    SELECT
+            SUM(redpacket.red_money) redMoneySum
+        FROM
+            flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        INNER JOIN s62.`t6250` tender ON tender.`F02` = user_redpacket.`bid_id`
+        <where>
+            AND tender.`F03` = user_redpacket.`user_id`
+            AND user_redpacket.`status` = 2
+            <![CDATA[AND tender.`F06` >= #{startDate}]]>
+            <![CDATA[AND tender.`F06` <= #{endDate}]]>
+            <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+
+    <select id="findUsedTotalCost" resultType="BigDecimal">
+        SELECT
+        SUM(redpacket.red_money) redMoneySum
+        FROM flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        LEFT JOIN
+        (
+        SELECT tender.f02,tender.f03 FROM s62.`t6250` tender
+        <where>
+            <![CDATA[AND tender.`F06` >= #{startDate}]]>
+            <![CDATA[AND tender.`F06` <= #{endDate}]]>
+        </where>
+        GROUP BY tender.f02,tender.f03
+        ) AS bids ON user_redpacket.`bid_id` = bids.`F02`
+        <where>
+            user_redpacket.`user_id` = bids.`F03`
+            AND user_redpacket.`status` = 2
+            <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+    
+    <select id="findTotlActiveCount" resultType="int">
+    SELECT SUM(a.activeCount) from ( SELECT
+		COUNT(1) activeCount<!-- 激活数量 -->
+        FROM flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        LEFT JOIN
+        (
+        SELECT tender.f02,tender.f03 FROM s62.`t6250` tender
+        <where>
+            <![CDATA[AND tender.`F06` >= #{startDate}]]>
+            <![CDATA[AND tender.`F06` <= #{endDate}]]>
+        </where>
+        GROUP BY tender.f02,tender.f03
+        ) AS bids ON user_redpacket.`bid_id` = bids.`F02`
+        <where>
+            user_redpacket.`user_id` = bids.`F03`
+            AND user_redpacket.`status` = 2
+            <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        GROUP BY redpacket.id) a 
+         <!-- SELECT
+        COUNT(1) activeCount
+        FROM flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        LEFT JOIN
+        (
+        SELECT tender.f02,tender.f03 FROM s62.`t6250` tender
+        <where>
+            <![CDATA[AND tender.`F06` >= #{startDate}]]>
+            <![CDATA[AND tender.`F06` <= #{endDate}]]> 
+        </where>
+        ) AS bids ON user_redpacket.`bid_id` = bids.`F02`
+        <where>
+            user_redpacket.`user_id` = bids.`F03`
+            AND user_redpacket.`status` = 2
+            <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if>
+        </where> -->
+    </select>
+    
+    
+    <!-- 统计发送数量(所有发送出去的还没有使用的时候) -->
+    <select id="findTotlRedNumber" resultType="int">
+    	<!-- SELECT SUM(a.redNumber) from (SELECT
+        redpacket.id redpacketId, 
+        redpacket.red_money redMoney,
+		redpacket.remarks remarks, add 备注
+		redpacket.activity_code activityCode, 
+		redpacket.invest_money investMoney, 
+		redpacket.effect_day effectDay, 
+		(SELECT
+      	 count(ured.id)
+        FROM flb.`t_red_packet` red 
+        LEFT JOIN flb.`t_user_redpackets` ured ON red.`id` = ured.`redpacket_id`
+		WHERE ured.grant_id IS NOT NULL AND ured.grant_status = 1 AND red.`id` = redpacketId) redNumber,发送数量
+		COUNT(1) activeCount,激活数量
+		SUM(redpacket.red_money) redMoneySum
+		还有一个就是转化投资额
+        FROM flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        LEFT JOIN
+        (
+        SELECT tender.f02,tender.f03 FROM s62.`t6250` tender
+        <where>
+            <![CDATA[AND tender.`F06` >= #{startDate}]]>
+            <![CDATA[AND tender.`F06` <= #{endDate}]]>
+        </where>
+        GROUP BY tender.f02,tender.f03
+        ) AS bids ON user_redpacket.`bid_id` = bids.`F02`
+        <where>
+            user_redpacket.`user_id` = bids.`F03`
+            AND user_redpacket.`status` = 2
+            <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        GROUP BY redpacket.id) a -->
+        SELECT
+        SUM(1) red_number
+        FROM flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        <where> 
+        AND user_redpacket.grant_id IS NOT NULL 
+        AND user_redpacket.grant_status = 1
+            <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
+    
+    <select id="getEachRedPacketSendAmount" resultType="int">
+    	SELECT
+        COUNT(1) red_number
+        FROM flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+		<where> 
+		AND user_redpacket.grant_id IS NOT NULL 
+		AND user_redpacket.grant_status = 1
+		AND redpacket.`id` = #{redpacketId} 
+		<!-- <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if> -->
+            <if test="activityCode != null"> 
+	    		AND redpacket.activity_code = #{activityCode}
+	    	</if>
+	    </where>
+		<!-- select DISTINCT(user_redpacket.grant_id),reward_record.grant_count from pms.da_reward_record reward_record 
+		RIGHT JOIN flb.`t_user_redpackets` user_redpacket on user_redpacket.grant_id =  reward_record.id
+		where reward_record.reward_type = 3 -->
+    </select>
+
+    <select id="findUserUsedReturncachRedpackets" resultType="UserUsedReturncachRedpacketVO">
+        SELECT
+            redpacket.id redpacketId,
+            redpacket.`red_money` redMoney,
+            tender.F06 activityTime,
+            u.F04 phoneNum
+        FROM
+            flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        INNER JOIN s62.`t6250` tender ON tender.`F02` = user_redpacket.`bid_id`
+        INNER JOIN s61.t6110 u ON u.F01 = user_redpacket.user_id
+        <where>
+            AND tender.`F03` = user_redpacket.`user_id`
+            AND user_redpacket.`status` = 2
+            <![CDATA[AND tender.`F06` >= #{startDate}]]>
+            <![CDATA[AND tender.`F06` <= #{endDate}]]>
+            <choose>
+                <when test="systemgrantFlag == true">
+                    AND redpacket.activity_code IS NULL
+                </when>
+                <otherwise>
+                    AND redpacket.id = #{redpacketId}
+                </otherwise>
+            </choose>
+            <if test="phoneNum != null and phoneNum != ''">
+                AND u.F04 = #{phoneNum}
+            </if>
+        </where>
+    </select>
+
+    <select id="findUsedReturncachRedpackets" resultType="ReturncachRedpacketVO">
+        SELECT
+        redpacket.id redpacketId, 
+        redpacket.red_money redMoney,
+		redpacket.remarks remarks, <!-- add 备注 -->
+		redpacket.activity_code activityCode, 
+		redpacket.invest_money investMoney, 
+		redpacket.effect_day effectDay, 
+		COUNT(1) activeCount,<!-- 激活数量 -->
+		SUM(redpacket.red_money) redMoneySum
+		<!-- 还有一个就是转化投资额 -->
+        FROM flb.`t_user_redpackets` user_redpacket
+        INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+        LEFT JOIN
+        (
+        SELECT tender.f02,tender.f03 FROM s62.`t6250` tender
+        <where>
+            <![CDATA[AND tender.`F06` >= #{startDate}]]>
+            <![CDATA[AND tender.`F06` <= #{endDate}]]>
+        </where>
+        GROUP BY tender.f02,tender.f03
+        ) AS bids ON user_redpacket.`bid_id` = bids.`F02`
+        <where>
+            user_redpacket.`user_id` = bids.`F03`
+            AND user_redpacket.`status` = 2
+            <if test="activityCode != null and activityCode != ''">
+                <choose>
+                    <when test="systemgrantFlag == true">
+                        AND redpacket.activity_code IS NULL
+                    </when>
+                    <otherwise>
+                        AND redpacket.activity_code LIKE '%${activityCode}%'
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+        GROUP BY redpacket.id
+    </select>
+</mapper>

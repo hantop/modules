@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="RiskTestMapper">
+
+	<select id="getQuestionList" parameterType="java.util.Map" resultType="RiskTestQuestion">
+		SELECT
+			risk_assessment_test_question.id,
+			risk_assessment_test_question.question,
+			risk_assessment_test_question.sort,
+			risk_assessment_test_question.subhead
+		FROM
+			flb.risk_assessment_test_question
+		ORDER BY
+		risk_assessment_test_question.sort
+	</select>
+	
+	<select id="getOptionByQid" parameterType="java.util.Map" resultType="RiskTestOption">
+		SELECT
+			risk_assessment_test_option.qid,
+			risk_assessment_test_option.content,
+			risk_assessment_test_option.score,
+			risk_assessment_test_option.sort
+		FROM
+			flb.risk_assessment_test_option
+		WHERE
+			risk_assessment_test_option.qid = #{qid}
+		ORDER BY
+			risk_assessment_test_option.sort
+	</select>
+	
+	<select id="getResultByScore" parameterType="java.util.Map" resultType="RiskTestResult">
+		SELECT
+			a.id,
+			a.type,
+			a.result
+		FROM
+			flb.risk_assessment_test_result a
+		WHERE
+			a.minscore <![CDATA[<=]]> #{score}
+		AND #{score} <![CDATA[<=]]>a.maxscore
+		limit 1
+	</select>
+	
+	<insert id="addTestResult" parameterType="java.util.Map">
+		INSERT INTO flb.risk_assessment_test_result_user(resultId,userId,score)
+		value(#{resultId},#{userId},#{score})
+	</insert>
+		
+	<select id="getTestResultByUid" parameterType="java.lang.Integer" resultType="java.util.Map">
+		SELECT
+			flb.risk_assessment_test_result_user.resultId
+		FROM
+			flb.risk_assessment_test_result_user
+		WHERE
+			risk_assessment_test_result_user.userId = #{userId}
+		ORDER BY
+			risk_assessment_test_result_user.createTime DESC
+		LIMIT 1
+	</select>
+
+</mapper>

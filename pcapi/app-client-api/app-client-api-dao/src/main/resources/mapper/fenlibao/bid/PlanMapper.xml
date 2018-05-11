@@ -1,0 +1,697 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PlanMapper">
+
+	<update id="updateSurplusAmountForInvestPlan" parameterType="java.util.Map" >
+		UPDATE flb.`t_invest_plan` tip
+		SET tip.`surplus_amount` = tip.`surplus_amount` - #{amount}
+		WHERE  tip.`id` = #{planId}
+		<![CDATA[
+		AND tip.`surplus_amount` - #{amount} >= 0
+		]]>
+	</update>
+
+	<insert id="insertRecordForInvestPlan" parameterType="com.fenlibao.p2p.model.entity.bid.InvestUserPlan" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.`t_user_plan`
+		SET user_id = #{userId} ,
+		plan_id = #{planId},
+		invest_amount = #{investAmount},
+		<if test="freezeAmount != null">
+			freeze_amount = #{freezeAmount},
+		</if>
+		status = 1
+	</insert>
+
+	<select id="lockUserPlan" parameterType="int" resultType="int">
+		SELECT  1 FROM flb.t_user_plan WHERE id = #{userPlanId} FOR UPDATE
+	</select>
+
+	<select id="getDirectionById" parameterType="int" resultType="DirectionalPlan">
+		SELECT
+		flb.t_market_setting.id productId,
+		flb.t_market_setting.total_user_assets totalUserAssets,
+		flb.t_market_setting.user_investing_amount userInvestingAmount,
+		flb.t_market_setting.user_accumulated_income userAccumulatedIncome,
+		flb.t_market_setting.target_user targetUser,
+		flb.t_market_setting.product_type productType,
+		flb.t_invest_plan.can_quit anytimeQuit
+		FROM
+		flb.t_market_setting
+		LEFT JOIN flb.t_invest_plan ON t_invest_plan.id = t_market_setting.id
+		WHERE
+		flb.t_market_setting.product_type = 1
+		AND flb.t_market_setting.product_id = #{productId}
+	</select>
+
+	<select id="getPlanRecordInfo" parameterType="int" resultType="PlanRecordInfo">
+		SELECT
+		up.id AS userPlanId,
+		up.user_id AS userId,
+		up.create_time AS investTime,
+		ip.bearrate_date AS interestTime,
+		CONCAT(ip.`name`, ip.number) AS planTitle,
+		ip.type AS type,
+		ip.is_novice AS isNovice,
+		ip.mo_increase_rate AS moIncreaseRate,
+		ip.min_yearly_rate AS lowRate,
+		ip.max_yearly_rate AS highRate,
+		ip.invest_rate AS investRate,
+		IF (ip.cycle_type = 'm',ip.cycle*30,ip.cycle)  AS loanDate,
+		up.invest_amount AS investAmount,
+		ip.can_quit AS canQuit,
+		up.status AS status,
+		(
+			SELECT
+				IFNULL(sum(c.scope), 0)
+			FROM
+				flb.t_user_coupon uc
+			LEFT JOIN flb.t_coupon c ON c.id = uc.coupon_id
+			WHERE
+				uc.user_plan_id = up.id
+			AND uc.invest_type = 3
+		) AS couponRise,
+		 IFNULL(ip.raise_rate, 0) AS raiseRate,
+		 ip.expire_time AS nextRepaymentDate,
+		 ip.status AS planStatus
+		FROM
+		flb.t_user_plan up
+		INNER JOIN flb.t_invest_plan ip ON ip.id = up.plan_id
+
+		WHERE
+		up.id = #{planRecordId}
+		AND
+		up.user_id = #{userId}
+	</select>
+
+	<select id="getUserPlanProducts" parameterType="int" resultType="UserPlanProduct">
+		SELECT
+					upp.id AS userPlanProductId,
+					upp.user_plan_id AS userPlanId,
+					upp.product_type AS productType,
+					upp.product_id AS productId,
+					upp.tender_id AS tenderId,
+				t.F18 AS endTimestamp,
+					t.F19 AS yq,
+				bid.F20 AS bidStatus
+			   FROM
+			   flb.t_user_plan_product upp
+			   LEFT JOIN s62.t6251 a ON a.F01 = upp.product_id
+			   LEFT JOIN s62.t6230 bid ON bid.F01 = a.F03
+			   LEFT JOIN s62.t6231 t ON t.F01 = a.F03
+			   WHERE
+			   upp.user_plan_id = #{userPlanId}
+			   AND
+			   upp.product_type = 2
+				 AND
+					bid.F20 in ('DFK','HKZ','TBZ')
+		UNION ALL
+		(
+		SELECT
+					upp.id AS userPlanProductId,
+					upp.user_plan_id AS userPlanId,
+					upp.product_type AS productType,
+					upp.product_id AS productId,
+					upp.tender_id AS tenderId,
+				t.F18 AS endTimestamp,
+					t.F19 AS yq,
+				bid.F20 AS bidStatus
+			   FROM
+			   flb.t_user_plan_product upp
+			   LEFT JOIN s62.t6250 a ON a.F01 = upp.tender_id
+			   LEFT JOIN s62.t6230 bid ON bid.F01 = a.F02
+			   LEFT JOIN s62.t6231 t ON t.F01 = a.F02
+			   WHERE
+			   upp.user_plan_id = #{userPlanId}
+			   AND
+			   upp.product_type = 1
+				 AND
+					bid.F20 in ('DFK','HKZ','TBZ')
+
+		)
+	</select>
+
+	<update id="updatePlanQuitStatus" parameterType="java.util.Map">
+		UPDATE flb.t_user_plan SET `status` = 2,SET exit_time = #{timestamp} WHERE `id` = #{userPlanId} AND user_id = #{userId}
+	</update>
+
+	<insert id="insertExitRecord" parameterType="java.util.Map">
+		INSERT INTO flb.t_user_exit_plan SET user_plan_id = #{userPlanId},`status` = 1,create_time = #{timestamp},update_time = #{timestamp}
+	</insert>
+
+	<select id="getNewPlanList" parameterType="java.util.Map" resultType="InvestInfo">
+		SELECT
+			1 AS newPlan,
+			r.id AS creditId,
+			r.invest_amount AS investAmount,
+			(
+				CASE p.cycle_type
+				WHEN 'd' THEN
+					0
+				ELSE
+					p.cycle
+				END
+			) AS loanMonths,
+			(
+				CASE p.cycle_type
+				WHEN 'd' THEN
+					p.cycle
+				ELSE
+					0
+				END
+			) AS loanDays,
+			p. STATUS AS bidStatus,
+			r.create_time AS purchaseTime,
+			p.expire_time AS expireDate,
+			0 AS zrId,
+			1 AS itemType,
+			p.can_quit AS anytimeQuit,
+			IFNULL(p.invest_rate,p.max_yearly_rate) AS yearYield,
+			1 AS isDepository,
+			p.id AS planId,
+			p.surplus_amount AS surplusAmount,
+			CONCAT(p.`name`,p.number) AS planTitle,
+			IFNULL(coupon.scope,0)+IFNULL(p.raise_rate,0) AS bidInterestRise,
+			(
+				CASE
+				WHEN IFNULL(coupon.scope, 0) = 0 THEN
+					FALSE
+				ELSE
+					TRUE
+				END
+			) AS jxFlag
+		FROM
+			flb.t_user_plan r
+		LEFT JOIN flb.t_invest_plan p ON r.plan_id = p.id
+		LEFT JOIN
+		(
+				SELECT
+					uc.user_plan_id AS id,
+					IFNULL(c.scope,0) AS scope
+				FROM
+					flb.t_user_coupon uc
+				LEFT JOIN flb.t_coupon c ON c.id = uc.coupon_id
+				WHERE
+					uc.invest_type = 3
+				AND uc.user_id = #{userId}
+			) coupon ON coupon.id = r.id
+		WHERE
+			r.user_id = #{userId}
+			AND p.is_cg = #{versionType}
+		ORDER BY purchaseTime DESC
+		limit #{num}
+	</select>
+
+
+	<select id="getOldPlanList" parameterType="java.util.Map" resultType="InvestInfo">
+		SELECT
+				0 AS newPlan,
+				r.id AS creditId,
+				r.amount AS investAmount,
+				(
+					CASE p.cycle_type
+					WHEN 'd' THEN
+						0
+					ELSE
+						p.cycle
+					END
+				) AS loanMonths,
+				(
+					CASE p.cycle_type
+					WHEN 'd' THEN
+						p.cycle
+					ELSE
+						0
+					END
+				) AS loanDays,
+				p.STATUS AS bidStatus,
+				r.create_time AS purchaseTime,
+				0 AS zrId,
+				1 AS itemType,
+				0 AS anytimeQuit,
+				p.rate AS yearYield,
+				1 AS isDepository,
+				p.id AS planId,
+				(p.amount-p.invested_amount) AS surplusAmount,
+				p.title AS planTitle,
+				(
+					SELECT
+						IFNULL(p.raised_rate, 0) + IFNULL(MAX(tc.`scope`), 0)
+					FROM
+						flb.`t_plan_bid_record` tpbr
+					LEFT JOIN flb.t_user_coupon_ext tuce ON tuce.`tender_id` = tpbr.`bid_record_id`
+					LEFT JOIN flb.`t_user_coupon` tuc ON tuc.`id` = tuce.`user_coupon_id`
+					LEFT JOIN flb.`t_coupon` tc ON tc.`id` = tuc.`coupon_id`
+					WHERE
+						tpbr.`plan_record_id` = r.`id`
+				) AS bidInterestRise,
+				(
+					SELECT
+						CASE
+					WHEN IFNULL(MAX(tc.`scope`), 0) = 0 THEN
+						FALSE
+					ELSE
+						TRUE
+					END
+					FROM
+						flb.`t_plan_bid_record` tpbr
+					LEFT JOIN flb.t_user_coupon_ext tuce ON tuce.`tender_id` = tpbr.`bid_record_id`
+					LEFT JOIN flb.`t_user_coupon` tuc ON tuc.`id` = tuce.`user_coupon_id`
+					LEFT JOIN flb.`t_coupon` tc ON tc.`id` = tuc.`coupon_id`
+					WHERE
+						tpbr.`plan_record_id` = r.`id`
+				) AS jxFlag
+			FROM
+				flb.t_plan_record r
+			LEFT JOIN flb.t_plan p ON r.plan_id = p.id
+			WHERE
+				r.user_id = #{userId}
+			ORDER BY purchaseTime DESC limit #{num}
+	</select>
+
+	<select id="getAllMyPlan" parameterType="java.util.Map" resultType="PlanInvestInfo">
+		<if test="versionType == 1 or versionType == null">
+			SELECT
+				0 AS newPlan,
+				2 AS `type`,
+				(p.amount-p.invested_amount) AS voteAmount,
+				p.repayment_type AS repaymentMode,
+				r.id AS creditId,
+				p.is_novice_bid AS isNoviceBid,
+				r.amount AS investAmount,
+				(
+					CASE p.cycle_type
+						WHEN 'd' THEN 0
+						ELSE p.cycle
+					END
+				) AS loanMonths,
+				(
+					CASE p.cycle_type
+						WHEN 'd' THEN p.cycle
+						ELSE 0
+					END
+				) AS loanDays,
+				p.STATUS AS bidStatus,
+				NULL AS planStatus,
+				NULL AS holdSatus,
+				NULL AS interestTime,
+				r.create_time AS purchaseTime,
+				0 AS anytimeQuit,
+				p.rate AS yearYield,
+				0 AS lowRate,
+				0 AS highRate,
+				0 AS bonusRate,
+				1 AS isDepository,
+				p.id AS planId,
+				p.title AS planTitle,
+				NULL AS applyTime,
+				(
+					SELECT
+						IFNULL(p.raised_rate, 0) + IFNULL(MAX(tc.`scope`), 0)
+					FROM
+						flb.`t_plan_bid_record` tpbr
+					LEFT JOIN flb.t_user_coupon_ext tuce ON tuce.`tender_id` = tpbr.`bid_record_id`
+					LEFT JOIN flb.`t_user_coupon` tuc ON tuc.`id` = tuce.`user_coupon_id`
+					LEFT JOIN flb.`t_coupon` tc ON tc.`id` = tuc.`coupon_id`
+					WHERE tpbr.`plan_record_id` = r.`id`
+				) AS bidInterestRise,
+				(
+					SELECT
+						CASE
+							WHEN IFNULL(MAX(tc.`scope`), 0) = 0 THEN FALSE
+							ELSE TRUE
+						END
+					FROM
+						flb.`t_plan_bid_record` tpbr
+					LEFT JOIN flb.t_user_coupon_ext tuce ON tuce.`tender_id` = tpbr.`bid_record_id`
+					LEFT JOIN flb.`t_user_coupon` tuc ON tuc.`id` = tuce.`user_coupon_id`
+					LEFT JOIN flb.`t_coupon` tc ON tc.`id` = tuc.`coupon_id`
+					WHERE tpbr.`plan_record_id` = r.`id`
+				) AS jxFlag,
+				NULL AS expireDate
+			FROM
+				flb.t_plan_record r
+			LEFT JOIN flb.t_plan p ON r.plan_id = p.id
+			WHERE
+				r.user_id = #{userId}
+				AND p.status in ('TBZ','DFK','HKZ')
+
+			UNION ALL
+
+		(
+		</if>
+
+			SELECT
+				1 AS newPlan,
+				p.type AS `type`,
+				p.surplus_amount AS voteAmount,
+				p.repay_mode AS repaymentMode,
+				r.id AS creditId,
+				(
+					CASE p.is_novice
+						WHEN 1 THEN 'S'
+						ELSE 'F'
+					END
+				)  AS isNoviceBid,
+				r.invest_amount AS investAmount,
+				(
+					CASE p.cycle_type
+						WHEN 'd' THEN 0
+						ELSE p.cycle
+					END
+				) AS loanMonths,
+				(
+					CASE p.cycle_type
+						WHEN 'd' THEN p.cycle
+						ELSE 0
+					END
+				) AS loanDays,
+				NULL AS bidStatus,
+				p.`STATUS` AS planStatus,
+				r.`status` AS holdSatus,
+				p.bearrate_date AS interestTime,
+				r.create_time AS purchaseTime,
+				p.can_quit AS anytimeQuit,
+				p.invest_rate AS yearYield,
+				p.min_yearly_rate AS lowRate,
+				p.max_yearly_rate AS highRate,
+				p.mo_increase_rate AS bonusRate,
+				1 AS isDepository,
+				p.id AS planId,
+				CONCAT(p.`name`,p.number) AS planTitle,
+				NULL AS applyTime,
+				IFNULL(coupon.scope,0)+IFNULL(p.raise_rate,0) AS bidInterestRise,
+				(
+					CASE
+						WHEN IFNULL(coupon.scope, 0) = 0 THEN FALSE
+						ELSE TRUE
+					END
+				) AS jxFlag,
+				p.expire_time AS expireDate
+			FROM
+				flb.t_user_plan r
+			LEFT JOIN flb.t_invest_plan p ON r.plan_id = p.id
+			LEFT JOIN flb.t_user_exit_plan _exit ON _exit.user_plan_id = r.id
+			LEFT JOIN
+			(
+				SELECT
+					uc.user_plan_id AS id,
+					IFNULL(c.scope,0) AS scope
+				FROM
+					flb.t_user_coupon uc
+				LEFT JOIN flb.t_coupon c ON c.id = uc.coupon_id
+				WHERE
+					uc.invest_type = 3
+				AND uc.user_id = #{userId}
+			) coupon ON coupon.id = r.id
+			WHERE
+				r.user_id = #{userId}
+			AND p.is_cg = #{versionType}
+			AND r.`status` = 1
+			AND _exit.id IS NULL
+
+		<if test="versionType == 1 or versionType == null">
+			)
+		</if>
+
+		ORDER BY purchaseTime DESC
+	</select>
+
+	<select id="getMyQuitPlans" parameterType="java.util.Map" resultType="PlanInvestInfo">
+		SELECT
+			1 AS newPlan,
+			p.type AS `type`,
+			p.surplus_amount AS voteAmount,
+			p.repay_mode AS repaymentMode,
+			r.id AS creditId,
+			(
+				CASE p.is_novice
+				WHEN 1 THEN
+				'S'
+				ELSE
+				'F'
+				END
+			)  AS isNoviceBid,
+			r.invest_amount AS investAmount,
+			(
+				CASE p.cycle_type
+				WHEN 'd' THEN
+				0
+				ELSE
+				p.cycle
+				END
+			) AS loanMonths,
+			(
+				CASE p.cycle_type
+				WHEN 'd' THEN
+				p.cycle
+				ELSE
+				0
+				END
+			) AS loanDays,
+			NULL AS bidStatus,
+			p.`STATUS` AS planStatus,
+			r.`status` AS holdSatus,
+			p.bearrate_date AS interestTime,
+			r.create_time AS purchaseTime,
+			p.can_quit AS anytimeQuit,
+			p.invest_rate AS yearYield,
+			p.min_yearly_rate AS lowRate,
+			p.max_yearly_rate AS highRate,
+			p.mo_increase_rate AS bonusRate,
+			1 AS isDepository,
+			p.id AS planId,
+			CONCAT(p.`name`,p.number) AS planTitle,
+			_exit.create_time AS applyTime,
+			IFNULL(coupon.scope,0)+IFNULL(p.raise_rate,0) AS bidInterestRise,
+			(
+				CASE
+				WHEN IFNULL(coupon.scope, 0) = 0 THEN
+					FALSE
+				ELSE
+					TRUE
+				END
+			) AS jxFlag,
+			p.expire_time AS expireDate
+		FROM
+			flb.t_user_plan r
+		LEFT JOIN flb.t_invest_plan p ON r.plan_id = p.id
+		LEFT JOIN flb.t_user_exit_plan _exit ON _exit.user_plan_id = r.id
+		LEFT JOIN
+		(
+			SELECT
+				uc.user_plan_id AS id,
+				IFNULL(c.scope,0) AS scope
+			FROM
+				flb.t_user_coupon uc
+			LEFT JOIN flb.t_coupon c ON c.id = uc.coupon_id
+			WHERE
+				uc.invest_type = 3
+			AND uc.user_id = #{userId}
+		) coupon ON coupon.id = r.id
+		WHERE
+			r.user_id = #{userId}
+		AND p.is_cg = #{versionType}
+		AND r.status =2
+		ORDER BY _exit.create_time DESC
+	</select>
+
+	<select id="getMySuccessPlans" parameterType="java.util.Map" resultType="PlanInvestInfo">
+		<if test="versionType == 1 or versionType == null">
+			SELECT
+				0 AS newPlan,
+				2 AS `type`,
+				(p.amount-p.invested_amount) AS voteAmount,
+				p.repayment_type AS repaymentMode,
+				r.id AS creditId,
+				p.is_novice_bid AS isNoviceBid,
+				r.amount AS investAmount,
+				(
+					CASE p.cycle_type
+					WHEN 'd' THEN
+					0
+					ELSE
+					p.cycle
+					END
+				) AS loanMonths,
+				(
+					CASE p.cycle_type
+					WHEN 'd' THEN
+					p.cycle
+					ELSE
+					0
+					END
+				) AS loanDays,
+				p.STATUS AS bidStatus,
+				NULL AS planStatus,
+				NULL AS holdSatus,
+				NULL AS interestTime,
+				r.create_time AS purchaseTime,
+				0 AS anytimeQuit,
+				p.rate AS yearYield,
+				0 AS lowRate,
+				0 AS highRate,
+				0 AS bonusRate,
+				1 AS isDepository,
+				p.id AS planId,
+				p.title AS planTitle,
+				NULL AS exitTime,
+				NULL AS applyTime,
+				(
+					SELECT
+					IFNULL(p.raised_rate, 0) + IFNULL(MAX(tc.`scope`), 0)
+					FROM
+					flb.`t_plan_bid_record` tpbr
+					LEFT JOIN flb.t_user_coupon_ext tuce ON tuce.`tender_id` = tpbr.`bid_record_id`
+					LEFT JOIN flb.`t_user_coupon` tuc ON tuc.`id` = tuce.`user_coupon_id`
+					LEFT JOIN flb.`t_coupon` tc ON tc.`id` = tuc.`coupon_id`
+					WHERE
+					tpbr.`plan_record_id` = r.`id`
+				) AS bidInterestRise,
+				(
+					SELECT
+					CASE
+					WHEN IFNULL(MAX(tc.`scope`), 0) = 0 THEN
+					FALSE
+					ELSE
+					TRUE
+					END
+					FROM
+					flb.`t_plan_bid_record` tpbr
+					LEFT JOIN flb.t_user_coupon_ext tuce ON tuce.`tender_id` = tpbr.`bid_record_id`
+					LEFT JOIN flb.`t_user_coupon` tuc ON tuc.`id` = tuce.`user_coupon_id`
+					LEFT JOIN flb.`t_coupon` tc ON tc.`id` = tuc.`coupon_id`
+					WHERE
+					tpbr.`plan_record_id` = r.`id`
+				) AS jxFlag,
+				NULL AS expectedProfit,
+				NULL AS expireDate
+			FROM
+				flb.t_plan_record r
+			LEFT JOIN flb.t_plan p ON r.plan_id = p.id
+			WHERE
+				r.user_id = #{userId}
+			AND p.status = 'YJQ'
+
+			UNION ALL
+
+			(
+		</if>
+
+		SELECT
+			1 AS newPlan,
+			p.type AS `type`,
+			p.surplus_amount AS voteAmount,
+			p.repay_mode AS repaymentMode,
+			r.id AS creditId,
+			(
+				CASE p.is_novice
+				WHEN 1 THEN
+				'S'
+				ELSE
+				'F'
+				END
+			)  AS isNoviceBid,
+			r.invest_amount AS investAmount,
+			(
+				CASE p.cycle_type
+				WHEN 'd' THEN
+				0
+				ELSE
+				p.cycle
+				END
+			) AS loanMonths,
+			(
+				CASE p.cycle_type
+				WHEN 'd' THEN
+				p.cycle
+				ELSE
+				0
+				END
+			) AS loanDays,
+			NULL AS bidStatus,
+			p.`STATUS` AS planStatus,
+			r.`status` AS holdSatus,
+			p.bearrate_date AS interestTime,
+			r.create_time AS purchaseTime,
+			p.can_quit AS anytimeQuit,
+			p.invest_rate AS yearYield,
+			p.min_yearly_rate AS lowRate,
+			p.max_yearly_rate AS highRate,
+			p.mo_increase_rate AS bonusRate,
+			1 AS isDepository,
+			p.id AS planId,
+			CONCAT(p.`name`,p.number) AS planTitle,
+			r.exit_time AS exitTime,
+			_exit.create_time AS applyTime,
+			IFNULL(coupon.scope,0)+IFNULL(p.raise_rate,0) AS bidInterestRise,
+			(
+				CASE
+				WHEN IFNULL(coupon.scope, 0) = 0 THEN
+					FALSE
+				ELSE
+					TRUE
+				END
+			) AS jxFlag,
+			settlement.expectedProfit-r.invest_amount AS expectedProfit,
+			p.expire_time AS expireDate
+		FROM
+			flb.t_user_plan r
+		LEFT JOIN flb.t_invest_plan p ON r.plan_id = p.id
+		LEFT JOIN flb.t_user_exit_plan _exit ON _exit.user_plan_id = r.id
+		LEFT JOIN
+			(
+				SELECT
+					uc.user_plan_id AS id,
+					IFNULL(c.scope,0) AS scope
+				FROM
+					flb.t_user_coupon uc
+				LEFT JOIN flb.t_coupon c ON c.id = uc.coupon_id
+				WHERE
+					uc.invest_type = 3
+				AND uc.user_id = #{userId}
+			) coupon ON coupon.id = r.id
+		LEFT JOIN (SELECT sr.user_plan_id,IFNULL(SUM(T6102.f06),0) AS expectedProfit FROM  flb.t_user_plan_settlement_record sr LEFT JOIN S61.T6102 T6102 ON T6102.F01 = sr.t6102_f01 GROUP BY sr.user_plan_id) AS settlement ON settlement.user_plan_id = r.id
+		WHERE
+			r.user_id = #{userId}
+		AND r.status = 3
+		AND p.is_cg = #{versionType}
+
+		<if test="versionType == 1 or versionType == null">
+			)
+		</if>
+
+		ORDER BY applyTime DESC
+	</select>
+
+	<select id="getUserQuitPlan" parameterType="java.util.Map" resultType="UserPlan">
+		SELECT
+		up.id as userPlanId,
+		up.user_id as userId,
+		up.plan_id as planId,
+		up.`status` as userPlanStatus,
+		up.invest_amount AS investAmount,
+		t_user_exit_plan.create_time as applyQuitTime
+		FROM
+		flb.t_user_plan up
+		INNER JOIN flb.t_user_exit_plan ON up.id = flb.t_user_exit_plan.user_plan_id
+		WHERE
+		up. STATUS = 1
+		AND up.id = #{userPlanId}
+	</select>
+
+
+	<select id="getPlanBidList" parameterType="java.util.Map" resultType="BorrowerEntity">
+		SELECT
+		pl.product_id as bidId,
+		t6230.F03 as bidTitle,
+		IF(real_name=NULL,NULL,CONCAT(left(eu.real_name,1),'**')) as loanName,
+		t6230.F05 as loanAmount
+		FROM
+		flb.t_plan_product_lib pl
+		LEFT  JOIN s62.t6230 t6230 ON pl.product_id = t6230.F01
+		LEFT JOIN flb.t_bid_ext_user eu ON  eu.bid = pl.product_id
+		WHERE
+		pl.plan_id = #{planId}
+		AND pl.is_bind = 1
+	</select>
+</mapper>

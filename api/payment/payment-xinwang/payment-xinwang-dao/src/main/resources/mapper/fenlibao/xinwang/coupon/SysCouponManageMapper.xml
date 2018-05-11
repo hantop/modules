@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysCouponManageMapper">
+    
+    <update id="updateRedpacket" parameterType="java.util.Map">
+        UPDATE flb.t_user_redpackets SET `status` = #{state}
+        <if test="tenderId != null">
+            ,tender_id = #{tenderId}
+        </if>
+        WHERE id = #{id} LIMIT 1
+    </update>
+
+    <select id="getUserCouponByTenderId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.coupon.XWUserCoupon">
+        SELECT ID id,user_id userId,coupon_id couponId,activity_id activityId,tender_id tenderId,valid_time validTime,coupon_status couponStatus,grant_id grantId,grant_status grantStatus,create_time createTime,update_time updateTime,scope FROM (
+           SELECT a.ID,a.user_id,a.coupon_id,a.activity_id,a.tender_id,a.valid_time,a.coupon_status,a.grant_id,a.grant_status,a.create_time,a.update_time,b.scope FROM flb.t_user_coupon a
+            LEFT JOIN flb.t_coupon b ON a.coupon_id = b.id	WHERE	a.tender_id = #{tenderId}
+            UNION
+            SELECT a.ID id,a.user_id,a.coupon_id,a.activity_id,a.tender_id,a.valid_time,a.coupon_status,a.grant_id,a.grant_status,a.create_time,a.update_time,b.scope FROM flb.t_user_coupon a
+            LEFT JOIN flb.t_coupon b ON a.coupon_id = b.id	LEFT JOIN flb.t_user_coupon_ext c ON a.ID = c.user_coupon_id WHERE	c.tender_id = #{tenderId}
+        )ttt LIMIT 1
+    </select>
+
+    <select id="getUserRedpacket" parameterType="java.util.Map" resultType="XWUserRedpacket">
+        SELECT
+            ur.id userRedpacketId,
+            r.id redpacketId,
+            r.red_money amount,
+            ur.valid_time validDate,
+            r.invest_deadline investDeadline,
+            r.invest_money investAmount
+        FROM
+        flb.t_user_redpackets ur
+        INNER JOIN flb.t_red_packet r ON ur.redpacket_id = r.id
+        LEFT JOIN flb.t_red_packet_bid_type rbt ON r.id = rbt.redpacket_id
+        LEFT JOIN s62.t6211 bt ON rbt.bidType_id = bt.F01
+        WHERE ur.user_id = #{userId}
+        <if test="state != null">
+            AND ur.`status` = #{state}
+        </if>
+        <if test="tenderId != null">
+            AND ur.tender_id = #{tenderId}
+        </if>
+    </select>
+
+    <update id="updateUserCoupon" parameterType="java.util.Map">
+        UPDATE flb.t_user_coupon SET coupon_status = #{state},tender_id = #{tenderId}
+        WHERE id = #{id}
+    </update>
+
+    <select id="getUserCoupon" parameterType="java.util.Map" resultType="XWUserCoupon">
+        SELECT a.ID,a.user_id,a.coupon_id,a.activity_id,a.tender_id,a.valid_time,a.coupon_status,a.grant_id,a.grant_status,a.create_time,a.update_time,b.scope FROM flb.t_user_coupon a
+        LEFT JOIN flb.t_coupon b ON a.coupon_id = b.id	WHERE a.user_id = #{userId}
+        <if test="state != null">
+            AND a.`coupon_status` = #{state}
+        </if>
+        <if test="tenderId != null">
+            AND a.tender_id = #{tenderId}
+        </if>
+        UNION
+        SELECT a.ID id,a.user_id,a.coupon_id,a.activity_id,a.tender_id,a.valid_time,a.coupon_status,a.grant_id,a.grant_status,a.create_time,a.update_time,b.scope FROM flb.t_user_coupon a
+        LEFT JOIN flb.t_coupon b ON a.coupon_id = b.id	LEFT JOIN flb.t_user_coupon_ext c ON a.id = c.user_coupon_id WHERE	a.user_id = #{userId}
+        <if test="state != null">
+            AND a.`coupon_status` = #{state}
+        </if>
+        <if test="tenderId != null">
+            AND c.tender_id = #{tenderId}
+        </if>
+    </select>
+</mapper>

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.statistics.withdraw.WithdrawMapper">
+
+    <!-- 体现统计 -->
+    <select id="findWithdraw" resultType="Withdraw">
+        SELECT
+            s61.t6110.F04 phoneNum,
+            CONCAT(
+                LEFT (s61.t6141.F02, 1),
+
+            REPEAT
+                (
+                    '*',
+                    CHAR_LENGTH(t6141.F02) - 1
+                )
+            ) realName,
+            s61.t6130.F08 createTime,
+            s61.t6130.F04 withdrawMoney,
+            tab_invest1.money investTotalMoney,
+            tab_invest1.count investCount,
+            tab_invest2.money investing,
+            s61.t6101.F06 surplusMoney
+        FROM
+            s61.t6130
+        LEFT JOIN s61.T6110 ON s61.T6110.F01 = s61.t6130.F02
+        LEFT JOIN s61.t6101 ON s61.T6110.F01 = s61.t6101.F02
+        LEFT JOIN s61.t6141 ON t6110.f01 = t6141.F01
+        LEFT JOIN (
+
+            SELECT
+                userId,count(userId) count,
+                SUM(money) money
+            FROM (
+
+                    SELECT
+                        s61.T6110.F01 userId,
+                        t6251.F05 AS money,
+                        t6251.F09 AS createTime
+                    FROM
+                      S62.t6251
+                    INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+                    WHERE
+                      S62.T6251.F12 > 0
+                UNION ALL
+
+                    SELECT
+                        s61.T6110.F01 userId,
+                        t6251.F06 AS money,
+                        date_format(T6250.f06, '%Y-%m-%d') AS createTime
+                    FROM
+                      S62.t6251
+                    INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+                    INNER JOIN s62.t6250 ON t6250.F01 = t6251.F11
+                    WHERE
+                        S62.T6251.F12 = 0
+                )tab_1 GROUP BY userId
+        ) tab_invest1 ON tab_invest1.userId = s61.T6110.F01
+        LEFT JOIN (
+                SELECT
+                    userId,count(userId) count,
+                    SUM(money) money
+                FROM (
+                    SELECT
+                        s61.T6110.F01 userId,
+                        T6250.F05 AS money,
+                        date_format(T6250.f06, '%Y-%m-%d') AS createTime
+                    FROM
+                      S62.t6250
+                    INNER JOIN s61.T6110 ON s61.T6110.F01 = S62.t6250.F03
+                    LEFT JOIN s62.t6251 ON t6251.F11 = t6250.F01
+                    LEFT JOIN s62.t6230 ON s62.t6230.F01 = S62.t6250.F02
+                    WHERE
+                      t6251.F01 IS NULL AND s62.t6230.F20 != 'YLB'
+            UNION ALL
+                    SELECT
+                        s61.T6110.F01 userId,
+                        t6251.F05 AS money,
+                        t6251.F09 AS createTime
+                    FROM
+                      S62.t6251
+                    INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+                    WHERE
+                        s62.t6251.F07 > 0 AND
+                        S62.T6251.F12 > 0
+            UNION ALL
+                    SELECT
+                        s61.T6110.F01 id,
+                        t6251.F06 AS money,
+                        date_format(T6250.f06, '%Y-%m-%d') AS createTime
+                    FROM
+                      S62.t6251
+                    INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+                    INNER JOIN s62.t6250 ON t6250.F01 = t6251.F11
+                    WHERE
+                      s62.t6251.F07 > 0
+                      AND S62.T6251.F12 = 0
+                ) tab_1 GROUP BY userId
+        ) tab_invest2 ON tab_invest2.userId = s61.T6110.F01
+        WHERE s61.t6101.F03 = 'WLZH'
+        AND s61.t6130.F16 = 'S'
+        <if test="withdrawStartTime != null">
+           AND s61.t6130.F08 &gt;= #{withdrawStartTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="withdrawStartTime != null">
+            AND s61.t6130.F08 &lt;= #{withdrawEndTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="minWithdrawMoney != null">
+            AND s61.t6130.F04 &gt;= #{minWithdrawMoney,jdbcType=DECIMAL}
+        </if>
+        <if test="maxWithdrawMoney != null">
+            AND s61.t6130.F04 &lt;= #{maxWithdrawMoney,jdbcType=DECIMAL}
+        </if>
+    </select>
+
+    <!-- 投资统计 -->
+    <select id="getWithdrawTotal" resultType="Withdraw">
+        SELECT
+            COUNT(tab_withdraw.userId) totalWithdrawr,			/*提现人数*/
+            SUM(tab_withdraw.withdrawTotalMoney) withdrawTotalMoney /*提现总金额*/
+        FROM (
+            SELECT
+                s61.T6110.F01 userId,
+                s61.t6130.F08 createTime,											/*提现时间*/
+                SUM(s61.t6130.F04) withdrawTotalMoney											/*体现金额*/
+            FROM
+                s61.t6130													/*s61.t6130 用户提现申请*/
+            LEFT JOIN s61.T6110 ON s61.T6110.F01 = s61.t6130.F02			/*s61.T6110 用户账号表*/
+              WHERE s61.t6130.F16 = 'S'
+            <if test="withdrawStartTime != null">
+                AND s61.t6130.F08 &gt;= #{withdrawStartTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="withdrawStartTime != null">
+                AND s61.t6130.F08 &lt;= #{withdrawEndTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="minWithdrawMoney != null">
+                AND s61.t6130.F04 &gt;= #{minWithdrawMoney,jdbcType=DECIMAL}
+            </if>
+            <if test="maxWithdrawMoney != null">
+                AND s61.t6130.F04 &lt;= #{maxWithdrawMoney,jdbcType=DECIMAL}
+            </if>
+            GROUP BY s61.T6110.F01
+        ) tab_withdraw
+
+    </select>
+</mapper>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserFinancingMapper">
+	<insert id="addUserFinancing" parameterType="java.util.Map">
+		INSERT INTO S61.T6115
+		  SET F01 = #{userId}
+	</insert>
+
+	<insert id="addUserBestFinancing" parameterType="java.util.Map">
+		INSERT INTO S64.T6413
+		  SET F01 = #{userId}
+	</insert>
+
+
+</mapper>

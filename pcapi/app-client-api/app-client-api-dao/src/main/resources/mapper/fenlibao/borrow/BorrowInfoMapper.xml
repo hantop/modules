@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="BorrowInfoMapper">
+	<select id="getBorrowInfoList" parameterType="java.util.Map" resultType="BorrowInfo">
+		SELECT a.*, (SELECT SUM(t6.F07) FROM S62.T6252 t6 WHERE t6.F02 = a.bid and t6.F03 = #{userId}) AS repayAmount, (CASE WHEN borrow.business_id IS NULL THEN 0 ELSE 1 END) AS isInProgress
+		FROM (
+			SELECT
+				t6252.F01 collectionId,
+				t6252.F02 bid,
+				t6230.F03 loanRecordTitle,
+				t6238.`F06` borrowRate,
+				(CASE t6230.F09 WHEN 0 THEN t6230.F32 ELSE t6230.F09 END) loanCycle,
+				(CASE t6230.F09 WHEN 0 THEN 'D' ELSE 'M' END) loanUnit,
+				(t6230.F05 - t6230.F07) loanAmount,
+				MIN(t6252.F08) refundDay,
+				t6231.`F02` totalPeriods,
+				t6231.`F03` restPeriods,
+				t6231.`F19` loanStatus,
+				MIN(t6252.F06) term,
+				DATEDIFF(NOW(),t6231.F12) loanDate,
+				DATEDIFF(MIN(t6252.F08), CURRENT_DATE()) distanceRefund
+			FROM
+				S62.T6252 t6252
+			LEFT JOIN S62.T6230 t6230 ON t6252.F02 = t6230.F01
+			LEFT JOIN S62.T6231 t6231 ON t6252.F02 = t6231.F01
+			LEFT JOIN S61.T6110 t6110 ON t6252.F03 = t6110.F01
+			LEFT JOIN s62.t6238 t6238 ON t6238.`F01` = t6230.F01
+			WHERE
+				t6230.F34 = 0
+				AND t6230.F38 = '1'
+				AND t6110.F01 = #{userId}
+				AND t6252.F09 = 'WH'
+			GROUP BY t6252.F02
+			ORDER BY t6252.F08 ASC
+		) a
+		LEFT JOIN (
+			SELECT tho.business_id
+			FROM flb.t_hx_order tho
+			WHERE  (tho.type_code = '1004' OR tho.type_code = '11004') AND tho.user_id = #{userId} AND tho.order_status = '2'
+			GROUP BY tho.business_id
+			ORDER BY tho.`complete_time` DESC
+		) hx ON hx.business_id = a.bid
+		<where>
+			<if test="status == 'YYQ'">
+				<!--<![CDATA[ distanceRefund < 0 ]]>-->
+				a.loanStatus = 'YZYQ' or a.loanStatus = 'S'
+			</if>
+			<if test="status == 'HKZ'">
+				<!--<![CDATA[ distanceRefund >= 0 ]]>-->
+				a.loanStatus = 'F'
+			</if>0
+		</where>
+	</select>
+
+	<select id="getYHQBorrowInfoList" parameterType="java.util.Map" resultType="BorrowInfo">
+		SELECT a.*, (SELECT SUM(t6.F07) FROM S62.T6252 t6 WHERE t6.F02 = a.bid and t6.F03 = #{userId}) AS repayAmount
+		FROM (
+			SELECT
+				t6252.F01 collectionId,
+				t6252.F02 bid,
+				t6230.F03 loanRecordTitle,
+				t6238.`F06` borrowRate,
+				(CASE t6230.F09 WHEN 0 THEN t6230.F32 ELSE t6230.F09 END) loanCycle,
+				(CASE t6230.F09 WHEN 0 THEN 'D' ELSE 'M' END) loanUnit,
+				(t6230.F05 - t6230.F07) loanAmount,
+				MAX(t6252.F10) refundDay,
+				t6231.`F02` totalPeriods,
+				t6231.`F03` restPeriods,
+				t6231.`F19` loanStatus
+				<!--,DATEDIFF(t6252.F08, CURRENT_DATE()) distanceRefund-->
+			FROM
+				S62.T6252 t6252
+			LEFT JOIN S62.T6230 t6230 ON t6252.F02 = t6230.F01
+			LEFT JOIN S62.T6231 t6231 ON t6252.F02 = t6231.F01
+			LEFT JOIN S61.T6110 t6110 ON t6252.F03 = t6110.F01
+			LEFT JOIN s62.t6238 t6238 ON t6238.`F01` = t6230.F01
+			WHERE
+				t6230.F34 = 0
+				AND t6230.F38 = 2
+				AND t6110.F01 = #{userId}
+				AND t6230.F20 = 'YJQ'
+			GROUP BY t6252.F02
+			ORDER BY t6252.F10 DESC
+		) a
+	</select>
+
+	<select id="getRepayInfo" parameterType="java.util.Map" resultType="BorrowInfo">
+		SELECT *
+		FROM  S62.T6252
+		WHERE T6252.F02 = #{bid}
+		  	AND T6252.F09 = #{status}
+		  	AND F06 = (
+		  		SELECT MIN(F06)
+		  		FROM S62.T6252
+		  		WHERE T6252.F02 = #{bid}
+				AND T6252.F09 = #{status}
+		  	)
+	</select>
+
+	<select id="getStayRepayStatics" parameterType="java.util.Map" resultType="BorrowStaticsInfo">
+		SELECT
+			IFNULL(SUM(a.principal)+SUM(a.interest)+SUM(a.yqsxf)+SUM(a.yqfx),0) AS sumLoanAmount,
+			IFNULL(SUM(a.principal),0) AS principal,
+			IFNULL(SUM(a.interest),0) AS interest,
+			IFNULL(SUM(a.yqsxf),0) AS yqsxf,
+			IFNULL(SUM(a.yqfx),0) AS yqfx
+		FROM (
+			SELECT
+				(CASE t6252.`F05` WHEN '7001' THEN SUM(t6252.`F07`) ELSE 0 END ) 'principal',
+				(CASE t6252.`F05` WHEN '7002' THEN SUM(t6252.`F07`) ELSE 0 END ) 'interest',
+				(CASE t6252.`F05` WHEN '7004' THEN SUM(t6252.`F07`) ELSE 0 END ) 'yqfx',
+				(CASE t6252.`F05` WHEN '7020' THEN SUM(t6252.`F07`) ELSE 0 END ) 'yqsxf'
+			FROM s62.t6252
+			LEFT JOIN s62.`t6230` ON t6230.`F01` = t6252.`F02`
+			WHERE
+				t6230.F38 = '2'
+				AND t6252.F09 = 'WH'
+				AND t6252.`F03` = #{userId}
+			GROUP BY t6252.`F05`
+		) a
+	</select>
+
+	<select id="getCurrentRepayStatics" parameterType="java.util.Map" resultType="RepayInfo">
+		SELECT
+			a.loanId AS loanId,
+			a.term AS term,
+			IFNULL(SUM(a.principal)+SUM(a.interest)+SUM(a.yqsxf)+SUM(a.yqfx),0) AS sumLoanAmount,
+			IFNULL(SUM(a.principal),0) AS principal,
+			IFNULL(SUM(a.interest),0) AS interest,
+			IFNULL(SUM(a.yqsxf),0) AS yqsxf,
+			IFNULL(SUM(a.yqfx),0) AS yqfx
+		FROM (
+			SELECT
+				t6252.F02 AS loanId,
+				t6252.F06 AS term,
+				(CASE t6252.`F05` WHEN '7001' THEN SUM(t6252.`F07`) ELSE 0 END ) 'principal',
+				(CASE t6252.`F05` WHEN '7002' THEN SUM(t6252.`F07`) ELSE 0 END ) 'interest',
+				(CASE t6252.`F05` WHEN '7004' THEN SUM(t6252.`F07`) ELSE 0 END ) 'yqfx',
+				(CASE t6252.`F05` WHEN '7020' THEN SUM(t6252.`F07`) ELSE 0 END ) 'yqsxf'
+			FROM  s62.t6252
+			LEFT JOIN s61.t6110 t6110 ON t6252.F03 = t6110.F01
+			WHERE t6252.F02 = #{bidId}
+				AND t6252.F09 = 'WH'
+				AND t6110.F01 = #{userId}
+				AND t6252.F06 = (
+					SELECT MIN(t6252.F06)
+					FROM s62.t6252
+					LEFT JOIN s61.t6110 t6110 ON t6252.F03 = t6110.F01
+					WHERE t6252.F02 = #{bidId}
+					AND t6252.F09 = 'WH'
+					AND t6110.F01 = #{userId}
+				)
+			GROUP BY t6252.`F05`
+		) a
+	</select>
+
+	<select id="getPreRepayStatics" parameterType="java.util.Map" resultType="ForwardRepayInfo">
+		SELECT
+			t6252.F02 AS loanId,
+			t6252.F06 AS term,
+			t6252.F05 AS typeId,
+			t6252.F07 AS amount,
+			(SELECT MIN(F06) FROM S62.t6252 WHERE t6252.F02 = #{bidId} AND t6252.F09 = 'WH') AS minTerm,
+
+			t6231.F17 AS starttime,
+			t6231.F18 AS endtime,
+			t6230.F06 AS loanRate,
+			t6230.F09 AS loanCycleForMonth,
+			t6230.F32 AS loanCycleForDay,
+			NOW() AS currentDate,
+			IFNULL((SELECT SUM(t6252.F07) FROM S62.t6252 WHERE t6252.F02 = #{bidId} AND t6252.F09 = 'WH' AND t6252.`F05` = '7001'), 0) AS sybj,
+			IFNULL((SELECT  T6252.F07 FROM S62.T6252 WHERE T6252.F02 = #{bidId} AND T6252.F09 = 'WH' AND T6252.`F05` = '7001' ORDER BY t6252.`F06` ASC LIMIT 1), 0) AS currentPrincipal
+		FROM s62.t6252
+		LEFT JOIN s62.`t6230` ON t6252.F02 = t6230.F01
+		LEFT JOIN s62.`t6231` ON t6231.F01 = t6230.F01
+		LEFT JOIN s61.`t6110` ON t6252.F03 = t6110.F01
+		WHERE t6252.F02 = #{bidId}
+			AND t6252.F09 = 'WH'
+			AND t6110.F01 = #{userId}
+	</select>
+
+	<select id="getRepaymentList" parameterType="java.util.Map" resultType="RepaymentInfo">
+		SELECT
+		T6252.F02 bidId,
+		T6252.F03 paymentUserId,
+		T6252.F04 receiveUserId,
+		T6252.F05 tradeType,
+		T6252.F06 period,
+		IFNULL(SUM(T6252.F07), 0.00) repaymentAmount,
+		T6252.F08 expectedRepaymentDate,
+		T6252.F09 repaymentStatus,
+		T6252.F10 actualRepaymentDate,
+		T6252.F11 creditId,
+		NULLIF(T6230.F32,0) AS loanDays,
+		NULLIF(T6230.F09,0) AS month,
+		DATEDIFF(NOW(),t6231.F12) loanDate
+		FROM
+		S62.T6252
+		LEFT JOIN S62.T6230 ON T6252.F02 = T6230.F01
+		LEFT JOIN S62.T6231 t6231 ON t6252.F02 = t6231.F01
+		WHERE
+		T6252.F03 = #{userId}
+
+		AND T6230.F38 = 2
+		AND T6252.F02 = #{bidId}
+
+		<if test="tradeType != null">
+			AND T6252.F05 = #{tradeType}
+		</if>
+		<if test="status != null">
+			AND T6252.F09 = #{status}
+		</if>
+		GROUP BY T6252.F06
+		ORDER BY T6252.F06 ASC
+	</select>
+
+	<select id="getRepaymentBidInfo" parameterType="java.util.Map" resultType="RepaymentBidInfo">
+		SELECT
+		T6230.F01 AS id,
+		T6230.F03 AS name,
+		T6230.F05 AS loanAmount,
+		t6238.`F06` rate,
+		T6230.F09 AS month,
+		T6230.F10 AS repaymentMode,
+		T6231.F12 AS lendingTime,
+		T6230.F32 AS loanDays,
+		T6230.F07 AS voteAmount,
+		expiration.expirationTime AS expirationTime,
+		ROUND((IFNULL(T6230.F05,0)-IFNULL(T6230.F07,0))*IFNULL(T6238.F02,0),2) AS serviceMoney,
+		repayment.repaymentAmount AS repaymentAmount
+		FROM S62.T6230
+		LEFT JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		LEFT JOIN (SELECT plan.F02 AS id,plan.F08 AS expirationTime FROM S62.T6252 plan WHERE plan.F02=#{bidId} and plan.F03=#{userId} ORDER BY plan.F06 DESC LIMIT 1) expiration
+		ON S62.T6230.F01=expiration.id
+		LEFT JOIN S62.T6238 ON T6230.F01 = T6238.F01
+		LEFT JOIN (SELECT
+		SUM(a.F07) AS repaymentAmount,a.F02
+		FROM
+		S62.T6252 a
+		WHERE
+		a.F02 = #{bidId}
+		AND a.F03 = #{userId}) repayment ON T6230.F01 =repayment.F02
+		WHERE  t6230.F01=#{bidId}
+		<if test="proType != null">
+			and T6211.F05=#{proType}
+		</if>
+	</select>
+
+	<select id="getXwBorrowInfoList" parameterType="java.util.Map" resultType="BorrowInfo">
+		SELECT a.*, (SELECT SUM(t6.F07) FROM S62.T6252 t6 WHERE t6.F02 = a.bid and t6.F03 = #{userId}) AS repayAmount, (CASE WHEN borrow.bid IS NULL THEN 0 ELSE 1 END) AS isInProgress
+		FROM (
+		SELECT
+		t6252.F01 collectionId,
+		t6252.F02 bid,
+		t6230.F03 loanRecordTitle,
+		t6238.`F06` borrowRate,
+		(CASE t6230.F09 WHEN 0 THEN t6230.F32 ELSE t6230.F09 END) loanCycle,
+		(CASE t6230.F09 WHEN 0 THEN 'D' ELSE 'M' END) loanUnit,
+		(t6230.F05 - t6230.F07) loanAmount,
+		MIN(t6252.F08) refundDay,
+		t6231.`F02` totalPeriods,
+		t6231.`F03` restPeriods,
+		t6231.`F19` loanStatus,
+		MIN(t6252.F06) term,
+		DATEDIFF(NOW(),t6231.F12) loanDate,
+		DATEDIFF(MIN(t6252.F08), CURRENT_DATE()) distanceRefund
+		FROM
+		S62.T6252 t6252
+		LEFT JOIN S62.T6230 t6230 ON t6252.F02 = t6230.F01
+		LEFT JOIN S62.T6231 t6231 ON t6252.F02 = t6231.F01
+		LEFT JOIN S61.T6110 t6110 ON t6252.F03 = t6110.F01
+		LEFT JOIN s62.t6238 t6238 ON t6238.`F01` = t6230.F01
+		WHERE
+		t6230.F38 = 2
+		AND t6110.F01 = #{userId}
+		AND t6252.F09 = 'WH'
+		GROUP BY t6252.F02
+		ORDER BY t6252.F08 ASC
+		) a
+		LEFT JOIN (
+		SELECT xw.loan_id AS bid FROM
+		flb.t_xw_project xw LEFT JOIN flb.t_xw_account xc ON xc.platform_user_no = xw.borrower_platform_user_no
+		WHERE xc.user_id = #{userId} AND xc.user_role = 'BORROWERS'
+		) borrow ON borrow.bid = a.bid
+		<where>
+			<if test="status == 'YYQ'">
+				<!--<![CDATA[ distanceRefund < 0 ]]>-->
+				 a.loanStatus = 'YZYQ' or a.loanStatus = 'S'
+			</if>
+			<if test="status == 'HKZ'">
+				<!--<![CDATA[ distanceRefund >= 0 ]]>-->
+				 a.loanStatus = 'F'
+			</if>
+		</where>
+	</select>
+	<select id="getRefundAmount" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+       SELECT IFNULL(SUM(t6252.F07),0) FROM S62.t6252 t6252
+       WHERE t6252.F03 = #{userId} AND t6252.F02 = #{bid}
+
+		<if test="term != null">
+			AND t6252.F06 = #{term}
+		</if>
+		<if test="tradeType != null">
+			AND T6252.F05 = #{tradeType}
+		</if>
+	</select>
+
+	<select id="getBorrowerBalance" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(F06,0) FROM s61.t6101 WHERE F02 = #{userId} AND F03 = 'XW_BORROWERS_WLZH' LIMIT 1
+	</select>
+
+	<select id="getBorrowerFrozen" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(F06,0) FROM s61.t6101 WHERE F02 = #{userId} AND F03 = 'XW_BORROWERS_SDZH' LIMIT 1
+	</select>
+
+	<select id="getBorrowTotal" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(F05),0) FROM S62.T6230 WHERE F02 = #{userId} AND F20 IN ('HKZ','YJQ') AND F38 = 2 LIMIT 1
+	</select>
+
+	<select id="getRepaymentByTypeList" parameterType="java.util.Map" resultType="RepaymentInfo">
+		SELECT
+		T6252.F02 bidId,
+		T6252.F03 paymentUserId,
+		T6252.F04 receiveUserId,
+		T6252.F05 tradeType,
+		T6252.F06 period,
+		IFNULL(T6252.F07, 0.00) repaymentAmount,
+		T6252.F08 expectedRepaymentDate,
+		T6252.F09 repaymentStatus,
+		T6252.F10 actualRepaymentDate,
+		T6252.F11 creditId,
+		NULLIF(T6230.F32,0) AS loanDays,
+		NULLIF(T6230.F09,0) AS month,
+		DATEDIFF(NOW(),t6231.F12) loanDate
+		FROM
+		S62.T6252
+		LEFT JOIN S62.T6230 ON T6252.F02 = T6230.F01
+		LEFT JOIN S62.T6231 t6231 ON t6252.F02 = t6231.F01
+		WHERE
+		T6252.F03 = #{userId}
+
+		AND T6230.F38 = 2
+		AND T6252.F02 = #{bidId}
+
+		<if test="tradeType != null">
+			AND T6252.F05 = #{tradeType}
+		</if>
+		<if test="status != null">
+			AND T6252.F09 = #{status}
+		</if>
+		ORDER BY T6252.F06 ASC
+	</select>
+
+	<!-- 查询标的借款人信息 -->
+	<select id="getBorrowerDetail" parameterType="java.util.Map" resultType="BorrowerDetail">
+		SELECT
+		IF(t6141.F02=NULL,NULL,CONCAT(left(t6141.F02,1),'**')) as name,
+		user.industry AS industry ,
+        t6141.F06 AS idCard,
+        user.`subject_nature` AS  subjectType,
+		user.address AS address,
+		user.borrower_info AS income,
+		user.credit AS creditReport,
+		user.bank_transaction AS bankStatement,
+	    user.other_borrower_info AS otherLoan,
+	    IFNULL(bl.use_detail,'未见异常') AS userSituation,
+        IFNULL(bl.finance_detail,'未见异常') AS operateSituation,
+        IFNULL(bl.repay_ability,'未见异常') AS repaymentSituation,
+        IFNULL(bl.overdue_detail,'未见异常') AS overdueSituation,
+        IFNULL(bl.lawsuit_detail,'未见异常') AS appealSituation,
+        IFNULL(bl.punish_detail,'未见异常') AS punishSituation,
+        t6110.F06 AS borrowerType,
+        t6161.F03 AS enterpriseCode,
+		t6161.F04 AS enterpriseName
+		FROM
+		flb.t_bid_ext_user user
+		LEFT JOIN s61.t6141 t6141 ON t6141.F01 = user.user_id
+		LEFT JOIN flb.borrower_info_after_loan bl ON bl.bid_id = user.bid
+		LEFT JOIN s61.t6161 t6161 ON t6161.F01 = user.user_id
+		LEFT JOIN s61.t6110 t6110 ON t6110.F01 = user.user_id
+		WHERE
+		user.bid=#{bidId}
+		LIMIT 1
+	</select>
+
+</mapper>

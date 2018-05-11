@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fenlibao.dao.pms.da.planCenter.PlanTypeMapper">
+    <!--更新计划-->
+    <update id="updatePlanTypeByPrimaryKey" parameterType="com.fenlibao.model.pms.da.planCenter.PlanType">
+        update flb.t_plan_type
+        <set>
+            <if test="title != null">
+                title = #{title,jdbcType=VARCHAR},
+            </if>
+            <if test="amount != null">
+                amount = #{amount,jdbcType=DECIMAL},
+            </if>
+            <if test="rate != null">
+                rate = #{rate,jdbcType=DECIMAL},
+            </if>
+            raised_rate = #{raisedRate,jdbcType=DECIMAL},
+            update_time = SYSDATE(),
+            total_user_assets = #{totalUserAssets,jdbcType=DECIMAL},
+            user_investing_amount = #{userInvestingAmount,jdbcType=DECIMAL},
+            user_accumulated_income = #{userAccumulatedIncome,jdbcType=DECIMAL},
+            target_user = #{targetUser,jdbcType=INTEGER},
+            label = #{label,jdbcType=DECIMAL},
+            comment = #{comment,jdbcType=DECIMAL},
+        </set>
+        where id = #{id,jdbcType=INTEGER}
+    </update>
+
+    <select id="findPlanTypePager" resultType="com.fenlibao.model.pms.da.planCenter.PlanType">
+        SELECT
+        planType.id,
+        planType.title,
+        planType.amount,
+        planType.cycle,
+        planType.cycle_type,
+        planType.rate,
+        planType.raised_rate,
+        planStatus.status
+        FROM
+        flb.t_plan_type planType
+        INNER JOIN flb.t_plan_type_status planStatus ON planType.id = planStatus.plan_type_id
+        WHERE
+        planType.is_cg = 2
+        <if test="title != null and title != ''">
+            AND planType.title like concat('%',trim(#{title}),'%')
+        </if>
+        ORDER BY planType.update_time DESC
+    </select>
+
+    <select id="findPlanTypeById" resultType="com.fenlibao.model.pms.da.planCenter.PlanType">
+    SELECT
+        planType.id,
+        planType.title,
+        planType.rate,
+        planType.raised_rate,
+        planType.amount,
+        planType.cycle,
+        planType.cycle_type,
+        planType.is_novice_bid,
+        planType.total_user_assets,
+        planType.user_investing_amount,
+        planType.user_accumulated_income,
+        planType.target_user,
+        planType.label,
+        planType.comment,
+        planStatus.status
+    FROM
+        flb.t_plan_type planType
+        INNER JOIN flb.t_plan_type_status planStatus ON planStatus.plan_type_id = planType.id
+    WHERE
+        planType.id = #{id}
+    </select>
+
+    <update id="setStatus">
+        update flb.t_plan_type_status
+        <set>
+            <if test="status != null">
+                status = #{status,jdbcType=INTEGER},
+            </if>
+        </set>
+        where plan_type_id = #{id,jdbcType=INTEGER}
+    </update>
+
+</mapper>

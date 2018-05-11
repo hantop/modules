@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.idmt.user.PmsUserMapper">
+
+    <select id="getUsersByRole" resultType="PmsUser">
+        SELECT
+            pms.idmt_user.id id,
+            pms.idmt_user.username username,
+            pms.idmt_user.realname realname,
+            pms.idmt_user.status `status`,
+            pms.idmt_role.id role_id,
+            pms.idmt_role.`name` role_name,
+            pms.idmt_group.`NAME` department
+        FROM pms.idmt_user
+        LEFT JOIN pms.idmt_user_role on (pms.idmt_user_role.user_id = pms.idmt_user.id)
+        LEFT JOIN pms.idmt_role ON (pms.idmt_role.id = pms.idmt_user_role.role_id)
+        LEFT JOIN pms.idmt_user_group ON (pms.idmt_user.id = pms.idmt_user_group.userid)
+        LEFT JOIN pms.idmt_group on (pms.idmt_group.id = pms.idmt_user_group.groupid)
+        <where>
+            <if test="roleId != null and roleId != ''">
+                pms.idmt_user_role.role_id = #{roleId}
+            </if>
+        </where>
+        ORDER BY pms.idmt_user.create_time DESC ,pms.idmt_role.id DESC
+    </select>
+
+    <resultMap id="BaseResultMap" type="PmsUser">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="username" property="username" jdbcType="VARCHAR"/>
+        <result column="realname" property="realname" jdbcType="VARCHAR"/>
+        <result column="phone" property="phone" jdbcType="VARCHAR"/>
+        <result column="email" property="email" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="BIT"/>
+        <result column="department" property="department" jdbcType="VARCHAR"/>
+        <result column="dimission" property="dimission" jdbcType="TINYINT"/>
+        <collection property="roles" javaType="list" ofType="com.fenlibao.model.pms.idmt.role.Role">
+            <id property="id" column="role_id"/>
+            <result property="name" column="role_name"/>
+        </collection>
+    </resultMap>
+
+    <select id="getPmsUser" parameterType="PmsUser" resultType="PmsUser">
+        SELECT
+            id,
+            username,
+            password,
+            salt,
+            realname,
+            phone,
+            email,
+            status,
+            create_time createTime
+        FROM pms.idmt_user
+        WHERE username=#{username} and password=#{password}
+    </select>
+
+    <select id="findByUsername" parameterType="java.lang.String" resultType="PmsUser">
+        SELECT
+            id,
+            username,
+            password,
+            salt,
+            realname,
+            phone,
+            email,
+            status,
+            create_time createTime,
+            last_changepwd_time lastChangepwdTime,
+            error_number errorNumber
+        FROM pms.idmt_user
+        WHERE username=#{username}
+    </select>
+
+    <insert id="saveUser" parameterType="PmsUser" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms.idmt_user (
+        username,
+        password,
+        salt,
+        realname,
+        phone,
+        email,
+        status,
+        create_time
+        ) values
+        (
+        #{username,jdbcType=VARCHAR},
+        #{password,jdbcType=VARCHAR},
+        #{salt,jdbcType=VARCHAR},
+        #{realname,jdbcType=VARCHAR},
+        #{phone,jdbcType=VARCHAR},
+        #{email,jdbcType=VARCHAR},
+        #{status,jdbcType=INTEGER},
+        #{createTime,jdbcType=TIMESTAMP}
+        )
+    </insert>
+    <update id="updatePassword" parameterType="PmsUser"  keyProperty="id">
+        UPDATE  pms.idmt_user
+        SET password= #{password,jdbcType=VARCHAR},salt= #{salt,jdbcType=VARCHAR},last_changepwd_time= CURRENT_TIMESTAMP
+        WHERE username= #{username,jdbcType=VARCHAR}
+    </update>
+
+    <update id="updateErrorNumber" parameterType="PmsUser"  keyProperty="id">
+        UPDATE  pms.idmt_user
+        SET error_number= #{errorNumber,jdbcType=INTEGER},last_changepwd_time= CURRENT_TIMESTAMP
+        where pms.idmt_user.id = #{id,jdbcType=INTEGER}
+    </update>
+    <update id="updateStatus" parameterType="PmsUser"  keyProperty="id">
+        UPDATE  pms.idmt_user
+        SET status= #{status,jdbcType=VARCHAR},last_changepwd_time= CURRENT_TIMESTAMP
+        where pms.idmt_user.id = #{id,jdbcType=INTEGER}
+    </update>
+
+
+    <select id="getUserList" parameterType="PmsUser" resultMap="BaseResultMap">
+        select
+        pms.idmt_user.id id,
+        pms.idmt_user.username username,
+        pms.idmt_user.phone,
+        pms.idmt_user.email,
+        pms.idmt_user.realname realname,
+        pms.idmt_user.status `status`,
+        pms.idmt_role.id role_id,
+        pms.idmt_role.`name` role_name,
+        pms.idmt_group.`NAME` department,
+        pms.idmt_user.dimission
+        from pms.idmt_user
+        LEFT JOIN pms.idmt_user_role on (pms.idmt_user_role.user_id = pms.idmt_user.id)
+        LEFT JOIN pms.idmt_role ON (pms.idmt_role.id = pms.idmt_user_role.role_id)
+        LEFT JOIN pms.idmt_user_group ON (pms.idmt_user.id = pms.idmt_user_group.userid)
+        LEFT JOIN pms.idmt_group on (pms.idmt_group.id = pms.idmt_user_group.groupid)
+        <where>
+            pms.idmt_group.`id` IN
+            <foreach collection="groups" item="item" open="(" separator="," close=")">
+                #{item.id}
+            </foreach>
+            <if test="realname != null and realname != ''">
+                AND pms.idmt_user.realname LIKE '%${realname}%'
+            </if>
+        </where>
+        ORDER BY pms.idmt_user.create_time DESC ,pms.idmt_role.id DESC
+    </select>
+
+    <select id="getUserOwnGroups" parameterType="java.lang.String" resultType="java.lang.Integer">
+        SELECT idmt_group.`id` FROM pms.idmt_user
+        LEFT JOIN pms.idmt_user_group ON idmt_user.`id` = idmt_user_group.`userid`
+        LEFT JOIN pms.idmt_group ON idmt_user_group.`groupid` = idmt_group.`id`
+        WHERE idmt_user.`username` = #{username,jdbcType=VARCHAR}
+    </select>
+
+    <select id="getAllGroups" parameterType="PmsGroup" resultType="PmsGroup">
+        SELECT idmt_group.`id` FROM pms.idmt_group WHERE idmt_group.`parent_ids` LIKE '%${id}%'
+    </select>
+
+    <delete id="delUser" parameterType="java.util.List" flushCache="true">
+        <![CDATA[
+           delete from pms.idmt_user where id in
+        ]]>
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <delete id="delRoles" parameterType="java.util.List">
+        <![CDATA[
+           delete from pms.idmt_user_role where pms.idmt_user_role.user_id in
+        ]]>
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <update id="updateUser" parameterType="PmsUser">
+        update pms.idmt_user
+        <set>
+            <if test="realname != null" >
+                realname = #{realname,jdbcType=VARCHAR},
+            </if>
+            <if test="password != null and password != ''" >
+                password = #{password,jdbcType=VARCHAR},
+            </if>
+            <if test="status != null" >
+                status = #{status,jdbcType=VARCHAR},
+            </if>
+            <if test="salt != null" >
+                salt = #{salt,jdbcType=VARCHAR},
+            </if>
+            <if test="phone != null">
+                phone = #{phone,jdbcType=VARCHAR},
+            </if>
+            <if test="email != null">
+                email = #{email,jdbcType=VARCHAR},
+            </if>
+            <if test="errorNumber !=null">
+                error_number= #{errorNumber,jdbcType=INTEGER},
+            </if>
+            last_changepwd_time = CURRENT_TIMESTAMP
+        </set>
+        where pms.idmt_user.id = #{id,jdbcType=INTEGER}
+    </update>
+
+    <select id="getUserRoleNames"  parameterType="int" resultType="String">
+        select
+          b.name
+        from
+          pms.idmt_user_role a
+        left join pms.idmt_role b on a.role_id = b.id
+        where a.user_id = #{username}
+    </select>
+
+    <select id="findRoles"  parameterType="int" resultType="Role">
+        select
+        b.id,
+        b.parent_id AS parentId,
+        b.name,
+        b.sort,
+        b.create_time
+        from
+        pms.idmt_user_role a
+        left join pms.idmt_role b on a.role_id = b.id
+        where a.user_id = #{username}
+    </select>
+
+    <select id="findPermissions"  parameterType="java.util.List" resultType="PermitVO">
+        SELECT qx.`id`,qx.`name`,qx.`permit_url` AS url,qx.`code` FROM pms.`idmt_permission` AS qx
+        LEFT JOIN pms.`idmt_role_permission` qxgl
+        ON qx.`id` = qxgl.`permission_id`
+        WHERE qxgl.`role_id` IN
+        <foreach item="item" index="index" collection="array" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="getUserPermissions" resultType="String">
+        select
+    </select>
+
+    <select id="getUserById" parameterType="int" resultType="PmsUser">
+        select
+            pms.idmt_user.id id,
+            pms.idmt_user.username username,
+            pms.idmt_user.realname realname,
+            pms.idmt_user.phone,
+            pms.idmt_user.email,
+            pms.idmt_user.status `status`
+        from pms.idmt_user
+         where pms.idmt_user.id = #{id}
+    </select>
+
+    <insert id="saveOrUpdateUserGroup" >
+        <selectKey keyProperty="count" resultType="int" order="BEFORE">
+            select count(*) from pms.idmt_user_group where idmt_user_group.userId = #{userId}
+        </selectKey>
+        <if test="count > 0">
+            update pms.idmt_user_group
+            set idmt_user_group.groupId = #{groupId}
+            where idmt_user_group.userId = #{userId}
+        </if>
+        <if test="count==0">
+            insert into pms.idmt_user_group (userId,groupId)
+            values (#{userId,jdbcType=INTEGER}, #{groupId,jdbcType=INTEGER})
+        </if>
+    </insert>
+
+    <update id="dimissionUser" parameterType="java.lang.Integer">
+            update pms.idmt_user
+            set idmt_user.status = 0,
+            idmt_user.dimission = 0
+            where idmt_user.id = #{id}
+    </update>
+</mapper>

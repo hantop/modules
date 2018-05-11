@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<!-- 定时检查新网用户绑卡 -->
+	<bean id="xwBindCardJob"
+		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.xinwang.XWBindCardJob" />
+		<property name="durability" value="true" />
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+   <!--时间待定 -->
+	<bean id="xwBindCardJobTrigger" class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="xwBindCardJob" />
+		<property name="cronExpression" value="0 0/10 * * * ?" />
+	</bean>
+
+</beans>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MallMapper">
+	<select id="getConsumePatterns" resultType="MallConsumePatternsVO">
+		SELECT title,slogan,iconUrl FROM mp.mall_consume_patterns WHERE _status = 1
+	</select>
+	
+	<select id="getCommodity" resultType="MallCommodityVO">
+		SELECT
+			c.`name` `name`,
+			c.slogan slogan,
+			c.icon_url iconUrl,
+			t.type_code pointsTypeCode,
+			c.points_qty pointsQty,
+			c.discount_points_qty discountPointsQty
+		FROM
+			mp.mall_commodity c
+		INNER JOIN mp.mp_points_type t ON c.points_type_id = t.id
+		WHERE
+			_status = 1
+	</select>
+</mapper>

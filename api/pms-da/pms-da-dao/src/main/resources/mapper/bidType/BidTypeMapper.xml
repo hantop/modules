@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.bidType.BidTypeMapper">
+
+	<select id="getBidTypes" resultType="com.fenlibao.model.pms.da.bidType.BidType">
+		SELECT
+		a.F01 as id,
+		a.F02 as typeName
+		FROM
+		s62.t6211 a
+		WHERE a.F03 = 'QY'
+		AND a.F05 NOT IN
+		<foreach collection="excludeCodes" open="(" close=")" separator="," item="code">
+			#{code}
+		</foreach>
+	</select>
+
+	<select id="getAllUsedBidType" resultType="com.fenlibao.model.pms.da.bidType.BidType">
+		SELECT
+        	a.F01 as id,
+			a.F02 as typeName,
+			a.F03 as status,
+			a.F04 as code
+        FROM
+            s62.t6211 a where a.F03 = 'QY'
+	</select>
+	
+	<select id="getBidTypesByRedPacketId" resultType="string">
+		SELECT
+			a.F02 as typeName
+        FROM
+            s62.t6211 a 
+        LEFT JOIN flb.t_red_packet_bid_type b ON a.F01 = b.bidType_id 
+        WHERE b.redpacket_id = #{redPacketId} AND a.F03 = 'QY'
+	</select>
+
+	<!-- 根据返现券id查询对应的标的id -->
+    <select id="getBidTypeIdsByRewardId" parameterType="int" resultType="com.fenlibao.model.pms.da.bidType.BidType">
+        SELECT
+        	a.F01 as id,
+			a.F02 as typeName,
+			a.F03 as status,
+			a.F04 as code
+        FROM
+            s62.t6211 a left join flb.t_red_packet_bid_type b on a.F01 = b.redpacket_id<!-- 条件什么都查出来了 -->
+        <where>
+            id = #{id}
+        </where>
+    </select>
+    
+    <!-- 往中间表里面插入数据-->
+    <insert id="insertRedPackageBidType">
+    	INSERT into flb.t_red_packet_bid_type (redpacket_id,bidType_id,create_time) values (#{redPackageId},#{bidTypeId},now())
+    </insert>
+
+	<select id="getBidTypeIdsByRedPacketId" resultType="int">
+		SELECT a.bidType_id
+		FROM flb.t_red_packet_bid_type a 
+		WHERE a.redpacket_id = #{redPacketId}
+	</select>
+
+	<select id="getBidTypeIdsByRateCouponId" resultType="int">
+		SELECT a.bid_type_id
+		FROM flb.t_coupon_bid_type a
+		WHERE a.coupon_id = #{rateCouponId}
+	</select>
+	
+	<delete id="deleteRedPackageBidType">
+		DELETE FROM flb.t_red_packet_bid_type WHERE redpacket_id = #{redPacketId} and bidType_id = #{oldTypeId}
+	</delete>
+</mapper>

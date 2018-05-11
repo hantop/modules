@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="http://www.springframework.org/schema/beans" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+	    http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx.xsd">
+    <mvc:annotation-driven/>
+    <mvc:resources mapping="/static/**" location="/static"></mvc:resources>
+
+    <context:component-scan base-package="com.fenlibao.pms.controller"/>
+    <context:component-scan base-package="com.fenlibao.service"/>
+    <context:component-scan base-package="com.fenlibao.p2p.service"/>
+    <context:component-scan base-package="com.fenlibao.p2p.dao"/>
+
+    <tx:annotation-driven transaction-manager="transactionManager" mode="proxy" proxy-target-class="false" order="0"/>
+
+    <bean id="tilesViewResolver"
+          class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+        <property name="viewClass">
+            <value>org.springframework.web.servlet.view.tiles3.TilesView</value>
+        </property>
+    </bean>
+
+    <bean id="tilesConfigurer"
+          class="org.springframework.web.servlet.view.tiles3.TilesConfigurer">
+        <property name="definitions">
+            <list>
+                <value>/WEB-INF/tiles/tiles*.xml</value>
+            </list>
+        </property>
+    </bean>
+
+    <mvc:interceptors>
+        <mvc:interceptor>
+            <mvc:mapping path="/cs/unbindBankCard"/>
+            <mvc:mapping path="/biz/loanList/loan"/>
+            <mvc:mapping path="/biz/loanList/notLoan"/>
+            <mvc:mapping path="/biz/repayment/doRepay"/>
+            <mvc:mapping path="/reward/red-packet/cash-red-packet-grant"/>
+            <mvc:mapping path="/reward/red-packet/async-grant"/>
+            <mvc:mapping path="/reward/rateCoupon/async-grant"/>
+            <mvc:mapping path="/marketing/activity/edit"/>
+            <mvc:mapping path="/cs/phone/replace"/>
+            <mvc:mapping path="/finance/replacementRecharge/edit"/>
+            <mvc:mapping path="/finance/replacementRecharge/audit"/>
+            <mvc:mapping path="/finance/accountmanagement/recharge"/>
+            <mvc:mapping path="/finance/accountmanagement/withdraw"/>
+            <mvc:mapping path="/finance/accountmanagement/transfer"/>
+            <mvc:mapping path="/finance/accountmanagement/unbindBankcard"/>
+            <mvc:mapping path="/finance/accountmanagement/bindBank"/>
+
+            <bean class="com.fenlibao.pms.launch.interceptor.LogInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+    <import resource="spring-mvc-shiro.xml"/>
+    <import resource="spring-task.xml"/>
+</beans>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.finance.returngold.ReturnGoldMapper">
+
+    <select id="getExperienceGoldCostList" resultType="ReturnExperienceGoldVO">
+        SELECT tmp0.id,tmp0.activityCode,tmp0.experienceGold,tmp0.effectDay,tmp0.yearYield
+        ,COUNT(tmp0.userId) AS usersCount,SUM(daysy) AS userspay FROM
+        (
+        SELECT
+        uexp.`user_id` AS userId,
+        egold.`id` AS id,
+        egold.activity_code AS activityCode,
+        egold.`experience_gold` AS experienceGold,
+        egold.`effect_day` AS effectDay,
+        egold.`year_yield` AS yearYield,
+        (FLOOR(egold.`experience_gold` * egold.`year_yield` / 365) * egold.`effect_day` / 100) AS daysy
+        FROM  flb.`t_user_experience` AS uexp  INNER JOIN flb.`t_experience_gold` AS egold
+        ON uexp.gold_id = egold.id
+        <where>
+            uexp.`yield_status` = 'YWC'
+            AND uexp.`grant_status` = 1
+            <if test="costStartTime != null">
+                <![CDATA[AND uexp.end_time >= #{costStartTime}]]>
+            </if>
+            <if test="costEndTime != null">
+                <![CDATA[AND uexp.end_time  <= #{costEndTime}]]>
+            </if>
+            <if test="goldCode != null and goldCode != ''">
+                AND egold.activity_code like '%${goldCode}%'
+            </if>
+        </where>
+        ) AS tmp0 GROUP BY tmp0.id ORDER BY tmp0.id
+    </select>
+
+    <select id="getExperienceGoldTotal" resultType="java.math.BigDecimal">
+        SELECT SUM(tmp3.userspay) total FROM
+        (SELECT tmp0.id,tmp0.activityCode,tmp0.experienceGold,tmp0.effectDay,tmp0.yearYield
+        ,COUNT(tmp0.userId) AS usersCount,SUM(daysy) AS userspay FROM
+        (
+        SELECT
+        uexp.`user_id` AS userId,
+        egold.`id` AS id,
+        egold.activity_code AS activityCode,
+        egold.`experience_gold` AS experienceGold,
+        egold.`effect_day` AS effectDay,
+        egold.`year_yield` AS yearYield,
+        (FLOOR(egold.`experience_gold` * egold.`year_yield` / 365) * egold.`effect_day` / 100) AS daysy
+        FROM  flb.`t_user_experience` AS uexp  INNER JOIN flb.`t_experience_gold` AS egold
+        ON uexp.gold_id = egold.id
+        <where>
+            uexp.`yield_status` = 'YWC'
+            AND uexp.`grant_status` = 1
+            <if test="costStartTime != null">
+                <![CDATA[AND uexp.end_time >= #{costStartTime}]]>
+            </if>
+            <if test="costEndTime != null">
+                <![CDATA[AND uexp.end_time  <= #{costEndTime}]]>
+            </if>
+            <if test="goldCode != null and goldCode != ''">
+                AND egold.activity_code like '%${goldCode}%'
+            </if>
+        </where>
+        ) AS tmp0 GROUP BY tmp0.id) AS tmp3
+    </select>
+
+    <!-- 详情 and eg.`arrival_status` = 'S'-->
+    <select id="getExperienceGolddetails" resultType="ReturnExperienceGoldVO">
+        SELECT tmp1.gold_id as id,tmp1.dd as earningsDate,tmp1.pays as userspay,uu.F04 as telphone FROM
+        (
+        SELECT
+        ug.`id`,
+        ug.`gold_id`,
+        eg.`user_id`,
+        DATE_FORMAT(DATE_ADD(ug.`end_time`, INTERVAL 1 DAY),'%Y-%m-%d') AS dd,
+        SUM(eg.`amount`) AS pays
+        FROM
+        flb.`t_user_experience` AS ug
+        INNER JOIN flb.`t_experience_earnings` AS eg
+        ON ug.`id` = eg.`exp_id`
+        <where>
+            ug.`yield_status` = 'YWC'
+            AND ug.`grant_status` = 1
+            AND ug.`gold_id` = #{gid}
+            <if test="costStartTime != null">
+                <![CDATA[AND ug.end_time >= #{costStartTime}]]>
+            </if>
+            <if test="costEndTime != null">
+                <![CDATA[AND ug.end_time  <= #{costEndTime}]]>
+            </if>
+        </where>
+        GROUP BY ug.`id`
+        ) AS tmp1 INNER JOIN s61.`t6110` AS uu
+        ON tmp1.`user_id` = uu.`F01`
+        <where>
+            <if test="telphone != null and telphone != ''">
+                AND uu.f04 =  #{telphone}
+            </if>
+        </where>
+    </select>
+</mapper>

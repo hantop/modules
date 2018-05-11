@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.idmt.role.RoleMapper">
+
+    <resultMap id="BaseResultMap" type="RoleVO">
+        <id column="id" property="id" jdbcType="INTEGER" />
+        <result column="parent_id" property="parentId" jdbcType="INTEGER" />
+        <result column="name" property="name" jdbcType="VARCHAR" />
+        <result column="description" property="description" jdbcType="VARCHAR" />
+        <result column="sort" property="sort" jdbcType="VARCHAR" />
+        <result column="create_time" property="createTime" jdbcType="DATE" />
+        <result column="isParent" property="isParent" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Sql">
+        id,
+        parent_id parentId,
+        name,
+        sort,
+        description,
+        (
+          CASE parent_id
+            WHEN 0 THEN 'true'
+            ELSE 'false'
+          END
+        ) isParent
+    </sql>
+
+    <select id="getRoles" resultType="RoleVO">
+        SELECT
+        <include refid="Base_Sql"/>
+        FROM pms.idmt_role
+        ORDER BY parent_id, sort
+    </select>
+
+    <delete id="removeRole" parameterType="Integer">
+        DELETE FROM pms.idmt_role
+        WHERE id = #{roleId}
+    </delete>
+
+    <select id="getCountByName" parameterType="String" resultType="int">
+        SELECT
+          COUNT(1)
+        FROM
+          pms.idmt_role
+        WHERE
+          name = #{roleName}
+    </select>
+
+    <update id="updateRoleParent">
+        UPDATE pms.idmt_role
+        SET
+          parent_id = #{parentId}
+        WHERE
+          id = #{id}
+    </update>
+
+    <update id="updateRole" parameterType="com.fenlibao.model.pms.idmt.role.Role">
+        UPDATE pms.idmt_role
+        SET
+          parent_id = #{parentId},
+          name = #{name},
+          description = #{description},
+          sort = #{sort}
+        WHERE
+          id = #{id}
+    </update>
+
+    <insert id="addRole" parameterType="com.fenlibao.model.pms.idmt.role.Role" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms.idmt_role(parent_id,name, description, sort, create_time)
+        VALUES(#{parentId}, #{name}, #{description}, #{sort}, now())
+    </insert>
+
+    <insert id="addUserRoles" parameterType="java.util.List" useGeneratedKeys="true">
+        INSERT INTO pms.idmt_user_role
+        (user_id,role_id, create_time)
+        VALUES
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.userId},#{item.roleId},#{item.createTime})
+        </foreach>
+    </insert>
+
+    <sql id="columns">
+        id,
+        parent_id parentId,
+        name,
+        description description,
+        create_time createTime,
+        sort
+    </sql>
+
+    <select id="findAllRoles" resultType="com.fenlibao.model.pms.idmt.role.vo.RoleVO">
+        SELECT
+          <include refid="columns"/>
+        FROM
+          pms.idmt_role
+    </select>
+
+    <select id="findRoleById" parameterType="Integer" resultType="com.fenlibao.model.pms.idmt.role.vo.RoleVO">
+        SELECT
+          <include refid="columns"/>
+        FROM
+          pms.idmt_role
+        WHERE
+          id = #{roleId}
+    </select>
+
+    <select id="findRoleByName" resultType="com.fenlibao.model.pms.idmt.role.vo.RoleVO">
+        SELECT
+          <include refid="columns"/>
+        FROM
+          pms.idmt_role
+        WHERE
+          name like '%${name}%'
+    </select>
+
+
+    <select id="findUserRolesByUsername" parameterType="java.lang.String" resultType="RoleVO">
+        SELECT
+        pms.idmt_role.id id,
+        pms.idmt_role.parent_id parentId,
+        pms.idmt_role.name name,
+        pms.idmt_role.description description,
+        pms.idmt_role.create_time createTime,
+        pms.idmt_role.sort sort
+        FROM pms.idmt_role
+        LEFT JOIN pms.idmt_user_role ON (pms.idmt_user_role.role_id = pms.idmt_role.id)
+        LEFT JOIN pms.idmt_user ON (pms.idmt_user.id = pms.idmt_user_role.user_id)
+        WHERE pms.idmt_user.username = #{username}
+    </select>
+
+    <delete id="deleteUserRole" parameterType="java.lang.Integer" flushCache="true">
+        <![CDATA[
+           delete from pms.idmt_user_role where user_id = #{userId}
+        ]]>
+    </delete>
+</mapper>

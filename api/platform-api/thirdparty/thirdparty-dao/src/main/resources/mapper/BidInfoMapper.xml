@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.platform.dao.thirdparty.BidInfoMapper">
+	
+	<select id="getBidInfoList" parameterType="java.util.Map" resultType="BidInfoEntity">
+		SELECT
+			v_bid_info.projectId,
+			v_bid_info.title,
+			v_bid_info.amount,
+			v_bid_info.voteAmount,
+			v_bid_info.interestRate,
+			v_bid_info.typeName,
+			v_bid_info.repaymentType,
+			v_bid_info.province,
+			v_bid_info.city,
+			v_bid_info.userID,
+			v_bid_info.amountUsedDesc,
+			v_bid_info.successTime,
+			v_bid_info.publishTime,
+			v_bid_info.deadline_m,
+			v_bid_info.deadline_d,
+			v_bid_info.state
+		FROM
+			pf.v_bid_info
+		<where>     
+		     <if test='bidState == "success"'>
+				v_bid_info.voteAmount <![CDATA[<]]> 100
+			 </if>
+			 <if test='bidState == "360success"'>
+				and v_bid_info.state <![CDATA[<>]]> 'YLB' AND v_bid_info.successTime is not null
+			 </if>
+			 
+			 <if test='successDate != null'>
+				and DATE_FORMAT(v_bid_info.successTime, '%Y-%m-%d') = DATE_FORMAT(#{successDate}, '%Y-%m-%d')
+			 </if>
+			 <if test='publishDate != null'>
+				and DATE_FORMAT(v_bid_info.publishTime, '%Y-%m-%d') = DATE_FORMAT(#{publishDate}, '%Y-%m-%d')
+			 </if>
+		</where>     
+		LIMIT
+			#{page},#{pageSize}
+
+	</select>
+	
+	<select id="getTotalCount" parameterType="java.util.Map"   resultType="java.lang.Integer">
+		SELECT
+			count(1)
+		FROM
+			pf.v_bid_info
+		<where>     
+		     <if test='bidState == "success"'>
+				v_bid_info.voteAmount <![CDATA[<]]> 100
+			 </if>
+			 <if test='bidState == "360success"'>
+				and v_bid_info.state <![CDATA[<>]]> 'YLB' AND v_bid_info.successTime is not null
+			 </if>
+			 <if test='bidState == "TBZ"'>
+				and v_bid_info.state = #{bidState}
+			 </if>
+			 
+			 <if test='successDate != null'>
+				and DATE_FORMAT(v_bid_info.successTime, '%Y-%m-%d') = DATE_FORMAT(#{successDate}, '%Y-%m-%d')
+			 </if>
+			 <if test='publishDate != null'>
+				and DATE_FORMAT(v_bid_info.publishTime, '%Y-%m-%d') = DATE_FORMAT(#{publishDate}, '%Y-%m-%d')
+			 </if>
+		</where>   
+	</select>
+	
+	<select id="getTotalAmount" parameterType="java.util.Map"   resultType="java.lang.Double">
+		SELECT
+			SUM(amount-voteAmount)
+		FROM
+			pf.v_bid_info
+		<where>
+			 <if test='bidState == "360success"'>
+				and v_bid_info.state <![CDATA[<>]]> 'YLB' AND v_bid_info.successTime is not null
+			 </if>
+			 <if test='successDate != null'>
+				and DATE_FORMAT(v_bid_info.successTime, '%Y-%m-%d') = DATE_FORMAT(#{successDate}, '%Y-%m-%d')
+			 </if>
+		</where>
+	</select>
+	
+	
+	<select id="getBidInvestrecordsList" parameterType="java.util.Map" resultType="BidInvestrecordsEntity">
+		SELECT
+			v_bid_investrecords.projectId,
+			v_bid_investrecords.subscribeUserName,
+			v_bid_investrecords.amount,
+			v_bid_investrecords.addDate,
+			v_bid_investrecords.type
+		FROM
+			pf.v_bid_investrecords
+		WHERE
+		   v_bid_investrecords.projectId=#{projectId}
+
+		LIMIT
+			#{page},#{pageSize}
+
+	</select>
+
+
+
+	<select id="getBidInfoListByIds" parameterType="java.util.Map" resultType="BidInfoEntity">
+			SELECT
+				v_bid_info.projectId,
+				v_bid_info.voteAmount,
+				v_bid_info.state
+			FROM
+				pf.v_bid_info
+			<where>     
+			
+			  v_bid_info.projectId IN<foreach collection="ids" item="id" index="index" open="(" separator="," close=")">
+				#{id}
+				</foreach>
+			</where>     
+	</select>
+	
+	<select id="getTotalCountByIds" parameterType="java.util.Map"   resultType="java.lang.Integer">
+		SELECT
+			count(1)
+		FROM
+			pf.v_bid_info
+		<where>     
+		     v_bid_info.projectId IN<foreach collection="ids" item="id" index="index" open="(" separator="," close=")">
+			#{id}
+			</foreach>
+		</where>     
+	</select>
+	
+	
+	<select id="getBidInfoListWDTY" parameterType="java.util.Map" resultType="BidInfoEntity">
+		SELECT
+			v_bid_info.projectId,
+			v_bid_info.title,
+			v_bid_info.amount,
+			v_bid_info.voteAmount,
+			v_bid_info.interestRate,
+			v_bid_info.typeName,
+			v_bid_info.repaymentType,
+			v_bid_info.province,
+			v_bid_info.city,
+			v_bid_info.userID,
+			v_bid_info.amountUsedDesc,
+			v_bid_info.successTime,
+			v_bid_info.publishTime,
+			v_bid_info.deadline_m,
+			v_bid_info.deadline_d,
+			v_bid_info.state
+		FROM
+			pf.v_bid_info
+		<where>     
+		    <if test='bidState == "success"'>
+		        v_bid_info.state <![CDATA[<>]]> 'YLB' 
+		        AND v_bid_info.successTime is not null
+				AND v_bid_info.successTime <![CDATA[>=]]> #{time_from}
+				AND v_bid_info.successTime <![CDATA[<=]]> #{time_to}
+			</if>
+			<if test='bidState == "TBZ"'>
+				AND v_bid_info.publishTime <![CDATA[>=]]> #{time_from}
+				AND v_bid_info.publishTime <![CDATA[<=]]> #{time_to}
+			</if>
+		</where>     
+		LIMIT
+			#{page},#{pageSize}
+	</select>
+	
+	<select id="getTotalCountWDTY" parameterType="java.util.Map"   resultType="java.lang.Integer">
+		SELECT
+			count(1)
+		FROM
+			pf.v_bid_info
+		<where>     
+		     <if test='bidState == "success"'>
+				 v_bid_info.state <![CDATA[<>]]> 'YLB' 
+		        AND v_bid_info.successTime is not null
+				and v_bid_info.successTime <![CDATA[>=]]> #{time_from}
+				and v_bid_info.successTime <![CDATA[<=]]> #{time_to}
+			</if>
+			<if test='bidState == "TBZ"'>
+				and v_bid_info.publishTime <![CDATA[>=]]> #{time_from}
+				AND v_bid_info.publishTime <![CDATA[<=]]> #{time_to}
+			</if>
+		</where>   
+	</select>
+	
+	<select id="getInvestrecordsCountWDTY" parameterType="java.util.Map"   resultType="java.lang.Integer">
+		SELECT
+			count(1)
+		FROM
+			pf.v_bid_investrecords
+		WHERE
+		   v_bid_investrecords.projectId=#{projectId}
+ 
+	</select>
+
+	<select id="getWDZJPrepaymentBidInfoList" parameterType="java.util.Map" resultType="BidInfoEntity">
+		SELECT
+		t6230.F01 AS projectId,
+		t6230.F03 AS title,
+		t6230.F05 AS amount,
+		t6230.F07 AS voteAmount,
+		t6230.F06 AS interestRate,
+		t6230.F33 AS typeName,
+		t6230.F10 AS repaymentType,
+		t6230.F02 AS userID,
+		t6230.F22 AS publishTime,
+		t6231.F11 AS successTime ,
+		t6230.F09 AS deadline_m,
+		t6230.F32 AS deadline_d,
+		t6230.F20 AS state
+		FROM
+		s62.t6230  INNER JOIN s62.t6231 ON t6231.F01 = t6230.F01
+		WHERE
+		t6230.F05>=1000000
+		AND
+		t6230.f20 IN ('TBZ','DFK','HKZ','DFZ') ORDER BY t6230.F05 DESC
+	</select>
+
+	<select id="getWDZJPrepaymentTotalCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+		count(*)
+		FROM
+		s62.t6230  INNER JOIN s62.t6231 ON t6231.F01 = t6230.F01
+		WHERE
+		t6230.F05>=1000000
+		AND
+		t6230.f20 IN ('TBZ','DFK','HKZ','DFZ') ORDER BY t6230.F05 DESC
+	</select>
+
+
+	<update id="setWDZJPrepaymentBids" parameterType="java.util.List">
+		UPDATE pf.v_bid_info a
+		<trim prefix="set" suffixOverrides=",">
+			<trim prefix=" a.voteAmount = case " suffix=" end,">
+				<foreach collection="list" item="item" index="index">
+					when a.projectId = #{item.projectId} then #{item.amount}
+				</foreach>
+			</trim>
+			<trim prefix=" a.state = case " suffix=" end,">
+				<foreach collection="list" item="item" index="index">
+					when a.projectId = #{item.projectId} then 'YJQ'
+				</foreach>
+			</trim>
+		</trim>
+		WHERE
+		a.projectId IN
+		<foreach collection="list" separator="," item="i" index="index" open="(" close=")" >
+			#{i.projectId}
+		</foreach>
+	</update>
+
+</mapper>

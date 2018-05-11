@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserAccountMapper">
+	<select id="getUserAccount" parameterType="java.util.Map" resultType="UserAccount">
+		SELECT
+			a.F01 as accountId,a.F03 as type,a.F06 as balance,a.F02 as userId
+		FROM
+			S61.T6101 AS a
+		<where>
+			<if test="userId != null">
+				AND a.F02 = #{userId}
+			</if>
+			<if test="type != null">
+				AND a.F03 = #{type}
+			</if>
+		</where>			
+	</select>
+
+	<insert id="addUserAccount">
+		INSERT INTO S61.T6101
+		  SET
+		  	F02 = #{userId},
+		  	F03 = #{type},
+		  	F04 = #{account},
+		  	F05 = #{accountName}
+	</insert>
+	
+	<select id="getWLZHBalance" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(F06,0) FROM s61.t6101 WHERE F02 = #{userId} AND F03 = 'WLZH' LIMIT 1
+	</select>
+
+	<select id="getSdUserFreezeSum" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT
+		IFNULL(userFree.F06, 0)
+		FROM
+		s61.t6101 userFree
+		WHERE
+		userFree.F03 = 'SDZH'
+		AND userFree.F02 = #{userId} LIMIT 1
+	</select>
+
+	<select id="getNewTenderFreezeSum" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT SUM(sumTemp)
+		FROM
+		(
+			SELECT IFNULL(SUM(t6250.`F04`),0) AS sumTemp
+			FROM s62.`t6250` t6250
+			LEFT JOIN s62.t6230 t6230 ON t6250.`F02` = t6230.`F01`
+			WHERE
+
+			t6250.`F01` NOT IN (SELECT tupp.`tender_id` FROM flb.`t_user_plan_product` tupp)
+			AND t6230.`F20` IN ('TBZ', 'DFK')
+			AND t6250.`F03` = #{userId}
+            AND t6230.`F38` = #{cgNum}
+			UNION ALL
+
+			SELECT IFNULL(SUM(tup.`invest_amount`),0) AS sumTemp
+			FROM flb.`t_user_plan` tup
+			LEFT JOIN flb.`t_invest_plan` tip ON tup.`plan_id` = tip.`id`
+			WHERE tip.`status` IN (4) AND tup.status IN (1)
+			AND tup.`user_id` = #{userId}
+			AND tip.`is_cg` = #{cgNum}
+		) temp
+	</select>
+
+	<select id="getPlanFreezeSum" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(IFNULL(temp2.`freezeInvested`, 0)), 0) + IFNULL(SUM(IFNULL(temp2.`freezeAmount`, 0)), 0)
+		FROM
+		(
+			SELECT
+				SUM(IFNULL(temp.freezeInvested, 0)) AS freezeInvested,
+				IF(temp.`status` IN (5, 6), (SUM(IFNULL(temp.freezeAmount,0)) - tup.invest_amount), 0) AS freezeAmount
+			FROM
+			(
+				SELECT
+					(
+						CASE
+						<!--计划投标中，已经匹配标，放款未回款，加上（放款金额-回款金额(异常回款)）-->
+						WHEN tip.`status` IN (4) THEN IF((tupp.tender_id IS NOT NULL AND tupp.product_id IS NOT NULL AND tupp.product_id != 0 AND (
+						tupp.return_amount = 0 OR t6230.F20 NOT IN ('YJQ','YDF')
+						)) , (IFNULL(tupp.amount, 0) - IFNULL(tupp.return_amount, 0)), 0)
+						<!--计划已放款，已经匹配标，未放款，减去未放款的投资金额-->
+						WHEN tip.`status` IN (5, 6) THEN IF((tupp.tender_id IS NOT NULL AND (tupp.product_id IS NULL OR tupp.product_id = 0)), 0 - IFNULL(tupp.amount, 0), 0)
+						END
+					) AS freezeInvested,
+					<!--计划已放款，减去该投资记录的剩余冻结金额（未匹配的金额和回款的金额）-->
+					IF(tip.`status` IN (5, 6), (IFNULL(tupp.amount, 0) - IFNULL(tupp.return_amount, 0)), 0) AS freezeAmount,
+					tup.`id` AS user_plan_id,
+					tip.`status`
+				FROM
+					flb.`t_user_plan` tup
+				LEFT JOIN flb.`t_invest_plan` tip ON tip.`id` = tup.`plan_id`
+				LEFT JOIN flb.`t_user_plan_product` tupp ON tupp.`user_plan_id` = tup.`id`
+
+				LEFT JOIN s62.`t6250` t6250 ON t6250.F01 = tupp.tender_id
+				LEFT JOIN s62.`t6230` t6230 ON t6250.F02 = t6230.`F01`
+
+				WHERE
+					tup.`user_id` = #{userId}
+					AND tup.status IN (1,2,4)
+			) temp
+			LEFT JOIN flb.`t_user_plan` tup ON temp.`user_plan_id` = tup.`id`
+			GROUP BY temp.`user_plan_id`
+		) temp2
+	</select>
+
+	<select id="getCgBalance" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT IFNULL(F06,0) FROM s61.t6101 WHERE F02 = #{userId} AND F03 = 'XW_INVESTOR_WLZH' LIMIT 1
+	</select>
+</mapper>

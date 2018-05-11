@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SendSmsRecordMapper">
+	<insert id="insertSendSmsRecord" parameterType="SendSmsRecord">
+	   <selectKey resultType="java.lang.Integer" order="AFTER" keyProperty="id">
+          SELECT LAST_INSERT_ID() AS id
+       </selectKey>
+	  insert into S10._1040 (F02, F03, F04,F05,F06,F07)
+      values (#{type,jdbcType=INTEGER}, #{content,jdbcType=VARCHAR},#{createTime,jdbcType=TIMESTAMP},
+      #{status,jdbcType=VARCHAR},#{outTime,jdbcType=TIMESTAMP},#{userId,jdbcType=INTEGER})
+	</insert>
+	
+	<select id="userSendPhoneCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(1) FROM S10._1040 t LEFT JOIN S10._1041 w ON t.F01 = w.F01
+		WHERE t.F02 = #{type,jdbcType=INTEGER} AND w.F02 = #{phone,jdbcType=VARCHAR} AND DATE_FORMAT(t.F04, '%Y-%m-%d') = DATE_FORMAT(CURRENT_TIMESTAMP (),'%Y-%m-%d')
+	</select>
+</mapper>

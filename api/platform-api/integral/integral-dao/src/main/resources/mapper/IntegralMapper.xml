@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.platform.dao.integral.IntegralMapper">
+    <select id="getPointsType" parameterType="String" resultType="PointsType">
+        select
+          id,
+          parent_id parentId,
+          type_name typeName,
+          type_code typeCode,
+          type_logo typeLogo,
+          change_type changeType,
+          is_root isRoot,
+          remark
+        from `mp`.`mp_points_type`
+        where type_code = #{typecode}
+    </select>
+
+    <select id="getPointsConfig" parameterType="_int" resultType="PointsConfig">
+        select
+          id,
+          t_id tId,
+          exchange_point exchangePoint,
+          start_time startTime,
+          end_time endTime
+        from `mp`.`mp_consume_points_config`
+        where t_id = #{pointsTypeId}
+    </select>
+
+    <insert id="saveMemberPoints" useGeneratedKeys="true" keyProperty="id" parameterType="MemberPoints">
+        insert into `mp`.`mp_member_points_sheet`
+          (t_id, user_id, numbers, change_type, create_time)
+        values
+          (#{tId}, #{userId}, #{numbers}, #{changeType}, sysdate())
+    </insert>
+
+    <select id="getMemberPointsRecord" parameterType="_int" resultType="PointsRecord">
+        select
+          id,
+          user_id userId,
+          numbers,
+          point_status pointStatus,
+          create_time createTime
+        from `mp`.`mp_member_points`
+        where user_id = #{userId}
+    </select>
+
+    <select id="getMemberConsumeRecord" resultType="MemberConsumeRecord">
+        select
+          id,
+          openid,
+          m_id mId,
+          amount,
+          create_time createTime,
+          d_id dId,
+          pos_c_id posCId
+        from `mp`.`mp_member_consume_sheet`
+        where pos_c_id = #{pos_sn}
+    </select>
+
+    <update id="updateMemberPointsRecord" parameterType="PointsRecord">
+        update `mp`.`mp_member_points` set numbers = #{numbers} where id = #{id}
+    </update>
+    
+    <select id="getId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+    	SELECT id FROM mp.mp_member_points WHERE user_id = #{userId} LIMIT 1
+    </select>
+    
+    <select id="getPoints" parameterType="java.lang.String" resultType="java.lang.Integer">
+    	SELECT numbers FROM mp.mp_member_points WHERE point_status = 1 AND user_id = #{userId} LIMIT 1
+    </select>
+
+    <select id="getMemberPointsRecordByOpenid" parameterType="java.lang.String" resultType="PointsRecord">
+        SELECT p.id id,
+          p.user_id userId,
+          p.numbers numbers,
+          p.point_status pointStatus,
+          p.create_time createTime
+        FROM mp.mp_member_points p INNER JOIN pf.pf_member_info mi ON p.id = mi.member_points_id INNER JOIN pf.pf_merchant_member mm ON mi.merchant_member_id = mm.id WHERE mm.openid = #{openid} LIMIT 1
+    </select>
+
+    <select id="getThisMonthPoints" resultType="MonthPoints">
+        SELECT mmpm.id id,
+        mmpm.user_id userId,
+        mmpm.month month,
+        mmpm.type_code typeCode,
+        mmpm.sum_points sumPoints,
+        mmpm.open_id openId
+        FROM mp.mp_member_points_month mmpm
+        WHERE mmpm.open_id = #{openId}
+        AND mmpm.type_code = #{typeCode}
+        AND DATE_FORMAT(mmpm.month,'%y-%m') = DATE_FORMAT(NOW(),'%y-%m')
+        LIMIT 1
+    </select>
+
+    <insert id="insertMonthPoints" useGeneratedKeys="true" keyProperty="id" parameterType="MonthPoints">
+        insert into `mp`.`mp_member_points_month`
+        (user_id, month, type_code, sum_points, open_id)
+        values
+        (#{userId}, #{month}, #{typeCode}, #{sumPoints}, #{openId})
+    </insert>
+
+    <update id="updateThisMonthPoints">
+        update `mp`.`mp_member_points_month` set user_id = #{userId}, sum_points = #{sumPoints} where id = #{id}
+    </update>
+
+</mapper>

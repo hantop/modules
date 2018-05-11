@@ -1,0 +1,51 @@
+Main-Class: org.springframework.boot.loader.WarLauncher
+Start-Class: com.fenlibao.p2p.Application
+---
+spring:
+  datasource:
+    url: jdbc:mysql://192.168.27.239:3306/sms?autoReconnect=true&failOverReadOnly=false&characterEncoding=utf8&useUnicode=true
+    username: develop
+    privateKey: MIIBUwIBADANBgkqhkiG9w0BAQEFAASCAT0wggE5AgEAAkEAgiIW2Tn0tnmELcsyykV/1U3EMiT6z0XMx0VAddRTC8a10T29CrpPUmEBOPUv1y1r4K4taCGu14nEMOG/YDG9PwIDAQABAkBjw8SmhpMALcrS3Lw0a/Gj0rm+A7Gwo/9pKcNQUhXUqUuA5Djn3GOA0M54M3DgqdYeivS/USG+KW06o9udV3RxAiEAvUzdEhueqWI26n12/W+vYf67hBMbOcb23WCv6UqzSLkCIQCv/EZoa50ceQK97rx4cV+bGZueN9CZrsZlreIF7qxJtwIgPhZSv9itPlMHPfuupksWU+bPq+70VAvs9gj7SWIF0YkCIDUUe0wNgVLQMQKGmnQdhf+rBqP/I7zm2VJb0vuFFJQbAiAgRILBwHdaqSqj+zrVUp9hglGArc6TA+G/1RAsfu0a9Q==
+    password: AQz9himbGasVN/HveJNP0JOljfpM3MvmL0Ysr97VjwD2H9pCILoT6VB/AcQXGcJYnJOA/uGxrZDwol2pDmreyA==
+    publickey: MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAIIiFtk59LZ5hC3LMspFf9VNxDIk+s9FzMdFQHXUUwvGtdE9vQq6T1JhATj1L9cta+CuLWghrteJxDDhv2AxvT8CAwEAAQ==
+    connectionProperties: config.decrypt=true;config.decrypt.key=${spring.datasource.publickey}
+    initialSize: 0
+    maxActive: 20
+    minIdle: 0
+    maxWait: 60000
+    validationQuery: select 1 from dual
+    testOnBorrow: true
+    testOnReturn: false
+    testWhileIdle: true
+    timeBetweenEvictionRunsMillis: 3600000
+    minEvictableIdleTimeMillis: 25200000
+    removeAbandoned: true
+    removeAbandonedTimeout: 1800
+    logAbandoned: true
+    filters: config
+  mybatis:
+    mapper-location: classpath*:mapper/*.xml
+    config-location: classpath:mybatis-config.xml
+  http:
+    encoding:
+      charset: UTF-8
+  jpa:
+    show-sql: true
+---
+logging:
+  file: /logs/sms.log
+  level.*: debug
+
+---
+server:
+  port: 8989
+  tomcat:
+    access_log_enabled: true
+    basedir: target/tomcat
+---
+sms:
+#EMAY("易美"),XUANWU_STANDARD("玄武普通短信通道"),XUANWU_MARKET("玄武营销通道");
+  default: XUANWU_STANDARD
+---
+alidayu:
+  enable: true

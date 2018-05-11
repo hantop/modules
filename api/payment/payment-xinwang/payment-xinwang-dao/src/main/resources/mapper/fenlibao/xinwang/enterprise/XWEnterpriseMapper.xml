@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWEnterpriseMapper">
+
+    <select id="getCountEnterpriseUser" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM s61.t6161 WHERE F01 = #{userId};
+    </select>
+
+    <insert id="insertEnterpriseInfoToT6161" parameterType="com.fenlibao.p2p.model.xinwang.param.account.EnterpriseRegisterRequestParams">
+      INSERT INTO `s61`.`t6161` (
+        `F01`,
+        `F02`,
+        `F03`,
+        `F04`,
+        `F05`,
+        `F06`,
+        `F07`,
+        `F08`,
+        `F09`,
+        `F10`,
+        `F11`,
+        `F12`,
+        `F13`,
+        `F14`,
+        `F15`,
+        `F16`,
+        `F17`,
+        `F18`,
+        `F19`,
+        `F20`,
+        `unified_code`,
+        `bank_license`,
+        `credit_code`
+    )
+    VALUES
+        (
+            #{userId},
+            #{enterpriseNo},
+            #{businessLicense},
+            #{enterpriseName},
+            #{taxNo},
+            #{orgNo},
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            #{legal},
+            #{legalIdCardNoWithStar},
+            #{legalIdCardNoEncrypt},
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            #{bankcardNo},
+            NULL,
+            #{unifiedCode},
+            #{bankLicense},
+            #{creditCode}
+        );
+    </insert>
+
+    <insert id="insertEnterpriseInfoToT6164" parameterType="com.fenlibao.p2p.model.xinwang.param.account.EnterpriseRegisterRequestParams">
+      INSERT INTO `s61`.`t6164` (
+            `F01`,
+            `F02`,
+            `F03`,
+            `F04`,
+            `F05`,
+            `F06`,
+            `F07`
+        )
+        VALUES
+        (
+            #{userId},
+            NULL,
+            NULL,
+            NULL,
+            NULL,
+            #{contactPhone},
+            #{contact}
+        );
+    </insert>
+
+    <update id="updateEnterpriseInfoT6161" parameterType="com.fenlibao.p2p.model.xinwang.param.account.EnterpriseRegisterRequestParams">
+        UPDATE `s61`.`t6161`
+        <set>
+            <if test="enterpriseNo != null and enterpriseNo != ''">
+                `F02` = #{enterpriseNo},
+            </if>
+            <if test="businessLicense != null and businessLicense != ''">
+                `F03` = #{businessLicense},
+            </if>
+            <if test="enterpriseName != null and enterpriseName != ''">
+                `F04` = #{enterpriseName},
+            </if>
+            <if test="taxNo != null and taxNo !=''">
+                `F05` = #{taxNo},
+            </if>
+            <if test="orgNo != null and orgNo != ''">
+                `F06` = #{orgNo},
+            </if>
+            <if test="legal != null and legal != ''">
+                `F11` = #{legal},
+            </if>
+            <if test="legalIdCardNoWithStar != null and legalIdCardNoWithStar != ''">
+                `F12` = #{legalIdCardNoWithStar},
+            </if>
+            <if test="legalIdCardNoEncrypt != null and legalIdCardNoEncrypt != ''">
+                `F13` = #{legalIdCardNoEncrypt},
+            </if>
+            <if test="bankcardNo != null and bankcardNo != ''">
+                `F19` = #{bankcardNo},
+            </if>
+            <if test="unifiedCode != null and unifiedCode != ''">
+                `unified_code` = #{unifiedCode},
+            </if>
+            <if test="bankLicense != null and bankLicense != ''">
+                `bank_license` = #{bankLicense},
+            </if>
+            <if test="creditCode != null and creditCode != ''">
+                `credit_code` = #{creditCode},
+            </if>
+            <if test="auditStatus != null and auditStatus != ''">
+                `audit_status` = #{auditStatus},
+            </if>
+        </set>
+        WHERE
+            `F01` = #{userId};
+    </update>
+
+    <update id="updateEnterprideInfoT6164" parameterType="com.fenlibao.p2p.model.xinwang.param.account.EnterpriseRegisterRequestParams">
+        UPDATE `s61`.`t6164`
+        SET `F06` = #{contactPhone},
+         `F07` = #{contact}
+        WHERE
+            `F01` = #{userId};
+    </update>
+
+    <select id="getCountEnterpriseUser6164" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM s61.t6164 WHERE F01 = #{userId};
+    </select>
+
+    <select id="getOrganizationBaseInfo" parameterType="int" resultType="OrganizationBaseInfo">
+        SELECT
+          F01, F02,
+          F03 registerNo,
+          F04 organizationName,
+          F05, F06, F07, F08, F09, F10,
+          F11 legal,
+          F12, F13, F14, F15, F16, F17,F18,F19,F20,
+          unified_code unifiedCode,
+          bank_license bankLicense,
+          credit_code creditCode,
+          audit_status auditStatus
+        FROM
+            S61.T6161
+        WHERE
+          T6161.F01 = #{orgId}
+    </select>
+</mapper>

@@ -1,0 +1,52 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+	<groupId>com.fenlibao.sms-api.xuanwu-sms</groupId>
+    <artifactId>xuanwu-sms-service</artifactId>
+    <name>xuanwu-sms-service</name>
+	
+	<parent>
+        <artifactId>xuanwu-sms</artifactId>
+        <groupId>com.fenlibao.sms-api</groupId>
+		<version>1.0-SNAPSHOT</version>
+    </parent>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+        <dependency>
+            <groupId>com.fenlibao.sms-api.xuanwu-sms</groupId>
+            <artifactId>xuanwu-sms-config</artifactId>
+			<version>${depedency.version}</version>
+        </dependency>		
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jvnet.jaxb2.maven2</groupId>
+                <artifactId>maven-jaxb2-plugin</artifactId>
+                <version>0.12.3</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <schemaLanguage>WSDL</schemaLanguage>
+                    <generatePackage>com.fenlibao.p2p.xuanwu.wsdl</generatePackage>
+                    <schemas>
+                        <schema>
+                            <url>http://211.147.239.62/Service/WebService.asmx?wsdl</url>
+                        </schema>
+                    </schemas>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

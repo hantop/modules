@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.loanList.LoanListMapper">
+	<select id="getLoanList" resultType="LoanList">
+        SELECT
+            t6230.F01 bidId/*标Id*/,
+            t6110.F01 borrowerId/*借款用户Id*/,
+            t6110.F02 borrowerAccount/*借款人账号*/,
+            t6230.F03 title/*标的名称*/,
+            t6230.F05 borrowMoney/*借款金额*/,
+            (t6230.F05 - t6230.F07) bidMoney/*投标金额*/,
+            t6230.F06 investRate/*投资年利率*/,
+            t6230.F20 bidStatus,
+            t6238.F06 borroweRate/*借款年利率*/,
+            CASE WHEN t6230.F09 > 0 THEN CONCAT(t6230.F09, '个月')
+            WHEN t6230.F32 > 0 THEN CONCAT(t6230.F32, '天')
+            END AS term/*借款期限*/,
+            t6231.F11 fullDate/*满标时间*/,
+            t6230.F10 repayment,
+            loan_order.F03 orderStatus,
+            t6231.entrust_payee_user_id receiptID,
+            entrustPayAccount.F02 receiptAccount
+        FROM s62.t6230
+        LEFT JOIN s61.t6110 ON t6110.F01 = t6230.F02
+        LEFT JOIN s62.t6231 ON t6230.f01 = t6231.F01
+        LEFT JOIN s62.t6238 ON t6230.f01 = t6238.F01
+        LEFT JOIN flb.t_xw_confirm_tender confirm ON confirm.project_id = t6230.F01
+        LEFT JOIN s65.t6501 loan_order ON confirm.order_id = loan_order.F01
+        LEFT JOIN s61.t6110 entrustPayAccount ON t6231.entrust_payee_user_id = entrustPayAccount.F01
+        <where>
+            t6230.F38 = 2
+            AND t6230.F36 = '0001'
+            <if test="status != null and status !=''">
+                AND t6230.F20 = #{status}
+            </if>
+            <if test="orderStatusA != null and orderStatusA != '' and orderStatusA != 'none'">
+                AND loan_order.F03 = (#{orderStatusA})
+                <if test="orderStatusB != null and orderStatusB !=''">
+                    OR loan_order.F03 = (#{orderStatusB})
+                </if>
+            </if>
+            <if test="orderStatusA == 'none'">
+                AND loan_order.F03 IS NULL
+            </if>
+            <if test="title != null and title !=''">
+                AND t6230.F03 like concat('%',trim(#{title}),'%')
+            </if>
+            <if test="borrowerAccount != null and borrowerAccount !=''">
+                AND t6110.F02 = #{borrowerAccount}
+            </if>
+            <if test="receiptAccount != null and receiptAccount !=''">
+                AND entrustPayAccount.F02 = #{receiptAccount}
+            </if>
+        </where>
+        ORDER BY t6230.F24 DESC
+	</select>
+
+    <select id="getBidStatus" resultType="string">
+        SELECT F20 bidStatus FROM s62.t6230 WHERE F01 = #{loanId}
+    </select>
+
+    <resultMap id="getOrderStatusMap" type="java.util.Map">
+        <result property="bidId" column="bidId"/>
+        <result property="orderStatus" column="orderStatus"/>
+    </resultMap>
+
+    <select id="getOrderStatus" resultMap="getOrderStatusMap">
+        SELECT
+            confirm.project_id bidId,
+            loan_order.F03 orderStatus
+        FROM
+            flb.t_xw_confirm_tender confirm
+        LEFT JOIN s65.t6501 loan_order ON confirm.order_id = loan_order.F01
+        <where>
+            <if test="bidIds != null">
+                AND confirm.project_id IN
+                <foreach collection="bidIds" item="bidId" open="(" separator="," close=")">
+                    #{bidId}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <select id="getEntrustPayBidByLoanId" resultType="EntrustPayBid">
+        SELECT
+            loan.F01 loanId,
+            loan.F02 borrowerId,
+            XW.borrower_platform_user_no borrowerPlatformUserNo,
+            xw.entrust_payee_platform_user_no entrustedPlatformUserNo,
+            account.user_type userType,
+            xw.project_type projectType
+        FROM
+            flb.t_xw_project xw
+        INNER JOIN s62.t6230 loan ON loan.F01 = xw.loan_id
+        INNER JOIN flb.t_xw_account account ON account.platform_user_no = xw.entrust_payee_platform_user_no
+        WHERE
+            xw.loan_id = #{loanId}
+    </select>
+
+    <resultMap id="getUserDetailMap" type="java.util.Map">
+        <result property="userId" column="userId"/>
+        <result property="userName" column="userName"/>
+    </resultMap>
+
+    <select id="getUserDetail" resultMap="getUserDetailMap">
+        SELECT
+            t6110.F01 userId,
+            CASE WHEN t6110.F06 = 'ZRR' THEN t6141.F02
+        WHEN t6110.F06 = 'FZRR' THEN t6161.F04 END AS userName
+        FROM s61.t6110
+        LEFT JOIN s61.t6141 ON t6110.F01 = t6141.F01
+        LEFT JOIN s61.t6161 ON t6110.F01 = t6161.F01
+        <where>
+            <if test="userIds != null">
+                AND t6110.F01 IN
+                <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+                    #{userId}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <resultMap id="getFlowBidOrderStateMap" type="java.util.Map">
+        <result property="loanId" column="loanId"/>
+        <result property="state" column="state"/>
+    </resultMap>
+
+    <select id="getFlowBidOrderState" resultMap="getFlowBidOrderStateMap">
+        SELECT
+            cancel.project_id loanId,
+            loan_order.F03 state
+        FROM flb.t_xw_cancel_tender cancel
+        LEFT JOIN s65.t6501 loan_order ON cancel.order_id = loan_order.F01
+        <where>
+            <if test="loanIds != null">
+                AND cancel.project_id IN
+                <foreach collection="loanIds" item="loanId" open="(" separator="," close=")">
+                    #{loanId}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+</mapper>

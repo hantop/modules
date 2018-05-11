@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.riskcontrol.RiskControlMapper">
+
+    <!--进单审核-->
+    <select id="getConsumerBidList" resultType="ConsumerBid">
+        select
+        tcb.id,
+        tcb.phone_num as accountNo,/*--按理说应查t6110，但是消费信贷一定会在分利宝开户成功，并且手机号是分利宝账户*/
+        tcb.phone_num as phone,
+        tcb.id_name as userName,
+        tcb.amount as loanAmount,
+        tcb.cycle as cycle,
+        tcb.cycle_type as cycleType,
+        tcb.repayment_type as paybackWay,
+        tcb.create_time as applyTime,
+
+        tcrbi.id_no   as idNo,
+
+        <if test="consumerBid.bankNo != null ">
+           t6114.F06 as bankNo,
+        </if>
+
+        tcrai.audit_status as auditStatus,
+
+        tcrai.audit_time as auditTime,
+
+        tcrai.credit_score as creditScore
+
+        from flb.t_consume_bidinfo tcb
+        left join flb.t_consume_risk_audit_info tcrai
+        on tcb.id = tcrai.bidinfo_id
+        left join flb.t_consume_risk_base_info tcrbi
+        on tcb.id = tcrbi.bidinfo_id
+        <if test="consumerBid.bankNo != null ">
+            left join s61.t6110  t6110
+            on tcb.phone_num = t6110.F02
+            left join s61.t6114  t6114
+            on t6114.F02 = t6110.F01
+        </if>
+
+        where 1=1
+
+        <if test="consumerBid.id != null and consumerBid.id != ''">
+            and tcb.id=#{consumerBid.id}
+        </if>
+
+
+        <if test="consumerBid.phone != null and consumerBid.phone != ''">
+            and tcb.phone_num=#{consumerBid.phone}
+        </if>
+
+        <if test="consumerBid.userName != null and consumerBid.userName != ''">
+
+
+            and tcb.id_name like concat('%',trim(#{consumerBid.userName}),'%')
+        </if>
+
+        <if test="consumerBid.auditStatus != null and consumerBid.auditStatus != ''">
+            and  tcrai.audit_status =#{consumerBid.auditStatus}
+        </if>
+
+        order by tcrai.audit_time DESC,tcb.create_time DESC
+    </select>
+
+    <!--风控管理消费信贷风控模型数据-反欺诈-->
+    <select id="getRiskAntiFraud" resultType="RiskAntiFraud">
+select
+bidinfo_id                 as bidInfoId                 ,
+create_time                as createTime                ,
+auth_status                as authStatus                ,
+id_query_bank_badness      as idQueryBankBadness        ,
+id_query_bank_overdue      as idQueryBankOverdue        ,
+id_query_bank_cheat        as idQueryBankCheat          ,
+id_query_bank_lost         as idQueryBankLost           ,
+id_query_bank_refuse       as idQueryBankRefuse         ,
+id_query_credit_badness    as idQueryCreditBadness      ,
+id_query_p2p_badness       as idQueryP2PBadness         ,
+id_query_p2p_overdue       as idQueryP2POverdue         ,
+id_query_p2p_cheat         as idQueryP2PCheat           ,
+id_query_p2p_lost          as idQueryP2PLost            ,
+id_query_p2p_refuse        as idQueryP2PRefuse          ,
+id_query_telecome_owe      as idQueryTelecomeOwe        ,
+id_query_insurance_cheat   as idQueryInsuranceCheat     ,
+id_query_court_break       as idQueryCourtBreak         ,
+id_query_court_enforced    as idQueryCourtEnforced      ,
+phone_query_bank_badness   as phoneQueryBankBadness     ,
+phone_query_bank_overdue   as phoneQueryBankOverdue     ,
+phone_query_bank_cheat     as phoneQueryBankCheat       ,
+phone_query_bank_lost      as phoneQueryBankLost        ,
+phone_query_bank_refuse    as phoneQueryBankRefuse      ,
+phone_query_p2p_badness    as phoneQueryP2PBadness      ,
+phone_query_p2p_overdue    as phoneQueryP2POverdue      ,
+phone_query_p2p_cheat      as phoneQueryP2PCheat        ,
+phone_query_p2p_lost       as phoneQueryP2PLost         ,
+phone_query_p2p_refuse     as phoneQueryP2PRefuse       ,
+phone_query_telecome_owe   as phoneQueryTelecomeOwe     ,
+phone_query_p2p_owe        as phoneQueryP2POwe          ,
+sign_query_bank_badness    as signQueryBankBadness      ,
+sign_query_bank_overdue    as signQueryBankOverdue      ,
+sign_query_bank_cheat      as signQueryBankCheat        ,
+sign_query_bank_lost       as signQueryBankLost         ,
+sign_query_bank_refuse     as signQueryBankRefuse       ,
+sign_query_p2p_badness     as signQueryP2PBadness       ,
+sign_query_p2p_overdue     as signQueryP2POverdue       ,
+sign_query_p2p_cheat       as signQueryP2PCheat         ,
+sign_query_p2p_lost        as signQueryP2PLost          ,
+sign_query_p2p_refuse      as signQueryP2PRefuse        ,
+sign_query_telecome_owe    as signQueryTelecomeOwe      ,
+sigh_query_insurance_cheat as sighQueryInsuranceCheat
+from flb.t_consume_risk_anti_fraud
+where bidinfo_id = #{consumerBid.id}
+    </select>
+
+    <!--风控管理消费信贷风控模型数据-审核信息-->
+    <select id="getRiskAuditInfo" resultType="RiskAuditInfo">
+select
+
+bidinfo_id	as	bidInfoId	,
+create_time	as	createTime	,
+audit_time	as	auditTime	,
+credit_score	as	creditScore	,
+audit_status	as	auditStatus
+from flb.t_consume_risk_audit_info
+where bidinfo_id = #{consumerBid.id}
+    </select>
+
+    <!--风控管理消费信贷风控模型数据-基本信息-->
+    <select id="getRiskBaseInfo" resultType="RiskBaseInfo">
+select
+bidinfo_id	as	bidinfoId	,
+create_time	as	createTime	,
+id_name	as	idName	,
+id_no	as	idNo	,
+phone_num	as	phoneNum	,
+sex	as	sex	,
+age as age,
+marry_status	as	marryStatus	,
+id_location	as	idLocation	,
+address	as	address	,
+qq	as	qq
+
+from flb.t_consume_risk_base_info
+where bidinfo_id = #{consumerBid.id}
+
+    </select>
+
+    <!--风控管理消费信贷风控模型数据-多头借贷-->
+    <select id="getRiskMutiBorrow" resultType="RiskMutiBorrow">
+select
+bidinfo_id	as	bidInfoId	,
+create_time	as	createTime	,
+device_use_muti_id_1d	as	deviceUseMutiId1D	,
+device_use_muti_id_7d	as	deviceUseMutiId7D	,
+id_use_muti_device_1d	as	idUseMutiDevice1D	,
+id_use_muti_device_7d	as	idUseMutiDevice7D	,
+id_use_muti_device_1m	as	idUseMutiDevice1M	,
+borrow_muti_platform_7d	as	borrowMutiPlatform7D	,
+borrow_muti_platform_1m	as	borrowMutiPlatform1M	,
+borrow_muti_platform_3m	as	borrowMutiPlatform3M	,
+borrow_muti_platform_6m	as	borrowMutiPlatform6M	,
+borrow_muti_platform_12m	as	borrowMutiPlatform12M	,
+borrow_muti_platform_18m	as	borrowMutiPlatform18M	,
+borrow_muti_platform_24m	as	borrowMutiPlatform24M	,
+borrow_muti_platform_60m	as	borrowMutiPlatform60M	,
+loan_exclude_3m	as	loanExclude3M	,
+loan_include_3m	as	loanInclude3M	,
+loan_muti_platform_6m	as	loanMutiPlatform6M	,
+loan_muti_platform_12m	as	loanMutiPlatform12M	,
+loan_muti_platform_18m	as	loanMutiPlatform18M	,
+loan_muti_platform_24m	as	loanMutiPlatform24M	,
+loan_muti_platform_60m	as	loanMutiPlatform60M
+from flb.t_consume_risk_mutiply_borrow
+where bidinfo_id = #{consumerBid.id}
+
+    </select>
+    <!--风控管理消费信贷风控模型数据-工作情况-->
+    <select id="getRiskWorkInfo" resultType="RiskWorkInfo">
+select
+bidinfo_id	as	bidInfoId	,
+create_time	as	createTime	,
+company_name	as	companyName	,
+company_phone	as	companyPhone	,
+company_address	as	companyAddress	,
+position	as	position	,
+monthly_income	as	monthlyIncome
+from flb.t_consume_risk_work_info
+where bidinfo_id = #{consumerBid.id}
+
+    </select>
+
+
+</mapper>

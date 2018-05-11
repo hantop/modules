@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TenderShareSettingMapper">
+    <insert id="addTenderShare" parameterType="TenderShareEntity">
+        INSERT INTO
+          flb.t_tender_share_record (tender_id,user_id,_code,quantity,remaining_qty,effective_time)
+        VALUES
+          (#{tenderId},#{userId},#{code},#{quantity},#{remainingQty},#{effectiveTime})
+    </insert>
+
+    <update id="updateShareRemainingQty" parameterType="java.util.Map">
+        UPDATE flb.t_tender_share_record SET remaining_qty = #{remainingQty} WHERE id = #{id} LIMIT 1
+    </update>
+    
+    <select id="getTenderShareSettingId" parameterType="java.math.BigDecimal" resultType="java.util.Map">
+        SELECT setting.id settingId,setting.qty qty FROM flb.t_tender_share_setting setting WHERE #{buyAmount} BETWEEN min_invest_money AND max_invest_money
+    </select>
+
+    <select id="getTenderShareEntityList" parameterType="java.util.Map" resultType="ShareRewardEntity">
+        SELECT
+                reward.id id,
+                reward.setting_id settingId,
+                reward.reward_type rewardType,
+                reward.reward_id rewardId,
+                reward.get_times getTimes,
+                reward.is_novice isNovice
+
+        FROM  flb.t_tender_share_setting_reward reward
+        WHERE
+            reward.setting_id = #{settingId}
+        <if test="isNovice != null and isNovice == 0">
+            AND reward.is_novice = #{isNovice}
+        </if>
+        FOR UPDATE
+    </select>
+
+    <select id="getRewardType" parameterType="java.util.Map" resultType="java.lang.Integer">
+       SELECT reward_type from flb.t_tender_share_setting_reward WHERE setting_id = #{settingId} AND is_novice = #{isNovice}
+    </select>
+
+    <select id="getRestNumByInvestRecord" parameterType="java.util.Map" resultType="java.lang.Integer">
+      SELECT (get_times -1) FROM flb.t_tender_share_setting_reward WHERE reward_id = #{rewardId} AND setting_id= #{settingId} AND reward_type= #{rewardType}
+    </select>
+</mapper>

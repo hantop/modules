@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWProjectMapper">
+
+    <select id="getProjectInfoById" parameterType="java.lang.Integer"
+            resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWProjectInfo">
+        select concat(a.F01,"") projectNo,a.F02 borrowerUserId,a.F03 projectName,a.F04 bidType,a.F05 projectAmount,a.F06 annnualInterestRate,a.F07 surplusAmount,a.F08 fundRaisingDays,a.F09 monthProjectPeriod,a.F10 repaymentWay,a.F20 state,a.F22 establishTime,a.F25 projectCode,a.F31 fundRaisingDeadline,a.F32 dayProjectPeriod,a.F34 inProgressOfRepay,a.F35 displayTime,a.F36 projectSource,b.borrower_platform_user_no borrowerPlatformUserNo,b.guarantee_platform_user_no guaranteePlatformUserNo,b.entrust_payee_platform_user_no entrustPayeePlatformUserNo,b.project_type projectType,b.entrust_pay_authorize_request_no entrustPayAuthorizeRequestNo
+         ,a.collect_type as collectType
+         from (select * from s62.t6230 where F01= #{loanId} and F38=2) a inner join flb.t_xw_project b ON a.F01=b.loan_id
+    </select>
+
+    <update id="establishProject" parameterType="java.util.Map">
+        UPDATE S62.T6230
+        <set>
+            <if  test="state!=null">
+                F20 = #{state},
+            </if>
+            <if test="establishTime!=null">
+                F22 = #{establishTime},
+            </if>
+            <if test="fundRaisingDeadline!=null">
+                F31 = #{fundRaisingDeadline},
+            </if>
+            <if test="displayTime!=null">
+                F35 = #{displayTime},
+            </if>
+        </set>
+       WHERE F01 = #{projectNo}
+    </update>
+
+    <select id="getTenderRecord" parameterType="java.util.Map"
+            resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderRecord">
+        SELECT a.F01 id, a.F02 projectNo, a.F03 investorId, a.F04 amount, a.F05 share, a.F06 investTime, a.F07 cancel,
+        a.F08 makeLoan,b.pre_treat_request_no preTreatRequestNo,b.investor_platform_user_no
+        investorPlatformUserNo,b.borrower_platform_user_no borrowerPlatformUserNo,b.make_loan_request_no
+        makeLoanRequestNo,b.cancel_tender_request_no cancelTenderRequestNo
+        FROM
+        (SELECT * from S62.T6250
+        <where>
+            <if test="projectNo != null">
+                and F02 = #{projectNo}
+            </if>
+            <if test="cancel != null">
+                and F07 = #{cancel}
+            </if>
+            <if test="makeLoan != null">
+                and F08 = #{makeLoan}
+            </if>
+        </where>
+        ) a
+        INNER JOIN flb.t_xw_tender b ON a.F01=b.tender_id
+
+    </select>
+
+    <select id="getProjectRateById" parameterType="java.lang.Integer"
+            resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWProjectRate">
+        select F01 projectNo,F02 transactionServiceRate,F04 lateChargeRate,F06 borrowerRate,F07 overdueCommissionRate,F09 projectRaiseInterestRate,
+         interest_percent as interestManagementRate,repayment_rate as repaymentRate
+         from s62.t6238 where F01=#{loanId}
+    </select>
+
+    <select id="getTenderRecordById" parameterType="java.lang.Integer"
+            resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderRecord">
+        SELECT a.F01 id, a.F02 projectNo, a.F03 investorId, a.F04 amount, a.F05 share, a.F06 investTime, a.F07 cancel, a.F08 makeLoan,b.pre_treat_request_no preTreatRequestNo,b.investor_platform_user_no investorPlatformUserNo,b.borrower_platform_user_no borrowerPlatformUserNo,b.make_loan_request_no makeLoanRequestNo,b.cancel_tender_request_no cancelTenderRequestNo
+        FROM S62.T6250 a
+        INNER JOIN flb.t_xw_tender b ON a.F01=b.tender_id
+        where a.F01= #{id}
+        for update
+    </select>
+
+    <insert id="insertTenderEntity" parameterType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderEntity">
+        INSERT INTO flb.t_xw_tender(tender_id,bid_id,pre_treat_request_no,investor_platform_user_no,borrower_platform_user_no,make_loan_request_no,is_send)
+        VALUES (#{tenderId},#{bidId},#{preTreatRequestNo},#{investorPlatformUserNo},#{borrowerPlatformUserNo},#{makeLoanRequestNo},#{send})
+    </insert>
+
+    <update id="updateTenderRecordById" parameterType="java.util.Map">
+        UPDATE S62.T6250
+        <set>
+            <if test="cancel!=null">
+                F07= #{cancel},
+            </if>
+            <if test="makeLoan!=null">
+                F08= #{makeLoan},
+            </if>
+        </set>
+        WHERE F01 = #{id}
+    </update>
+
+    <update id="updateProjectExtraInfo" parameterType="java.util.Map">
+        UPDATE S62.T6231
+        <set>
+            <if test="totalTerms!=null">
+                F02= #{totalTerms},
+            </if>
+            <if test="remainTerms!=null">
+                F03= #{remainTerms},
+            </if>
+            <if test="nextRepayDate!=null">
+                F06= #{nextRepayDate},
+            </if>
+            <if test="bidConfirmTime != null">
+                F12 = #{bidConfirmTime},
+            </if>
+            <if test="settleTime != null">
+                F13 = #{settleTime},
+            </if>
+            <if test="cancelTenderTime != null">
+                F15 = #{cancelTenderTime},
+            </if>
+            <if test="bearInterestDate != null">
+                F17 = #{bearInterestDate},
+            </if>
+            <if test="endDate != null">
+                F18 = #{endDate},
+            </if>
+            <if test="overdue != null">
+                F19 = #{overdue},
+            </if>
+        </set>
+        where F01= #{id}
+    </update>
+
+    <insert id="batchInsertRepaymentPlan" parameterType="java.util.List">
+        insert into s62.t6252 (F02,F03,F04,F05,F06,F07,F08,F09,F10,F11)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.projectId},#{item.payerId},#{item.payeeId},#{item.feeType},#{item.term},#{item.amount},#{item.dueDate},#{item.repayState},#{item.actualRepayTime},#{item.creditId})
+        </foreach>
+    </insert>
+
+    <update id="updateProjectInfo" parameterType="java.util.Map">
+        UPDATE s62.t6230
+        <set>
+            <if test="surplusAmount!=null">
+                F07= #{surplusAmount},
+            </if>
+            <if test="state!=null">
+                F20= #{state},
+            </if>
+            <if test="inProgressOfRepay!=null">
+                F34= #{inProgressOfRepay},
+            </if>
+        </set>
+        where F01= #{id}
+    </update>
+
+    <select id="getProjectExtraInfo" parameterType="java.lang.Integer"
+            resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWProjectExtraInfo">
+        SELECT F01 id,F02 totalTerms,F03 remainTerms,F06 nextRepayDate,F08 useFor,F12 bidConfirmTime,F13 settleTime,F15 cancelTenderTime,F17 bearInterestDate,F18 endDate,F19 overdue,F28 agreementNo,F32 joinPlan,guarantee_user_id guaranteeUserId,entrust_payee_user_id entrustPayeeUserId from s62.t6231 where F01= #{projectId}
+    </select>
+
+    <update id="setEntrustInfo" parameterType="java.util.Map">
+        UPDATE flb.t_xw_project
+        <set>
+            <if test="entrustedPlatformUserNo!=null">
+                entrust_payee_platform_user_no = #{entrustedPlatformUserNo},
+            </if>
+            <if test="authorizeRequestNo!=null">
+                entrust_pay_authorize_request_no = #{authorizeRequestNo},
+            </if>
+            <if test="authorizeStatus!=null">
+                authorize_status = #{authorizeStatus},
+            </if>
+        </set>
+        WHERE loan_id = #{loadId}
+    </update>
+
+    <select id="getPreEstablishProject" resultType="java.lang.Integer">
+        select F01 from S62.T6230 WHERE F38=2 and F20 = 'YFB' AND F22 IS NOT NULL AND F22 <![CDATA[<=]]> CURRENT_TIMESTAMP();
+    </select>
+
+    <insert id="projectJoinPlan" parameterType="java.lang.Integer">
+        insert into flb.t_plan_product_lib (product_type,product_id) values (1, #{projectId})
+    </insert>
+
+    <select id="lockRepayStatus" resultType="java.lang.Integer" parameterType="java.lang.Integer">
+        SELECT F34 FROM s62.t6230 WHERE F01 = #{projectId} FOR UPDATE
+    </select>
+
+    <select id="getSendTender" resultType="XWTenderBO">
+        SELECT
+            t1.id id,
+            t1.bid_id bidId,
+            t1.tender_id tenderId,
+            t1.pre_treat_request_no preTreatRequestNo,
+            t1.investor_platform_user_no investorPlatformUserNo,
+            t1.borrower_platform_user_no borrowerPlatformUserNo,
+            t1.make_loan_request_no makeLoanRequestNo,
+            t1.cancel_tender_request_no cancelTenderRequestNo,
+            t1.is_send send,
+            t3.F04 amount
+        FROM flb.t_xw_tender t1
+        INNER JOIN s62.t6230 t2 on t2.F01 = t1.bid_id AND t2.F20 = 'DFK' AND t2.F36 = '0002' AND t2.F38 = 2
+        INNER JOIN s62.t6250 t3 ON t3.F01 = t1.tender_id
+        WHERE t1.is_send = 0
+        LIMIT 100
+    </select>
+
+    <update id="updateXWTenderSend" parameterType="java.util.Map">
+        UPDATE flb.t_xw_tender SET is_send = #{send} WHERE id = #{id}
+    </update>
+
+    <select id="getSysTenderRecord" resultType="SysTenderRecord" parameterType="SysTenderRecord">
+        SELECT
+        F01 id,
+        F02 bidId,
+        F03 userId,
+        F04 tenderAmount,
+        F05 creditAmount,
+        F06 investTime,
+        F07 cancelFlag,
+        F08 loanFlag,
+        F09 autoFlag
+        FROM s62.t6250
+        <where>
+            <if test="bidId != null">
+                and F02 = #{bidId}
+            </if>
+            <if test="cancelFlag != null">
+                and F07 = #{cancelFlag}
+            </if>
+            <if test="loanFlag != null">
+                and F08 = #{loanFlag}
+            </if>
+        </where>
+    </select>
+
+    <select id="getBidByStatus" resultType="java.lang.Integer" parameterType="java.util.Map">
+        SELECT
+        F01 id
+        FROM s62.t6230
+        WHERE F20 = #{state} AND F38 = 2 LIMIT 500
+    </select>
+
+    <update id="updateProjectStatus" parameterType="java.util.Map">
+        UPDATE s62.t6230
+        <set>
+            <if test="state!=null">
+                F20= #{state},
+            </if>
+        </set>
+        where F01= #{id}  AND F20 = #{preState}
+    </update>
+
+    <select id="getInvestorBO" resultType="com.fenlibao.p2p.model.xinwang.bo.InvestorBO" parameterType="java.lang.Integer">
+        SELECT
+          t1.F02 userName,
+          t2.F02 realName,
+          t2.F07 idCardNo
+        FROM
+           s61.t6110 t1
+          LEFT JOIN s61.t6141 t2
+            ON t2.F01 = t1.F01
+        WHERE t1.F01  = #{id}
+    </select>
+
+
+    <insert id="saveXWProjectPrepaymentConfig" parameterType="com.fenlibao.p2p.model.xinwang.entity.project.XWProjectPrepaymentConfig">
+       INSERT
+INTO
+    flb.pre_repayment_config
+    (
+        bid_id,
+        penalty_flag,
+        penalty_type,
+        penalty_amount,
+        penalty_divide_rate,
+        original_penalty,
+        create_time
+    )VALUES (
+    #{bidId},
+         #{penaltyFlag},
+         #{penaltyType},
+         #{penaltyAmount},
+        #{penaltyDivideRate},
+        #{originalPenalty},
+        #{createTime}
+)
+ON DUPLICATE KEY UPDATE
+
+       penalty_flag = #{penaltyFlag},
+       penalty_type = #{penaltyType},
+      penalty_amount =  #{penaltyAmount},
+     penalty_divide_rate =  #{penaltyDivideRate},
+     original_penalty =  #{originalPenalty},
+      create_time = #{createTime}
+
+    </insert>
+
+
+    <select id="getInterestPercent" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT
+        interest_percent currentPercent
+        FROM flb.t_interest_management management
+        <where>
+            <if test="state != null">
+                management.state = #{state}
+            </if>
+        </where>
+        ORDER BY management.id DESC LIMIT 1
+    </select>
+
+    <update id="updateInterestPercent" parameterType="java.util.Map">
+        UPDATE s62.t6238
+        <set>
+            <if test="interestPercent!=null">
+                interest_percent = #{interestPercent}
+            </if>
+        </set>
+        where F01= #{id}
+    </update>
+
+    <select id="getCancelBidsByStatus" resultType="java.lang.Integer" parameterType="java.util.Map">
+        SELECT
+            loan.F01 id
+        FROM
+            s62.t6230 loan
+        INNER JOIN flb.t_xw_cancel_tender cancel ON loan.F01 = cancel.project_id
+        WHERE
+            loan.F20 = #{state}
+        AND loan.F38 = 2
+        LIMIT 500
+    </select>
+
+</mapper>

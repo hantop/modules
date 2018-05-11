@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ElectronicSignatrueMapper">
+    <select id="getListByStatus" parameterType="java.util.Map" resultType="ElectronicSignature">
+        SELECT
+          	t.id id,
+			t.bid bid,
+			t.liability_user_type liabilityUserType,
+			t.liability_user_name liabilityUserName,
+			t.liability_address liabilityAddress,
+			t.liability_phone liabilityPhone,
+			t.liability_id_card_no liabilityIdCardNo,
+			t.liability_unified_code liabilityUnifiedCode,
+			t.liability_juridical_person liabilityJuridicalPerson,
+			t.liability_official_seal_code liabilityOfficialSealCode,
+			t.liability_status liabilityStatus,
+			t.normal_user_name normalUserName,
+			t.normal_address normalAddress,
+			t.normal_phone normalPhone,
+			t.normal_juridical_person normalJuridicalPerson,
+			t.normal_unified_code normalUnifiedCode,
+			t.enterprise_user_name enterpriseUserName,
+			t.enterprise_phone enterprisePhone,
+			t.enterprise_official_seal_code enterpriseOfficialSealCode,
+			t.enterprise_status enterpriseStatus,
+			t.agreement_stage agreementStage,
+			t.no_sensitive_agreement noSensitiveAgreement,
+			t.sensitive_agreement sensitiveAgreement
+          FROM s62.electronic_signature t
+        <where>
+			<if test="agreementStage!=null">
+        		AND t.agreement_stage = #{agreementStage}
+			</if>
+		</where>
+    </select>
+
+	<update id="updateFileName" parameterType="java.util.Map">
+		UPDATE s62.electronic_signature
+			SET no_sensitive_agreement = #{noSensitiveAgreement},
+			sensitive_agreement = #{sensitiveAgreement}
+		WHERE id = #{id}
+	</update>
+
+	<update id="updateFileNameByBid" parameterType="java.util.Map">
+		UPDATE s62.electronic_signature
+		<set>
+			<if test="noSensitive != null and noSensitive != ''">
+				no_sensitive_agreement = #{noSensitive},
+			</if>
+			<if test="sensitive != null and sensitive != ''">
+				sensitive_agreement = #{sensitive}
+			</if>
+		</set>
+		WHERE bid = #{bid}
+	</update>
+
+	<update id="updateAgreementStage" parameterType="java.util.Map">
+		UPDATE s62.electronic_signature
+			SET agreement_stage = #{toStage}
+		WHERE id = #{id} AND agreement_stage = #{oldStage}
+	</update>
+
+	<select id="getImageList" resultType="UploadImage" >
+		SELECT
+		a.id AS id,
+		a.enterprise_official_seal_code AS enterpriseOfficialSealCode,
+		a.enterprise_status AS enterpriseStatus,
+		a.enterprise_phone AS enterprisePhoneNum,
+		a.enterprise_user_name AS enterpriseUsername,
+		c.unified_code AS enterpriseUserAccount,
+		a.liability_official_seal_code AS liabilityOfficialSealCode,
+		a.liability_status AS liabilityStatus,
+		a.liability_phone AS liabilityPhone,
+		a.liability_user_name AS liabilityName,
+		a.liability_unified_code AS liabilityUserAccount
+		FROM
+		s62.electronic_signature AS a
+		LEFT JOIN s62.t6230 b ON a.bid = b.F01
+		LEFT JOIN s61.t6161 c ON b.F02 = c.F01
+		WHERE
+		(a.enterprise_official_seal_code !=null AND a.enterprise_status = 0) OR  (a.liability_official_seal_code and a.liability_status = 0)
+		limit 10
+	</select>
+
+
+	<update id="updateSealStatus" parameterType="java.util.Map">
+		update s62.electronic_signature a
+		set
+		<if test="sealType != null and sealType == 'enterprise'">
+			a.enterprise_status =  1
+		</if>
+		<if test="sealType != null and sealType == 'liability'">
+			a.liability_status =  1
+		</if>
+		where a.id = #{id}
+	</update>
+
+</mapper>

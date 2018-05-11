@@ -1,0 +1,715 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TradeMapper">
+	<!-- 交易记录 AND funds_flow.F03 != '7002'-->
+	<select id="getRecordList" parameterType="java.util.Map" resultType="TradeRecordForm">
+		SELECT
+		funds_flow.F05 AS tradeTime,
+		convert(funds_flow.F06, decimal(20, 2)) - convert(funds_flow.F07, decimal(20, 2)) AS tradeAmount,
+		(
+		CASE
+		WHEN trade_type.F01 = 7004 then '其他'
+		WHEN trade_type.F01 = 7005 then '其他'
+		ELSE trade_type.F02
+		END
+		) AS tradeTypeName,
+
+		(
+		CASE
+		WHEN trade_type.F01 = 7004 then ''
+		WHEN trade_type.F01 = 7005 then ''
+		ELSE funds_flow.F09
+		END
+		) AS mark,
+
+		funds_flow.F08 as balance
+		FROM
+		S61.T6102 AS funds_flow
+		INNER JOIN S61.T6101 AS funds_account ON funds_flow.F02 = funds_account.F01
+		INNER JOIN S51.T5122 AS trade_type ON trade_type.F01 = funds_flow.F03
+		WHERE
+		funds_account.F02 = #{userId} AND funds_account.F03 = #{accountType}
+		AND (funds_flow.F06 - funds_flow.F07) <![CDATA[<>]]> 0
+		AND funds_flow.F13 = 'YH'
+		<if test="type == 1">
+			AND trade_type.F01 in(1001,1004)
+		</if>
+		<if test="type == 2">
+			AND trade_type.F01 in(2001,2004)
+		</if>
+		<if test="type == 3">
+			AND trade_type.F01 in(1201,2002,2003,2005,4001,1205)
+		</if>
+		<if test="type == 4">
+			AND trade_type.F01 in(3001,3002,3003,3004,3005,3006,3007,13001,33001,43001,53001,63001,73001,83001,93001)
+		</if>
+		<if test="type == 5">
+			AND trade_type.F01 in(7001,7002,7003,7004,7005,7009,7010,7011,7012,7013,7014)
+		</if>
+		<if test="type == 6">
+			AND trade_type.F01 in(5112,5113,5114,5115,5116,5118,5201,7008,7022,8001,9001,9002)
+		</if>
+		<if test="type == 7">
+			AND trade_type.F01 in(7025)
+		</if>
+		<if test="type == 8">
+			AND trade_type.F01 in(3001,3002,3003,3004,3005,3006,3007,13001,33001,43001,53001,63001,73001,83001,93001,
+			7001,7002,7003,7004,7005,7009,7010,7011,7012,7013,7014,
+			5112,5113,5114,5115,5116,5118,5201,7008,7022,8001,9001,9002)
+		</if>
+
+		<if test="dayType == 0">
+			<![CDATA[AND DATE_SUB(CURDATE(), INTERVAL 7 DAY) <= funds_flow.F05
+			AND CURRENT_TIMESTAMP()>=funds_flow.F05 ]]>
+		</if>
+
+		<if test="dayType == 1">
+			<![CDATA[AND DATE_SUB(CURDATE(), INTERVAL  1 MONTH) <= funds_flow.F05
+			AND CURRENT_TIMESTAMP()>=funds_flow.F05 ]]>
+		</if>
+		<if test="dayType == 2">
+			<![CDATA[AND DATE_SUB(CURDATE(), INTERVAL  2 MONTH) <= funds_flow.F05
+			AND CURRENT_TIMESTAMP()>=funds_flow.F05 ]]>
+		</if>
+		<if test="dayType == 3">
+			<![CDATA[AND DATE_SUB(CURDATE(), INTERVAL  3 MONTH) <= funds_flow.F05
+			AND CURRENT_TIMESTAMP()>=funds_flow.F05 ]]>
+		</if>
+
+
+		<if test="startTime !=null">
+			<![CDATA[AND funds_flow.F05 >= #{startTime}]]>
+		</if>
+		<if test="endTime !=null">
+			<![CDATA[AND funds_flow.F05 <= #{endTime}]]>
+		</if>
+
+		order by funds_flow.F01 desc
+	</select>
+	<!-- 收益记录 -->
+	<select id="getEarningsList" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT
+		IFNULL(SUM(T6252.F07), 0) AS amount
+		FROM
+		S62.T6252,
+		S62.T6230,
+		S61.T6110,
+		s62.T6211
+		WHERE
+		T6252.F02 = T6230.F01
+		AND T6230.F02 = T6110.F01
+		AND T6211.F01 = T6230.F04
+		AND T6252.F04 = #{userId}
+		AND t6252.F09 = #{status}
+		AND T6211.F05 = #{bidType}
+		AND T6252.F05 IN
+		<foreach collection="feeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+	</select>
+	<!-- 重置交易密码 -->
+	<update id="resetPassword" parameterType="java.util.Map">
+		UPDATE  S61.T6118 SET F08 = #{newPassword}, F05 = #{status} WHERE F01 = #{userId}
+	</update>
+	<!-- 免交易密码开关 -->
+	<update id="changePasswordStatus" parameterType="java.util.Map">
+		UPDATE  S61.T6118 SET F10 = #{isOpen} WHERE F01 = #{userId}
+	</update>
+	<!-- 获取交易密码 -->
+	<select id="getTradePassword" parameterType="int" resultType="java.lang.String">
+		SELECT F08 FROM s61.t6118 WHERE F01 = #{userId} LIMIT 1
+	</select>
+	<!-- 保存协议号 -->
+	<insert id="saveNoAgree" parameterType="java.util.Map">
+		INSERT INTO flb.t_pay_extend (id, no_agree) VALUES (#{userId}, #{noAgree})
+	</insert>
+	<!-- 获取协议号 -->
+	<select id="getNoAgree" parameterType="int" resultType="java.lang.String">
+		SELECT no_agree FROM flb.t_pay_extend WHERE id = #{userId} LIMIT 1
+	</select>
+	<!-- 获取待收金额（本息） -->
+	<select id="getDueInAmount" parameterType="int" resultType="DueInAmount">
+		SELECT
+  			IFNULL(SUM(CASE WHEN a.F05 = 7001 THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'principal',
+  			IFNULL(SUM(CASE WHEN a.F05 IN (7002, 7022, 7023) THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'interest' ,
+  			IFNULL(SUM(CASE WHEN a.F05 IN (7004, 7005) THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'others'
+		FROM
+	  	(
+			SELECT F05, SUM(F07) F07 FROM s62.t6252
+			WHERE F05 IN (7001, 7002, 7004, 7005, 7022, 7023)
+				AND F09 IN ('WH', 'HKZ')
+				AND F04 = #{userId}
+			GROUP BY F05
+	  	) a
+	</select>
+
+	<select id="getDueInAmountByDepository" parameterType="java.util.Map" resultType="DueInAmount">
+		SELECT
+            IFNULL(SUM(CASE WHEN a.F05 = 7001 THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'principal',
+            IFNULL(SUM(CASE WHEN a.F05 IN (7002, 7022, 7023) THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'interest' ,
+            IFNULL(SUM(CASE WHEN a.F05 IN (7004, 7005) THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'others'
+		FROM
+		(
+            SELECT s.F05, SUM(s.F07) F07 FROM s62.t6252 s
+            LEFT JOIN S62.t6230 bid ON  s.F02 = bid.F01
+            WHERE s.F05 IN (7001, 7002, 7004, 7005, 7022, 7023)
+            AND s.F09 IN ('WH', 'HKZ')
+            AND s.F04 = #{userId}
+            AND bid.F38 =1
+            GROUP BY s.F05
+		) a
+	</select>
+
+	<!-- 获取每个用户每个债权当期的收益-->
+	<select id="getProspectiveEarnings" resultType="EarningsForm">
+		SELECT
+		h.F04 userId,
+		b.F04 bidTypeId,
+		b.F01 bidId,
+		h.F07 amount,
+		z.F01 ZQ_id,
+		z.F12 ZQZR_orderId,
+		be.F17 jx_startTime,
+		be.F18 jx_endTime,
+		be.F02 period
+		FROM
+		s62.t6252 h
+		INNER JOIN s62.t6251 z ON h.F11 = z.F01
+		INNER JOIN s62.t6231 be ON h.F02 = be.F01
+		INNER JOIN s62.t6230 b ON h.F02 = b.F01
+		WHERE
+		h.F05 = 7002
+		AND h.F09 = 'WH'
+		AND CURDATE() <![CDATA[ <= ]]> h.F08
+		AND be.F17 <![CDATA[ < ]]> CURDATE()
+		GROUP BY
+		h.F11
+		ORDER BY
+		h.F08 ASC
+		<!-- LIMIT 1000 -->
+	</select>
+	<!-- 插入每个用户每个标的每天收益 -->
+	<insert id="insertDayEarnings" parameterType="DayEarningsEntity">
+		INSERT INTO
+			flb.t_day_earnings (user_id, bid_id, bid_type_id, earnings_date, amount, is_arrival, create_time, zq_id, type)
+		VALUES
+			(#{userId}, #{bidId}, #{bidTypeId}, #{earningsDate}, #{amount}, #{isArrival}, #{createTime}, #{ZQ_id}, #{type})
+	</insert>
+	<!-- 获取用户历史收益或预期收益 -->
+	<select id="getEarningsRecordList" parameterType="java.util.Map" resultType="EarningsRecordForm">
+		SELECT
+		t.F02 AS earningsTypeName, IFNULL(a.F07,0) AS amount FROM s62.t6211 AS t
+		LEFT JOIN
+		(SELECT SUM(h.F07) AS F07, h.F02, b.F04 FROM s62.t6252 AS h LEFT JOIN s62.t6230 AS b ON h.F02 = b.F01
+		WHERE h.F09 = #{status} AND h.F05 in
+		<foreach collection="feeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND h.F04 = #{userId} GROUP BY b.F04) AS a
+		ON t.`F01` = a.F04
+	</select>
+	<!-- 根据用户、标、收益时间，判断该收益时间是否已有收益 -->
+	<select id="existEarningsRecord" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT id FROM flb.t_day_earnings WHERE user_id = #{userId} AND zq_id = #{ZQ_id} AND earnings_date = #{earningsDate} LIMIT 1
+	</select>
+	<!-- 获取某个债权之前未到账的收益 -->
+	<select id="getHistoryTotalEarnings" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(amount), 0) FROM flb.t_day_earnings WHERE zq_id = #{ZQ_id} AND is_arrival = 'F' LIMIT 1
+	</select>
+	<!-- 获取昨天收益 -->
+	<select id="getYesterdayEarnings" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(amount),0)
+		FROM
+			flb.t_day_earnings WHERE user_id = #{userId} AND type = #{type}
+		AND
+			earnings_date = DATE_SUB(CURDATE(),INTERVAL 1 DAY)
+	</select>
+	<!-- 获取用户在日收益表未到账的总收益 (201活期宝，活期宝没有未到账收益)-->
+	<select id="getExpectDayEarnings" parameterType="java.lang.Integer" resultType="EarningsRecordForm">
+		SELECT
+			t.`name` earningsTypeName,
+			IFNULL(e.amount, 0) amount,
+			 `code`
+		FROM
+			flb.t_earnings_type t
+		LEFT JOIN (
+			SELECT
+				type,
+				SUM(amount) amount
+			FROM
+				flb.t_day_earnings
+			WHERE
+				is_arrival = 'F'
+			AND user_id = #{userId}
+			AND earnings_date <![CDATA[ < ]]> CURDATE()
+			GROUP BY
+				type
+		) e ON t.`code` = e.type WHERE t.`status` = 'QY' AND t.`code` != 201
+	</select>
+	<!-- 判断已到账收益表是否已初始化 -->
+	<select id="isExistArrivalEarnings" resultType="java.lang.Integer">
+		SELECT id FROM flb.t_arrival_earnings LIMIT 1
+	</select>
+	<!-- 获取用户已到账收益 -->
+	<select id="getArrivalEarnings" parameterType="java.lang.Integer" resultType="EarningsRecordForm">
+		SELECT
+			t.`name` earningsTypeName,IFNULL(a.amount,0) amount, `code`
+		FROM
+			flb.t_earnings_type t LEFT JOIN (SELECT SUM(amount) amount,type FROM flb.t_arrival_earnings WHERE user_id = #{userId} GROUP BY type) a
+		ON
+			t.`code` = a.type WHERE t.`status` = 'QY'
+	</select>
+	<!-- 获取当前债权zhuanrang之前的债权ID -->
+	<select id="getBeforeZQ_id" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT F11 FROM s62.t6262 WHERE F12 = #{nowZQ_id} LIMIT 1
+	</select>
+
+	<!-- 获取指定时间段内的投标记录 按totalInvest倒序-->
+	<select id="getTenderRecords" parameterType="java.util.Map" resultType="TenderRecords">
+		SELECT u.F14 AS nickname,u.F04 AS phone,a.userId,a.totalInvest FROM
+        (SELECT F03 AS userId,SUM(F04) AS totalInvest FROM s62.t6250 WHERE F06 BETWEEN #{startDate} AND #{endDate}
+         GROUP BY F03 ORDER BY totalInvest DESC LIMIT 0,#{limit})
+         AS a LEFT JOIN s61.t6110 u ON a.userId=u.F01
+	</select>
+
+	<!-- 用户在指定时间内的投标总额 -->
+	<select id="getUserTenderTotal" parameterType="java.util.Map" resultType="double">
+		SELECT IFNULL(SUM(F04),0) AS totalInvest FROM s62.t6250 WHERE F03 = #{userId} AND F06 BETWEEN #{startDate} AND #{endDate}
+	</select>
+	<select id="getPwdStatus" parameterType="java.lang.Integer" resultType="java.lang.String">
+		SELECT F05 FROM S61.T6118 WHERE T6118.F01 = #{userId} LIMIT 1
+	</select>
+
+	<select id="getEarningsYesterdaySum" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(amount),0)
+		FROM
+			flb.t_day_earnings WHERE user_id = #{userId}
+		AND
+			earnings_date = DATE_SUB(CURDATE(),INTERVAL 1 DAY) LIMIT 1
+	</select>
+
+	<select id="getOtherInterest" parameterType="java.util.Map" resultType="EarningsForm">
+		SELECT
+			SUM(h.F07) amount,
+			b.F04 bidTypeId,
+			z.F12 ZQZR_orderId
+		FROM
+			s62.t6252 h
+		INNER JOIN s62.t6230 b ON h.F02 = b.F01
+		INNER JOIN s62.t6251 z ON h.F11 = z.F01
+		WHERE
+			(h.F05 = 7004 OR h.F05 = 7005)
+		AND h.F09 = #{status}
+		AND h.F04 = #{userId}
+		GROUP BY bidTypeId,ZQZR_orderId = 0
+	</select>
+
+	<!-- 获取某债权的已获收益-->
+	<select id="getArrivalEarningsByCreditId" parameterType="java.lang.Integer" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(amount), 0)
+		FROM
+			flb.t_arrival_earnings
+		WHERE
+			zq_id = #{creditId}
+	</select>
+
+	<select id="getJxStartTime" parameterType="java.util.Map" resultType="java.util.Date">
+		SELECT h.F08 FROM s62.t6252 h WHERE h.F08 <![CDATA[<]]> jx_endTime AND h.F11 = ZQ_id ORDER BY h.F08 DESC LIMIT 1
+	</select>
+
+	<select id="getYHGains" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(F07),0) FROM s62.t6252 WHERE F04 = #{userId} AND F09 = 'YH' AND F05 in(7002,7004,7005,7022,7023)
+	</select>
+
+	<select id="getPlanSurplusBidList" parameterType="java.util.Map" resultType="BidInfoForPlan">
+		SELECT
+		T6230.F01 bidId,
+		T6230.F03 bidTitle,
+		T6230.F04 bidType,
+		T6230.F06 yearYield,
+		T6230.F10 repaymentMode,
+		T6230.F20 bidStatus,
+		T6230.F09 loanMonths,
+		T6230.F32 loanDays,
+		T6230.F28 isNoviceBid,
+		T6230.F07 surplusAmount
+		FROM
+		S62.T6230
+		LEFT JOIN flb.`t_plan_bid` tpb ON tpb.`bid_id` = T6230.`F01`
+		WHERE tpb.`plan_id` = #{planId} AND T6230.F07 >= 100
+		ORDER BY T6230.F07 DESC
+	</select>
+
+	<insert id="addPlanRecord" parameterType="com.fenlibao.p2p.model.entity.bid.PlanRecord"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.`t_plan_record` (user_id, plan_id) VALUES (#{userId}, #{planId})
+	</insert>
+
+	<select id="lockPlan" resultType="BigDecimal">
+		SELECT 1 FROM flb.`t_plan` where id = #{planId} FOR UPDATE
+	</select>
+
+	<insert id="addPlanBidRecord" parameterType="java.util.Map"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.`t_plan_bid_record` (plan_record_id, bid_record_id) VALUES (#{planRecordId}, #{bidRecordId})
+	</insert>
+
+	<update id="updatePlanRecordAmount" parameterType="java.util.Map">
+		UPDATE flb.`t_plan_record` tpr, flb.`t_plan` tp
+		SET tpr.amount = (
+		SELECT IFNULL(SUM(t6250.`F04`),0) FROM flb.`t_plan_bid_record` tpbr LEFT JOIN s62.`t6250` t6250 ON t6250.`F01` = tpbr.`bid_record_id` WHERE tpbr.`plan_record_id` = #{planRecordId}
+		),
+		tp.invested_amount = tp.invested_amount + (
+		SELECT IFNULL(SUM(t6250.`F04`),0) FROM flb.`t_plan_bid_record` tpbr LEFT JOIN s62.`t6250` t6250 ON t6250.`F01` = tpbr.`bid_record_id` WHERE tpbr.`plan_record_id` = #{planRecordId}
+		)
+		WHERE tpr.`id` = #{planRecordId}
+		AND tp.id = tpr.`plan_id`
+	</update>
+
+	<select id="getPlanRecordAmount" parameterType="java.util.Map" resultType="BigDecimal">
+		SELECT IFNULL(SUM(amount),0) FROM flb.`t_plan_record` WHERE id = #{planRecordId}
+	</select>
+
+	<select id="getPlanTitle" parameterType="java.util.Map" resultType="java.lang.String">
+		SELECT title FROM flb.`t_plan` WHERE id = #{planId}
+	</select>
+
+	<select id="getPlan" parameterType="java.util.Map" resultType="Plan">
+		SELECT id, title, rate, raised_rate AS raisedRate, amount, invested_amount AS investedAmount, cycle, cycle_type AS cycleType,
+		repayment_type AS repaymentType, stage_num AS stageNum, description, is_novice_bid AS isNoviceBid, `status`, create_time AS createTime, update_time AS updateTime
+		FROM flb.`t_plan`
+		WHERE id = #{planId}
+	</select>
+
+	<select id="getInvestPlan" parameterType="java.util.Map" resultType="InvestPlan">
+		SELECT
+		id,
+		TYPE,
+		is_novice AS isNovice,
+		NAME as title,
+		number,
+		amount,
+		surplus_amount AS surplusAmount,
+		cycle,
+		cycle_type AS cycleType,
+		invest_rate AS investRate,
+		mo_increase_rate AS moIncreaseRate,
+		min_yearly_rate AS minYearlyRate,
+		max_yearly_rate AS maxYearlyRate,
+		raise_rate AS raiseRate,
+		display_time AS displayTime,
+		release_time AS releaseTime,
+		audit_time AS auditTime,
+		full_time AS fullTime,
+		settle_time AS settleTime,
+		bearrate_date AS bearrateTime,
+		expire_time AS expireTime,
+		overdue_rate AS overdueRate,
+		STATUS,
+		repay_mode AS repayMode,
+		fund_raising_period AS fundRaisingPeriod,
+		can_quit AS canQuit,
+		create_time AS createTime,
+		update_time AS updateTime,
+		is_cg AS isCG
+		FROM
+		flb.`t_invest_plan`
+		WHERE id = #{planId}
+		<if test="isLock == 1">
+			FOR UPDATE
+		</if>
+	</select>
+
+	<update id="updatePlanStatus" parameterType="java.util.Map">
+		UPDATE flb.`t_plan` tp
+		SET STATUS = "DFK"
+		WHERE
+		(SELECT COUNT(1) FROM flb.`t_plan_bid` tpb WHERE tpb.`plan_id` = tp.`id`)
+		= (SELECT COUNT(1) FROM flb.`t_plan_bid` tpb  LEFT JOIN s62.`t6230` t6230 ON t6230.`F01` = tpb.`bid_id` WHERE tpb.`plan_id` = tp.`id` AND t6230.`F07` <![CDATA[<]]> 100 )
+		AND tp.`id` = #{planId}
+	</update>
+
+	<update id="updateInvestPlanStatus" parameterType="java.util.Map">
+		UPDATE flb.`t_invest_plan` tip
+		SET `status` = 5,
+			full_time = NOW(),
+			bearrate_date = NOW(),
+			update_time = NOW(),
+			expire_time = (CASE cycle_type  WHEN 'd' THEN DATE_ADD(NOW(),INTERVAL cycle DAY) WHEN 'm' THEN DATE_ADD(NOW(),INTERVAL cycle MONTH) ELSE NULL END)
+		WHERE
+			tip.`id` = #{planId}
+		AND surplus_amount <![CDATA[<]]> 100
+	</update>
+
+	<select id="getPlanRecordsList" parameterType="java.util.Map" resultType="PlanRecords">
+		SELECT
+			r.user_id AS userId,
+			r.amount AS investAmount,
+			r.create_time AS investTime,
+			CONCAT(LEFT(b.F02,1),'**') AS investorName
+		FROM
+			flb.t_plan_record r
+		LEFT JOIN s61.t6141 AS b ON r.user_id=b.F01
+		WHERE
+			r.plan_id = #{planId}
+	</select>
+
+	<select id="getNewPanRecordsList" parameterType="java.util.Map" resultType="PlanRecords">
+		SELECT
+			r.user_id AS userId,
+			r.invest_amount AS investAmount,
+			r.create_time AS investTime,
+			CONCAT(LEFT(b.F02,1),'**') AS investorName
+		FROM
+			flb.t_user_plan r
+		left join s61.t6141 as b on r.user_id=b.F01
+		WHERE
+			r.plan_id = #{planId}
+	</select>
+
+	<select id="getUserPlanDetail" parameterType="java.util.Map" resultType="PlanFinacing">
+		SELECT
+		p.id AS id,
+		p.title as bidTitle,
+		r.amount as investAmount,
+		r.id as planRecordId,
+		1 as itemType,
+		p.rate as yearYield,
+		p.is_novice_bid as isNoviceBid,
+		p.cycle as loanDate,
+		p.cycle_type as loanType,
+		p.repayment_type as repaymentMode,
+		p.raised_rate as interest
+		FROM
+		flb.t_plan_record r
+		LEFT JOIN flb.t_plan p ON r.plan_id = p.id
+		WHERE r.user_id = #{userId}
+		AND r.id = #{planRecordId}
+	</select>
+
+
+	<select id="getBidRecordsList" parameterType="java.util.Map" resultType="BidRecords">
+		SELECT
+			t6250.F02 AS bidId,
+			t6230.F03 AS bidTitle,
+			IFNULL(t6251.F01,0) AS creditId,
+			t6231.F17 AS interestTime,
+			e.expireTime AS expireTime,
+			t6250.F04 AS investAmount,
+			IFNULL(
+			(
+				SELECT SUM(T6252.F07)
+				FROM s62.T6252
+				WHERE
+					T6252.F11 = t6251.F01
+					AND T6252.F05 IN (7002, 7004, 7005, 7022, 7023)
+			),0) AS expectedProfit,
+			t6230.F20 AS STATUS,
+			t6250.F06 AS investTime
+		FROM
+		(
+			SELECT
+				DISTINCT(b.bid_record_id) AS id,
+				b.plan_record_id,
+				MAX(_a.F08) AS expireTime
+				FROM
+					flb.t_plan_bid_record b
+				LEFT JOIN s62.t6250 a ON a.F01 = b.bid_record_id
+				LEFT JOIN s62.t6251 c ON c.F11 = a.F01
+				LEFT JOIN s62.t6252 _a ON _a.F11 = c.F01
+				WHERE
+					b.plan_record_id = #{planRecordId}
+				GROUP BY _a.F02
+		) e
+		LEFT JOIN s62.t6250 t6250 ON e.id = t6250.F01
+		LEFT JOIN s62.t6230 t6230 ON t6230.F01 = t6250.F02
+		LEFT JOIN s62.t6231 t6231 ON t6231.F01 = t6250.F02
+		LEFT JOIN s62.t6251 t6251 ON t6251.F11 = t6250.F01
+		LEFT JOIN flb.t_plan_record tpr ON tpr.id = e.plan_record_id
+		WHERE tpr.user_id =  #{userId}
+	</select>
+
+	<select id="getNewPlanBidRecordsList" parameterType="java.util.Map" resultType="BidRecords">
+		SELECT
+			t6250.F02 AS bidId,
+			t6230.F03 AS bidTitle,
+			IFNULL(tupp.product_id,0) AS creditId,
+			(CASE tupp.product_type WHEN 1 THEN t6250.F04 WHEN 2 THEN t6251.F05 ELSE 0 END) AS investAmount,
+			t6231.F17 AS interestTime,
+			t6230.F20 AS STATUS,
+			t6250.F06 AS investTime
+		FROM flb.`t_user_plan_product` tupp
+		LEFT JOIN flb.`t_user_plan` tup ON tup.id = tupp.user_plan_id
+		LEFT JOIN s62.`t6250` t6250 ON t6250.F01 = tupp.tender_id
+		LEFT JOIN s62.`t6251` t6251 ON t6251.F01 = tupp.product_id
+		LEFT JOIN s62.`t6230` t6230 ON t6230.F01 = t6250.F02
+		LEFT JOIN s62.`t6231` t6231 ON t6231.F01 = t6250.F02
+		WHERE tup.id = #{planRecordId}
+		AND tup.user_id =  #{userId}
+	</select>
+
+	<select id="getDBCurrentTime" resultType="java.sql.Timestamp">
+		SELECT NOW()
+	</select>
+
+	<select id="getOldPlanProfit" parameterType="java.util.Map" resultType="PlanBidProfit">
+		SELECT
+		r.bid_record_id AS recordId,
+		IFNULL((select sum(T6252.F07) FROM s62.T6252
+		WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7002,7004,7005)),0) AS profit,
+		IFNULL((select sum(T6252.F07) FROM s62.T6252
+		WHERE T6252.F11 = t6251.F01 AND T6252.F05 in (7022,7023)),0) AS raiseProfit
+		FROM
+		flb.t_plan_bid_record r
+		left join s62.t6250 as b on r.bid_record_id=b.F01
+		LEFT JOIN s62.t6251 on t6251.F11 = b.F01
+		WHERE
+		r.plan_record_id = #{planRecordId}
+	</select>
+
+	<select id="getNewDueInAmount" parameterType="java.util.Map" resultType="DueInAmount">
+		SELECT
+			IFNULL(SUM(CASE WHEN a.F05 = 7001 THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'principal',
+			IFNULL(SUM(CASE WHEN a.F05 IN (7002, 7022, 7023) THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'interest' ,
+			IFNULL(SUM(CASE WHEN a.F05 IN (7004, 7005) THEN IFNULL(a.F07,0) ELSE 0 END),0) AS 'others'
+		FROM
+		(
+			SELECT t6252.F05, SUM(t6252.F07) F07
+			FROM s62.t6252
+			LEFT JOIN s62.t6230 ON t6230.F01 = t6252.F02
+			WHERE t6252.F05 IN (7001, 7002, 7004, 7005, 7022, 7023)
+			AND t6252.F09 IN ('WH', 'HKZ')
+			AND t6252.F04 = #{userId}
+			AND t6230.F38 = #{versionType}
+			AND NOT EXISTS (SELECT 1 FROM flb.t_user_plan_product upp WHERE upp.product_id = t6252.F11 AND t6252.F04 = #{userId})
+			GROUP BY t6252.F05
+		) a
+	</select>
+
+	<select id="getPlanDueInAmount" parameterType="java.util.Map" resultType="DueInAmount">
+		SELECT
+		SUM(tempSum.principal)
+		<if test="versionType != null and versionType ==2">
+			-(SELECT IFNULL(sum(d.subMoney),0) FROM errorlog.tmp_plan_detail d
+			LEFT JOIN flb.t_user_plan p ON d.userPlanId = p.id
+			WHERE d.user_id = #{userId} AND  p.status !=3)
+		</if>
+		AS 'principal', SUM(tempSum.interest) AS 'interest', SUM(tempSum.others) AS 'others'
+		FROM
+		(
+		SELECT
+		<!--计划回款的金额依次从本金、利息、其他扣除-->
+		<![CDATA[
+				IF(SUM(IF(temp.transaction_type IN (7001), temp.amount, 0)) < MAX(IFNULL(temp6102.return_amount,0)),
+					0, (SUM(IF(temp.transaction_type IN (7001), temp.amount, 0)) - MAX(IFNULL(temp6102.return_amount,0)))) AS 'principal',
+
+				(CASE
+					WHEN SUM(IF(temp.transaction_type IN (7001), temp.amount, 0)) >= MAX(IFNULL(temp6102.return_amount,0))
+						THEN SUM(IF(temp.transaction_type IN (7002,7022,7028), temp.amount, 0))
+					WHEN SUM(IF(temp.transaction_type IN (7001), temp.amount, 0)) < MAX(IFNULL(temp6102.return_amount,0))
+						AND SUM(IF(temp.transaction_type IN (7001,7002,7022,7028), temp.amount, 0)) >= MAX(IFNULL(temp6102.return_amount,0))
+						THEN SUM(IF(temp.transaction_type IN (7001,7002,7022,7028), temp.amount, 0)) - MAX(IFNULL(temp6102.return_amount,0))
+					WHEN SUM(IF(temp.transaction_type IN (7001,7002,7022,7028), temp.amount, 0)) < MAX(IFNULL(temp6102.return_amount,0))
+						THEN 0
+				END) AS 'interest',
+
+				IF(SUM(IF(temp.transaction_type IN (7001,7002,7022,7028), temp.amount, 0)) < MAX(IFNULL(temp6102.return_amount,0)),
+					SUM(IFNULL(temp.amount,0)) - MAX(IFNULL(temp6102.return_amount,0)), SUM(IF(temp.transaction_type IN (7004), temp.amount, 0))) AS 'others'
+			]]>
+		FROM
+		(
+		SELECT SUM(r.expect_amount) amount, r.transaction_type, r.user_plan_id
+		FROM flb.t_user_plan_repay r
+		LEFT JOIN flb.`t_invest_plan` tip ON tip.`id` = r.plan_id
+		LEFT JOIN flb.t_user_plan u ON u.id = r.user_plan_id
+		WHERE r.transaction_type IN (7001,7002,7004,7022,7028)
+		AND r.user_id = #{userId}
+		AND tip.`is_cg` = #{versionType}
+		and u.status !=3
+		GROUP BY r.transaction_type,r.user_plan_id
+		) temp
+		LEFT JOIN
+		(
+		SELECT SUM(t6102.F06 - t6102.F07) return_amount, tupsr.user_plan_id
+		FROM flb.`t_user_plan_settlement_record` tupsr
+		LEFT JOIN s61.t6102 t6102 ON t6102.F01 = tupsr.t6102_f01
+		GROUP BY tupsr.user_plan_id
+		) temp6102 ON temp.user_plan_id = temp6102.user_plan_id
+		GROUP BY temp.user_plan_id
+		) tempSum
+	</select>
+
+	<select id="getNewYHGains" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(t6252.F07),0) FROM s62.t6252
+		LEFT JOIN s62.t6230 ON t6230.F01 = t6252.F02
+		WHERE t6252.F04 = #{userId} AND t6252.F09 = 'YH' AND t6252.F05 in(7002,7004,7005,7022,7023)
+		AND t6230.F38 = #{versionType}
+		AND NOT EXISTS (SELECT 1 FROM flb.t_user_plan_product upp WHERE upp.product_id = t6252.F11 AND t6252.F04 = #{userId})
+	</select>
+
+	<select id="getPlanYHGains" resultType="java.math.BigDecimal">
+		SELECT
+		IFNULL(SUM(t6102.f06) - (
+		SELECT
+		sum(invest_amount)
+		FROM flb.t_user_plan _up
+		<if test="versionType != null">
+			LEFT JOIN flb.`t_invest_plan` _ip ON _ip.id = _up.plan_id
+		</if>
+		WHERE
+		_up.user_id = #{userId}
+		and _up.status = 3
+		<if test="versionType != null">
+			and _ip.is_cg = #{versionType}
+		</if>
+		),0)
+		FROM
+		s61.t6102
+		LEFT JOIN s61.t6101 t6101 ON t6101.F01 = t6102.F02
+		LEFT JOIN flb.t_user_plan_settlement_record re ON re.t6102_f01 = t6102.F01
+		LEFT JOIN flb.t_user_plan tp ON tp.id = re.user_plan_id
+		WHERE
+		t6101.F02 = #{userId} AND t6102.F03 in (7027,7030)
+		<if test="versionType != null and versionType ==1">
+			and t6101.F03 = 'WLZH'
+		</if>
+		<if test="versionType != null and versionType ==2">
+			and t6101.F03  = 'XW_INVESTOR_WLZH'
+		</if>
+		and tp.status = 3
+	</select>
+
+	<select id="getInvestPlanByUserPlanId" parameterType="java.util.Map" resultType="InvestPlan">
+		SELECT
+			tip.id,
+			tip.TYPE,
+			tip.is_novice AS isNovice,
+			tip.NAME AS title,
+			tip.number,
+			tip.amount,
+			tip.surplus_amount AS surplusAmount,
+			tip.cycle,
+			tip.cycle_type AS cycleType,
+			tip.invest_rate AS investRate,
+			tip.mo_increase_rate AS moIncreaseRate,
+			tip.min_yearly_rate AS minYearlyRate,
+			tip.max_yearly_rate AS maxYearlyRate,
+			tip.raise_rate AS raiseRate,
+			tip.display_time AS displayTime,
+			tip.release_time AS releaseTime,
+			tip.audit_time AS auditTime,
+			tip.full_time AS fullTime,
+			tip.settle_time AS settleTime,
+			tip.bearrate_date AS bearrateTime,
+			tip.expire_time AS expireTime,
+			tip.overdue_rate AS overdueRate,
+			tip.STATUS,
+			tip.repay_mode AS repayMode,
+			tip.fund_raising_period AS fundRaisingPeriod,
+			tip.can_quit AS canQuit,
+			tip.create_time AS createTime,
+			tip.update_time AS updateTime,
+			tip.is_cg AS isCG
+		FROM flb.`t_invest_plan` tip
+		LEFT JOIN flb.`t_user_plan` tup ON tip.`id` = tup.`plan_id`
+		WHERE tup.id = #{userPlanId}
+		LIMIT 1
+	</select>
+</mapper>

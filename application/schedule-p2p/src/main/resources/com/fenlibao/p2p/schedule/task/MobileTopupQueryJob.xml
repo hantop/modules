@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean id="MobileTopupQueryJob"
+		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.MobileTopupQueryJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler 
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to 
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="MobileTopupQueryJobTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="MobileTopupQueryJob" />
+		<!-- 每5分 -->
+		<property name="cronExpression" value="0 0/5 *  * * ?" />
+	</bean>
+
+	<!--易赏充值异常数据处理-->
+	<bean id="MobileTopupFixJob"
+		  class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.MobileTopupFixJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="MobileTopupFixJobTrigger"
+		  class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="MobileTopupFixJob" />
+		<!-- 每15分 -->
+		<property name="cronExpression" value="0 0/15 *  * * ?" />
+	</bean>
+</beans>

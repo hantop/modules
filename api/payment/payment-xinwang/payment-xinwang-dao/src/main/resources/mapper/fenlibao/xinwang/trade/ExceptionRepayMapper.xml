@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ExceptionRepayMapper">
+    <select id="getDebtUsers" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.ExceptionRepay">
+        SELECT
+            userId,
+            userRole,
+            debtAmount,
+            lastRepayDate,
+            updateTime
+        FROM
+          errorlog.`exception_repay`
+        WHERE
+          debtAmount > 0;
+    </select>
+
+    <insert id="saveExceptionRepayRequestNo" parameterType="java.util.Map">
+        INSERT INTO flb.`t_xw_exception_repay` (
+            `userId`,
+            `userRole`,
+            `exceptionRequestNo`,
+            `deductAmount`
+        )
+        VALUES
+            (#{userId}, #{userRole}, #{exceptionRequestNo}, #{amount});
+    </insert>
+
+    <select id="findExceptionRepayPoByRequestNo" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.XWExceptionRepayPO">
+        SELECT
+            id,
+            userId,
+            userRole,
+            exceptionRequestNo,
+            deductAmount
+        FROM
+            flb.`t_xw_exception_repay`
+        WHERE
+            exceptionRequestNo = #{requestNo};
+    </select>
+
+    <update id="updateExceptionRepay" parameterType="java.util.Map">
+        UPDATE `errorlog`.`exception_repay`
+        SET `debtAmount` = `debtAmount` - #{deductAmount},
+         `lastRepayDate` = #{lastRepayDate}
+        WHERE
+            `userId` = #{userId}
+        AND `userRole` = #{userRole};
+    </update>
+</mapper>

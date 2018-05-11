@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.repayment.RepaymentMapper">
+    <select id="getRepaymentList" resultType="RepaymentVO">
+        SELECT
+        bid.F01 bidId,
+        bid.F03 title,
+        bid.F02 borrowUserId,
+        userInfo.F02 borrowUserAccount,
+        bid.F05 - bid.F07 repayMoney,
+        DATEDIFF(
+        min(repayment.F08),
+        CURRENT_DATE ()
+        ) distanceRefund,
+        min(repayment.F08) repayDay,
+        min(repayment.F06) currentTerm,
+        bidExtend.F02 totalTerm,
+        bid.F10 repayMethod,
+        bid.F34 repaying,
+        sys_order.F03 orderState,
+        bid.F20 status,
+        bidExtend.entrust_payee_user_id receiptID,
+        entrustPayAccount.F02 receiptAccount
+        FROM
+        S62.T6230 bid
+        INNER JOIN s62.t6231 bidExtend ON bidExtend.F01 = bid.F01
+        LEFT JOIN S62.T6252 repayment ON repayment.F02 = bid.F01
+        LEFT JOIN S61.T6110 userInfo ON repayment.F03 = userInfo.F01
+        LEFT JOIN flb.t_xw_repay xw_repay ON xw_repay.project_id = bid.F01 AND xw_repay.term = repayment.F06
+        LEFT JOIN s65.t6501 sys_order ON xw_repay.order_id = sys_order.F01
+        LEFT JOIN s61.t6110 entrustPayAccount ON bidExtend.entrust_payee_user_id = entrustPayAccount.F01
+        WHERE
+        repayment.F09 = 'WH'
+        AND bid.F38 = 2
+        AND bid.F36 = '0001'
+        AND bid.F20 = 'HKZ'
+        AND repayment.F05 IN (
+        '7001',
+        '6002',
+        '7004',
+        '7003',
+        '7002'
+        )
+        <if test="title != null and title !=''">
+            AND bid.F03 = trim(#{title})
+        </if>
+        <if test="borrowUserAccount != null and borrowUserAccount !=''">
+            AND userInfo.F02 = trim(#{borrowUserAccount})
+        </if>
+        <if test="receiptAccount != null and receiptAccount !=''">
+            AND entrustPayAccount.F02 = trim(#{receiptAccount})
+        </if>
+        <if test="repayDayStart != null and repayDayStart !=''">
+            <![CDATA[AND repayment.F08 >= #{repayDayStart}]]>
+        </if>
+        <if test="repayDayEnd != null and repayDayEnd !=''">
+            <![CDATA[AND repayment.F08 <= #{repayDayEnd}]]>
+        </if>
+        GROUP BY
+        repayment.F02
+        ORDER BY
+        repayDay ASC
+    </select>
+
+    <select id="getErrorRepayment" resultType="RepaymentVO">
+        SELECT
+        sys_order.F01 bidId,
+        bid.F03 title,
+        bid.F02 borrowUserId,
+        userInfo.F02 borrowUserAccount,
+        CASE WHEN userInfo.f06 = 'ZRR' THEN userExetend.f02
+        WHEN userInfo.f06 = 'FZRR' THEN orgExetend.F04 END AS borrowUserName,
+        bid.F05 - bid.F07 repayMoney,
+        DATEDIFF(
+        repayment.F08,
+        CURRENT_DATE ()
+        ) distanceRefund,
+        repayment.F08 repayDay,
+        repayment.F06 currentTerm,
+        bidExtend.F02 totalTerm,
+        bid.F10 repayMethod,
+        bid.F34 repaying,
+        sys_order.F03 orderState,
+        bid.F20 status
+        FROM
+        S62.T6230 bid
+        INNER JOIN s62.t6231 bidExtend ON bidExtend.F01 = bid.F01
+        LEFT JOIN S62.T6252 repayment ON repayment.F02 = bid.F01
+        LEFT JOIN S61.T6110 userInfo ON repayment.F03 = userInfo.F01
+        LEFT JOIN S61.T6141 userExetend ON userInfo.F01 = userExetend.F01
+        LEFT JOIN S61.T6161 orgExetend ON userInfo.F01 = orgExetend.F01
+        LEFT JOIN flb.t_xw_repay xw_repay ON xw_repay.project_id = bid.F01
+        LEFT JOIN s65.t6501 sys_order ON xw_repay.order_id = sys_order.F01
+        WHERE
+        repayment.F09 = 'WH'
+        AND bid.F38 = 2
+        AND bid.F34 = 1
+        AND bid.F20 = 'HKZ'
+        AND repayment.F05 IN (
+        '7001',
+        '6002',
+        '7004',
+        '7003',
+        '7002'
+        )
+        <if test="title != null and title !=''">
+            AND bid.F03 = trim(#{title})
+        </if>
+        <if test="borrowUserAccount != null and borrowUserAccount !=''">
+            AND userInfo.F02 = trim(#{borrowUserAccount})
+        </if>
+        GROUP BY
+        repayment.F02
+        LIMIT 1
+    </select>
+
+    <select id="getGuaranteePlatformUser" resultType="string">
+        SELECT guarantee_platform_user_no
+        FROM flb.t_xw_project
+        WHERE loan_id = #{bidId}
+        LIMIT 1
+    </select>
+
+</mapper>

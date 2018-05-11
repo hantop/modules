@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysBidManageMapper">
+
+	<select id="getTenderOrder" resultType="SysTenderOrder">
+		SELECT F01 orderId, F02 userId, F03 bidId, F04 tenderAmount, F05 recordId FROM S65.T6504 WHERE T6504.F01 = #{orderId} LIMIT 1
+	</select>
+
+	<select id="getBidById" parameterType="java.lang.Integer" resultType="SysBidInfo">
+		SELECT T6230.F01, T6230.F02, T6230.F03, T6230.F04, T6230.F05, T6230.F06, T6230.F07, T6230.F08, T6230.F09, T6230.F10, T6230.F11, T6230.F12, T6230.F13, T6230.F14, T6230.F15, T6230.F16, T6230.F17, T6230.F18, T6230.F19, T6230.F20, T6230.F21, T6230.F22, T6230.F23, T6230.F24, T6230.F25, T6230.F26, T6230.F28,T6230.F31,T6230.F32,T6230.F33,T6230.F34,T6230.F35,T6230.F36,T6230.F38,T6230.F39  FROM S62.T6230 WHERE T6230.F01 = #{bidId} LIMIT 1 for update
+	</select>
+
+	<select id="getBidOtherRateByBid" parameterType="java.lang.Integer" resultType="java.util.Map">
+		SELECT t6238.F02 as orderRate, t6238.F06 AS borrowerRate FROM s62.t6238 t6238 WHERE  t6238.F01 = #{bid}
+	</select>
+
+	<update id="updateBid" parameterType="java.util.Map">
+		UPDATE S62.T6230
+		<set>
+			<if test="F07 != null">
+				F07 = #{F07},
+			</if>
+			<if test="F20 != null">
+				F20 = #{F20},
+			</if>
+			<if test="F22 != null">
+				F22 = #{F22},
+			</if>
+			<if test="F31 != null">
+				F31 = #{F31},
+			</if>
+			<if test="F35 != null">
+				F35 = #{F35},
+			</if>
+		</set>
+		where F01= #{F01}
+	</update>
+
+	<insert id="addTenderRecord" parameterType="SysTenderRecord">
+		<selectKey resultType="java.lang.Integer" order="AFTER" keyProperty="id">
+			SELECT LAST_INSERT_ID() AS id
+		</selectKey>
+		INSERT INTO S62.T6250 SET F02 = #{bidId}, F03 = #{userId}, F04 = #{tenderAmount}, F05 = #{creditAmount}, F06 = CURRENT_TIMESTAMP(), F07 = #{cancelFlag}, F09 = #{autoFlag}
+	</insert>
+
+	<update id="updateTenderOrder" parameterType="java.util.Map">
+		UPDATE S65.T6504 SET F05 = #{recordId} WHERE F01 = #{orderId} LIMIT 1
+	</update>
+
+	<select id="countTenderOrderOfDQR" parameterType="java.util.Map" resultType="int">
+		SELECT COUNT(1) FROM s65.t6504 t INNER JOIN s65.t6501 o ON t.F01 = o.F01 WHERE o.F03 = 'DQR' AND t.F03 = #{bidId} AND t.F01 <![CDATA[<>]]> #{tenderId}
+	</select>
+
+	<update id="updateBidExInfo" parameterType="java.util.Map">
+		UPDATE S62.T6231
+		<set>
+			<if test="F02 != null">
+				F02 = #{F02},
+			</if>
+			<if test="F03 != null">
+				F03 = #{F03},
+			</if>
+			<if test="F06 != null">
+				F06 = #{F06},
+			</if>
+			<if test="F11 != null">
+				F11 = #{F11},
+			</if>
+			<if test="F13 != null">
+				F13 = #{F13},
+			</if>
+			<if test="F15 != null">
+				F15 = #{F15},
+			</if>
+			<if test="F17 != null">
+				F17 = #{F17},
+			</if>
+			<if test="F18 != null">
+				F18 = #{F18},
+			</if>
+			<if test="F19 != null">
+				F19 = #{F19},
+			</if>
+		</set>
+		where F01= #{F01}
+	</update>
+
+	<!-- 查询标的借款人信息 -->
+	<select id="getTBidExtUser" parameterType="int" resultType="TBidExtUser">
+		SELECT
+		t_bid_ext_user.id id,
+		t_bid_ext_user.bid bid,
+		t_bid_ext_user.user_id userId,
+		t_bid_ext_user.borrower_info borrowerInfo,
+		t_bid_ext_user.credit credit,
+		t_bid_ext_user.bank_transaction bankTransaction,
+		t_bid_ext_user.risk risk,
+		t_bid_ext_user.operator operator,
+		t_bid_ext_user.real_name realName,
+		t_bid_ext_user.real_credit_card_num realCreditCardNum,
+		IFNULL(t_bid_ext_user.real_phone, IFNULL(t6164.F06, t6164.F04)) AS realPhone,
+		t_bid_ext_user.industry industry,
+		t_bid_ext_user.address address,
+		t_bid_ext_user.subject_nature subjectNature,
+		t_bid_ext_user.other_borrower_info otherBorrowerInfo
+		FROM
+		flb.t_bid_ext_user LEFT JOIN s61.t6164 t6164 ON t_bid_ext_user.user_id = t6164.F01
+		WHERE
+		t_bid_ext_user.bid=#{bidId}
+		LIMIT 1
+	</select>
+</mapper>

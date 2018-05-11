@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="CouponManageMapper">
+
+    <select id="selectUserCouponByTenderId" resultType="com.fenlibao.p2p.model.trade.entity.UserCoupon">
+         select ID id,user_id userId,coupon_id couponId,activity_id activityId,tender_id tenderId,valid_time validTime,coupon_status couponStatus,grant_id grantId,grant_status grantStatus,create_time createTime,update_time updateTime from flb.t_user_coupon where tender_id= #{tenderId} limit 1
+    </select>
+
+    <update id="returnUserCoupon" parameterType="java.util.Map">
+        update flb.t_user_coupon set tender_id=null,coupon_status=1 where tender_id= #{tenderId}
+    </update>
+    
+    <resultMap id="userRedpacketMap" type="UserRedpacketVO" autoMapping="true">
+        <id column="userRedpacketId" property="userRedpacketId"></id>
+        <collection property="bidTypes" ofType="BidType_" autoMapping="true"></collection>
+    </resultMap>
+    <select id="getUserRedpacket" parameterType="java.util.Map" resultMap="userRedpacketMap">
+        SELECT
+            ur.id userRedpacketId,
+            r.id redpacketId,
+            r.red_money amount,
+            ur.valid_time validDate,
+            r.invest_deadline investDeadline,
+            r.invest_money investAmount,
+            bt.F01 typeId,bt.f02 typeName,bt.F05 typeCode
+        FROM
+            flb.t_user_redpackets ur
+        INNER JOIN flb.t_red_packet r ON ur.redpacket_id = r.id
+        LEFT JOIN flb.t_red_packet_bid_type rbt ON r.id = rbt.redpacket_id
+        LEFT JOIN s62.t6211 bt ON rbt.bidType_id = bt.F01
+        WHERE ur.user_id = #{userId}
+        <if test="state != null">
+            AND ur.`status` = #{state}
+        </if>
+        <if test="bidTypeId != null">
+            AND rbt.bidType_id = #{bidTypeId}
+        </if>
+        <if test="tenderId != null">
+            AND ur.tender_id = #{tenderId}
+        </if>
+        <if test="userRedpacketIds != null">
+            AND ur.id in
+            <foreach collection="userRedpacketIds" index="index" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+    </select>
+    
+    <update id="updateRedpacket" parameterType="java.util.Map">
+        UPDATE flb.t_user_redpackets SET `status` = #{state}
+        <if test="tenderId != null">
+            ,tender_id = #{tenderId}
+        </if>
+        WHERE id = #{id} LIMIT 1
+    </update>
+
+    <resultMap id="userCouponMap" type="UserCouponVO" autoMapping="true">
+        <id column="userCouponId" property="userCouponId"></id>
+        <collection property="bidTypes" ofType="BidType_" autoMapping="true"></collection>
+    </resultMap>
+    <select id="getUserCoupon" parameterType="java.util.Map" resultMap="userCouponMap">
+        SELECT
+            uc.id userCouponId,
+            c.id couponId,
+            uc.valid_time validTime,
+            uc.coupon_status state,
+            c.max_invest_money maxInvestAmount,
+            c.min_invest_money minInvestAmount,
+            c.max_invest_day maxInvestDay,
+          c.min_invest_day minInvestDay,
+            c.scope scope,
+            bt.F01 typeId,bt.f02 typeName,bt.F05 typeCode
+        FROM
+            flb.t_user_coupon uc
+        INNER JOIN flb.t_coupon c ON uc.coupon_id = c.id
+        INNER JOIN flb.t_coupon_bid_type cbt ON c.id = cbt.coupon_id
+        LEFT JOIN s62.t6211 bt ON cbt.bid_type_id = bt.F01
+        WHERE uc.user_id = #{userId}
+        <if test="state != null">
+            AND uc.coupon_status = #{state}
+        </if>
+        <if test="bidTypeId != null">
+            AND cbt.bid_type_id = #{bidTypeId}
+        </if>
+        <if test="userCouponId != null">
+            AND uc.id = #{userCouponId}
+        </if>
+        <if test="tenderId != null">
+            AND uc.tender_id = #{tenderId}
+        </if>
+    </select>
+    
+    <update id="updateUserCoupon" parameterType="java.util.Map">
+        UPDATE flb.t_user_coupon SET coupon_status = #{state}
+        <if test="tenderId != null">
+            ,tender_id = #{tenderId}
+        </if>
+         WHERE id = #{id} LIMIT 1
+    </update>
+</mapper>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+	<!-- 提现延迟请求第三方支付处理 -->
+	<bean id="withdrawDelayRequestJob"
+		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.WithdrawDelayRequestJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler 
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to 
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="withdrawDelayRequestTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="withdrawDelayRequestJob" />
+		<!-- 线上频率 每5分钟执行一次-->
+		<!--<property name="cronExpression" value="0 */5 11 9-10 10 ?" />-->
+		<property name="cronExpression" value="0 */5 * * * ?" />
+	</bean>
+
+</beans>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="DBFileMapper">
+    <select id="getLatestDBFile" parameterType="int" resultType="DBFileVO">
+		SELECT
+			id,
+			file_name AS fileName,
+			version AS dbVersion,
+			last_changetime AS lastChangetime,
+			type
+		FROM
+			flb.t_dbfile
+		WHERE
+			type = #{type}
+		AND version = (SELECT MAX(version) FROM flb.t_dbfile)
+	</select>
+
+    <select id="getDBFileMaxVersion" parameterType="int" resultType="java.lang.Float">
+		SELECT
+			MAX(VERSION)
+		FROM
+			flb.t_dbfile
+		WHERE type = #{type}
+	</select>
+
+    <select id="getDBFileLastChangetime" parameterType="int" resultType="java.sql.Timestamp">
+		SELECT
+			MAX(last_changetime)
+		FROM
+		flb.t_dbfile
+		WHERE type = #{type}
+	</select>
+
+    <select id="getDataRecordLastChangetime" parameterType="int" resultType="java.sql.Timestamp">
+		SELECT
+			MAX(change_time)
+		FROM
+			flb.t_data_change_record
+		WHERE type = #{type}
+	</select>
+
+    <insert id="addDBFileRecord" parameterType="DBFileVO">
+		INSERT INTO flb.t_dbfile (
+			FILE_NAME,
+			VERSION,
+			LAST_CHANGETIME,
+			TYPE
+		)
+		VALUES(
+			#{fileName},
+			#{dbVersion},
+			#{lastChangetime},
+			#{type}
+		)
+	</insert>
+</mapper>

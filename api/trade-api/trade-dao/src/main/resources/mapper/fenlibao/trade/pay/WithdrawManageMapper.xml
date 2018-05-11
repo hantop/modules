@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="WithdrawManageMapper">
+	<select id="getSuccessApplyId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+		SELECT F01 FROM s61.t6130 WHERE F09 != 'TXSB' AND F02 = #{userId} LIMIT 1
+	</select>
+	
+	<select id="getOfflineRechargeAmount" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(F04),0) FROM s71.t7150 WHERE F02 = #{userId} AND F03 = 'WLZH' AND F05 = 'YCZ' AND F10 <![CDATA[ > ]]> DATE_SUB(NOW(),INTERVAL #{hours} HOUR) LIMIT 1
+	</select>
+	
+	<insert id="addWithdrawApply" parameterType="com.fenlibao.p2p.model.trade.entity.pay.T6130" useGeneratedKeys="true" keyProperty="F01">
+	    insert into s61.t6130 (F02,F03,F04,F06,F07,F08,F09,F14,F16) values(#{F02},#{F03},#{F04},#{F06},#{F07},#{F08},#{F09},#{F14},#{F16})
+	</insert>
+	
+	<update id="updateWithdrawApply" parameterType="com.fenlibao.p2p.model.trade.entity.pay.T6130">
+	    update s61.t6130 
+	    <set>
+			<if test="F09 != null">
+				F09 = #{F09},
+			</if>
+			<if test="F16 != null">
+				F16 = #{F16},
+			</if>
+		</set>
+        where F01 = #{F01}
+	</update>
+
+	<insert id="insertWithdrawDelayRequest" parameterType="java.util.Map">
+		INSERT INTO `errorlog`.`withdrawdelayrequest` (
+			`userId`,
+			`withdrawAmount`,
+			`userInfo`,
+			`bankCard`,
+			`flowNum`,
+			`createTime`,
+			`orderId`
+		)
+		VALUES
+			(
+				#{userId},
+				#{withdrawAmount},
+				#{userInfo},
+				#{bankCard},
+				#{flowNum},
+				NOW(),
+				#{orderId}
+			);
+	</insert>
+	
+	<select id="findWithdrawDelayRequests" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.trade.vo.WithdrawDelayRequest">
+		SELECT
+			id,
+			userId,
+			withdrawAmount,
+			userInfo,
+			bankCard,
+			flowNum,
+			requestState,
+			createTime,
+			orderId
+		FROM
+			errorlog.`withdrawdelayrequest`
+		WHERE requestState = 0
+		<if test="limit != null and limit != ''">
+			limit #{limit};
+		</if>
+	</select>
+
+	<update id="updateWithdrawDelayRequestsWithdrawState" parameterType="java.lang.Integer">
+		UPDATE `errorlog`.`withdrawdelayrequest`
+		SET
+		 `requestState` = 1
+		WHERE
+			`id` = #{id};
+	</update>
+
+	<select id="getTransactionState" parameterType="java.lang.String" resultType="java.lang.Integer">
+		SELECT state FROM errorlog.`transactionstate` WHERE `name` = #{withdrawDelayRequestJob};
+	</select>
+</mapper>

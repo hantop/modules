@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysMakeLoanMapper">
+    <update id="saveMakeLoanRequestNo" parameterType="java.util.Map">
+        UPDATE flb.t_xw_tender t SET t.make_loan_request_no= #{makeLoanRequestNo} WHERE t.tender_id = #{tenderId}
+          AND
+        NOT EXISTS (SELECT 1 FROM flb.t_xw_request req WHERE req.request_no = t.make_loan_request_no AND req.state IN ('DQR','DTJ','CG'))
+    </update>
+
+    <select id="getProjectInfoByMakeLoanRequestNo" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWProjectInfo" >
+        SELECT
+            concat(c.F01, "") projectNo,
+            c.F02 borrowerUserId,
+            c.F03 projectName,
+            c.F05 projectAmount,
+            c.F06 annnualInterestRate,
+            c.F07 surplusAmount,
+            c.F08 fundRaisingDays,
+            c.F09 monthProjectPeriod,
+            c.F10 repaymentWay,
+            c.F20 state,
+            c.F22 establishTime,
+            c.F25 projectCode,
+            c.F31 fundRaisingDeadline,
+            c.F32 dayProjectPeriod,
+            c.F35 displayTime,
+            c.F36 projectSource,
+            d.borrower_platform_user_no borrowerPlatformUserNo,
+            d.guarantee_platform_user_no guaranteePlatformUserNo,
+            d.entrust_payee_platform_user_no entrustPayeePlatformUserNo,
+            d.project_type projectType,
+            d.entrust_pay_authorize_request_no entrustPayAuthorizeRequestNo
+        FROM
+            flb.t_xw_tender a
+        INNER JOIN s62.t6230 c ON a.bid_id = c.F01
+        INNER JOIN flb.t_xw_project d ON c.F01 = d.loan_id
+        where 	a.make_loan_request_no = #{makeLoanRequestNo}
+        and  c.F38 = 2
+    </select>
+
+    <select id="getTenderRecordByMakeLoanRequestNo" parameterType="java.lang.String" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderRecord">
+        SELECT a.F01 id, a.F02 projectNo, a.F03 investorId, a.F04 amount, a.F05 share, a.F06 investTime, a.F07 cancel, a.F08 makeLoan,b.pre_treat_request_no repayPreTreatRequestNo,b.investor_platform_user_no investorPlatformUserNo,b.borrower_platform_user_no borrowerPlatformUserNo,b.make_loan_request_no makeLoanRequestNo
+        FROM S62.T6250 a INNER JOIN (select * from flb.t_xw_tender where make_loan_request_no= #{makeLoanRequestNo}) b ON a.F01=b.tender_id limit 1
+    </select>
+
+    <insert id="createProjectConfirmTenderInfo" parameterType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectConfirmTenderInfo" useGeneratedKeys="true" keyProperty="id">
+        INSERT flb.t_xw_confirm_tender (project_id,order_id) VALUES (#{projectId},#{orderId})
+    </insert>
+
+    <select id="getProjectConfirmTenderInfoByOrderId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectConfirmTenderInfo">
+        SELECT id,order_id orderId,project_id projectId FROM flb.t_xw_confirm_tender where order_id= #{orderId}
+    </select>
+    
+    <select id="getOngoingConfirmTenderOrder" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT a.order_id FROM (select * from flb.t_xw_confirm_tender where project_id= #{projectId}) a INNER JOIN S65.t6501 b ON a.order_id=b.F01 where b.F03 in ('DTJ','DQR') limit 1
+    </select>
+
+    <select id="getAcceptFailTenderRecordList" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderRecord">
+        SELECT a.F01 id, a.F02 projectNo, a.F03 investorId, a.F04 amount, a.F05 share, a.F06 investTime, a.F07 cancel, a.F08 makeLoan,b.pre_treat_request_no preTreatRequestNo,b.investor_platform_user_no investorPlatformUserNo,b.borrower_platform_user_no borrowerPlatformUserNo,b.make_loan_request_no makeLoanRequestNo,b.cancel_tender_request_no cancelTenderRequestNo
+        FROM (SELECT * from S62.T6250 where F02 = #{projectId} and F07='F' and F08='F') a
+        INNER JOIN flb.t_xw_tender b ON a.F01=b.tender_id
+        INNER join flb.t_xw_request c ON b.make_loan_request_no =c.request_no
+        where c.state='SB' limit 100
+    </select>
+
+    <select id="getPlatformConfirmTenderFailRequestList" parameterType="java.lang.Integer" resultType="java.lang.String">
+        SELECT b.make_loan_request_no
+        FROM (SELECT * from S62.T6250 where F02 = #{projectId} and F07='F' and F08='F') a
+        INNER JOIN flb.t_xw_tender b ON a.F01=b.tender_id
+        INNER join flb.t_xw_request c ON b.make_loan_request_no =c.request_no
+        where c.state='CG' limit 100
+    </select>
+
+    <select id="getResultConfirmRequest" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        select a.id,a.interface_name interfaceName,a.batch_no batchNo,a.request_no requestNo,a.order_id orderId,a.platform_user_no platformUserNo,a.user_id userId,a.request_time requestTime,a.state,a.update_time updateTime
+        from flb.t_xw_request a
+        INNER JOIN flb.t_xw_tender b
+        ON a.request_no=b.make_loan_request_no
+        where a.state IN ('DQR','DTJ') and a.request_time <![CDATA[<]]> #{requestTime} AND a.interface_name = #{interfaceName} limit 1000
+    </select>
+
+    <select id="getPlatformConfirmTenderFailTenderList" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderRecord">
+        SELECT
+            a.F01 id,
+            a.F02 projectNo,
+            a.F03 investorId,
+            a.F04 amount,
+            a.F05 SHARE,
+            a.F06 investTime,
+            a.F07 cancel,
+            a.F08 makeLoan,
+            b.pre_treat_request_no preTreatRequestNo,
+            b.investor_platform_user_no investorPlatformUserNo,
+            b.borrower_platform_user_no borrowerPlatformUserNo,
+            b.make_loan_request_no makeLoanRequestNo,
+            b.cancel_tender_request_no cancelTenderRequestNo
+        FROM
+            flb.t_xw_tender b
+        INNER JOIN s62.t6250 a ON a.F01 = b.tender_id and a.F07 = 'F' and a.F08 = 'F'
+        INNER JOIN flb.t_xw_request c ON b.make_loan_request_no = c.request_no and c.state = 'CG' AND TIMESTAMPDIFF(MINUTE, c.update_time, NOW())<![CDATA[ > ]]> 30
+        LIMIT 100
+    </select>
+
+    <select id="getAutoConfirmTenderProjectList" resultType="java.lang.Integer">
+        SELECT
+            F01
+        FROM
+            s62.t6230
+        WHERE
+            F20 = 'DFK'
+        AND F36 = '0002'
+        AND F38 = 2
+        AND F07 = 0
+        AND NOT EXISTS (
+			-- 不存在待确认的放款业务订单或者没有发送新网请求的标的
+            SELECT
+                1
+            FROM
+                flb.t_xw_tender a
+            LEFT JOIN flb.t_xw_request t ON t.request_no = a.make_loan_request_no
+            WHERE
+                a.bid_id = t6230.F01
+            AND ( t.state IN ('DQR', 'DTJ') OR a.is_send = 0)
+        )
+        LIMIT 1000
+    </select>
+
+    <select id="getNotFinishConfirmTenderRecords" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectConfirmTenderInfo">
+        select a.id,a.order_id orderId,a.project_id projectId from flb.t_xw_confirm_tender a INNER JOIN s65.t6501 b ON a.order_id=b.F01 where b.F03='DQR' limit 1000
+    </select>
+
+    <insert id="createMakeloanListen" parameterType="java.util.Map">
+        INSERT flb.t_makeloan_listen(time1,time2,time3,confirm,time4,t6101s,time5,t6102s,time6,time7,time8,time3_list) VALUES(#{time1},#{time2},#{time3},#{confirm},#{time4},#{t6101s},#{time5},#{t6102s},#{time6},#{time7},#{time8},#{timeList})
+    </insert>
+</mapper>

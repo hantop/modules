@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="OrderManageMapper">
+
+    <insert id="add" parameterType="T6501" useGeneratedKeys="true" keyProperty="F01">
+        INSERT INTO s65.t6501 (F02,F03,F04,F07,F08,F09,F10) VALUES (#{F02},#{F03},NOW(),#{F07},#{F08},#{F09},#{F10})
+    </insert>
+    
+    <update id="update" parameterType="T6501">
+        UPDATE s65.t6501 SET F03 = #{F03}
+        <if test="F05 != null">
+            ,F05 = #{F05}
+        </if>
+        <if test="F06 != null">
+            ,F06 = #{F06}
+        </if>
+        <if test="F10 != null">
+            ,F10 = #{F10}
+        </if>
+        WHERE F01 = #{F01} LIMIT 1
+    </update>
+    
+    <select id="get" parameterType="java.lang.Integer" resultType="T6501">
+        SELECT F01,F02,F03,F04,F05,F06,F07,F08,F09,F10 FROM s65.t6501 WHERE F01 = #{id} LIMIT 1 FOR UPDATE
+    </select>
+    
+    <update id="updateByFlowNo" parameterType="T6501">
+        UPDATE s65.t6501 SET F03 = #{F03}, F05= CURRENT_TIMESTAMP() 
+        WHERE F10 = #{F10} 
+    </update>
+
+    <select id="getByFlowNo" parameterType="java.lang.String" resultType="T6501">
+        SELECT F01,F02,F03,F04,F05,F06,F07,F08,F09,F10 FROM s65.t6501 WHERE F10 = #{code} 
+    </select>
+    
+    <insert id="addTenderOrder" parameterType="T6504">
+        INSERT INTO S65.T6504 SET F01 = #{F01}, F02 = #{F02}, F03 = #{F03}, F04 = #{F04}
+    </insert>
+    
+    <select id="getBySerialNum" parameterType="java.lang.String" resultType="T6501">
+        SELECT F01,F02,F03,F04,F05,F06,F07,F08,F09,F10 FROM s65.t6501 WHERE F10 = #{serialNum} limit 1
+    </select>
+</mapper>

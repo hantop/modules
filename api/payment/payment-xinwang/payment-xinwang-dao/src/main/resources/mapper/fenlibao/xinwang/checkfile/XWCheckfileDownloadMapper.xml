@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWCheckfileDownloadMapper">
+
+    <insert id="insertCheckfileRecharge" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileRecharge">
+        INSERT INTO `flb`.`t_xw_checkfile_recharge` (
+            `recharge_time`,
+            `platform_no`,
+            `pay_company_code`,
+            `request_no`,
+            `recharge_order_no`,
+            `business_type`,
+            `amount`,
+            `currency_type`,
+            `user_id`,
+            `platform_user_no`,
+            `bankcard_no`,
+            `bankcode`,
+            `pay_type`,
+            `receive_amount`,
+            `remark`
+        )
+        VALUES
+            (
+                #{rechargeTime},
+                #{platformNo},
+                #{payCompanyCode},
+                #{requestNo},
+                #{rechargeOrderNo},
+                #{businessType},
+                #{amount},
+                #{currencyType},
+                #{userId},
+                #{platformUserNo},
+                #{bankcardNo},
+                #{bankcode},
+                #{payType},
+                #{receiveAmount},
+                #{remark}
+            );
+    </insert>
+
+    <insert id="insertCheckfileWithdraw" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileWithdraw">
+        INSERT INTO `flb`.`t_xw_checkfile_withdraw` (
+            `withdraw_time`,
+            `platform_no`,
+            `request_no`,
+            `order_no`,
+            `business_type`,
+            `amount`,
+            `currency_type`,
+            `user_id`,
+            `platform_user_no`,
+            `bankcard_no`,
+            `bankcode`,
+            `receive_amount`,
+            `remark`,
+            `withdraw_status`,
+            `withdraw_way`,
+            `otherpay_amount`,
+            `repayment_type`,
+            `withdraw_type`
+        )
+        VALUES
+            (
+                #{withdrawTime},
+                #{platformNo},
+                #{requestNo},
+                #{orderNo},
+                #{businessType},
+                #{amount},
+                #{currencyType},
+                #{userId},
+                #{platformUserNo},
+                #{bankcardNo},
+                #{bankcode},
+                #{receiveAmount},
+                #{remark},
+                #{withdrawStatus},
+                #{withdrawWay},
+                #{otherpayAmount},
+                #{repaymentType},
+                #{withdrawType}
+            );
+    </insert>
+
+    <insert id="insertCheckfileCommission" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileCommission">
+        INSERT INTO `flb`.`t_xw_checkfile_commission` (
+            `deduct_money_time`,
+            `platform_no`,
+            `order_no`,
+            `business_type`,
+            `sponsor_platform_user_no`,
+            `receiver_platform_user_no`,
+            `amount`,
+            `currency_type`,
+            `load_id`,
+            `remark`,
+            `request_no`
+        )
+        VALUES
+        (
+            #{deductMoneyTime},
+            #{platformNo},
+            #{orderNo},
+            #{businessType},
+            #{sponsorPlatformUserNo},
+            #{receiverPlatformUserNo},
+            #{amount},
+            #{currencyType},
+            #{loadId},
+            #{remark},
+            #{requestNo}
+        );
+    </insert>
+
+    <insert id="insertCheckfileUser" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileUser">
+        INSERT INTO `flb`.`t_xw_checkfile_user` (
+            `record_type`,
+            `register_time`,
+            `modify_time`,
+            `user_id`,
+            `platform_no`,
+            `business_type`,
+            `platform_user_no`,
+            `member_type`,
+            `member_role`,
+            `account_name`,
+            `paper_type`,
+            `paper_number`,
+            `mobile`,
+            `bankcard_no`,
+            `legal_person_name`,
+            `bankcode`,
+            `business_licence_number`,
+            `organization_code`,
+            `tax_register_number`,
+            `bank_licence`,
+            `organization_credit_code`,
+            `unify_society_credit_code`,
+            `remark`
+        )
+        VALUES
+            (
+                #{recordType},
+                #{registerTime},
+                #{modifyTime},
+                #{userId},
+                #{platformNo},
+                #{businessType},
+                #{platformUserNo},
+                #{memberType},
+                #{memberRole},
+                #{accountName},
+                #{paperType},
+                #{paperNumber},
+                #{mobile},
+                #{bankcardNo},
+                #{legalPersonName},
+                #{bankcode},
+                #{businessLicenceNumber},
+                #{organizationCode},
+                #{taxRegisterNumber},
+                #{bankLicence},
+                #{organizationCreditCode},
+                #{unifySocietyCreditCode},
+                #{remark}
+            );
+    </insert>
+
+    <insert id="insertCheckfileBackrollRecharge" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileBackrollRecharge">
+        INSERT INTO `flb`.`t_xw_checkfile_recharge` (
+            `recharge_time`,
+            `platform_no`,
+            `pay_company_code`,
+            `request_no`,
+            `recharge_order_no`,
+            `business_type`,
+            `amount`,
+            `currency_type`,
+            `user_id`,
+            `platform_user_no`,
+            `pay_type`,
+            `receive_amount`,
+            `withdraw_commission`,
+            `remark`,
+            `withdraw_request_no`
+        )
+        VALUES
+        (
+            #{rechargeTime},
+            #{platformNo},
+            #{payCompanyCode},
+            #{requestNo},
+            #{rechargeOrderNo},
+            #{businessType},
+            #{amount},
+            #{currencyType},
+            #{userId},
+            #{platformUserNo},
+            #{payType},
+            #{receiveAmount},
+            #{withdrawCommission},
+            #{remark},
+            #{withdrawRequestNo}
+        );
+    </insert>
+
+    <insert id="insertCheckfileTransaction" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileTransaction">
+        INSERT INTO `flb`.`t_xw_checkfile_transaction` (
+            `transaction_time`,
+            `platform_no`,
+            `request_no`,
+            `order_no`,
+            `business_type`,
+            `amount`,
+            `interest_amount`,
+            `currency_type`,
+            `sponsor_user_id`,
+            `sponsor_platform_user_no`,
+            `receiver_user_id`,
+            `receiver_platform_user_no`,
+            `load_id`,
+            `old_order_no`,
+            `remark`,
+            `share_rights`,
+            `custom_defined_param`
+        )
+        VALUES
+            (
+                #{transactionTime},
+                #{platformNo},
+                #{requestNo},
+                #{orderNo},
+                #{businessType},
+                #{amount},
+                #{interestAmount},
+                #{currencyType},
+                #{sponsorUserId},
+                #{sponsorPlatformUserNo},
+                #{receiverUserId},
+                #{receiverPlatformUserNo},
+                #{loadId},
+                #{oldOrderNo},
+                #{remark},
+                #{shareRights},
+                #{customDefinedParam}
+            );
+    </insert>
+
+
+    <insert id="insertCheckfileDateStatus" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileDateStatus" >
+        insert into `flb`.`t_xw_checkfile_date_status` (checkfile_date)values (#checkfileDate#)
+    </insert>
+</mapper>

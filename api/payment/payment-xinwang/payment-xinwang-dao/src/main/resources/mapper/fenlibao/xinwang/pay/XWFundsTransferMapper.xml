@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWFundsTransferMapper">
+    <insert id="insertFlow" parameterType="XWFundsTransfer">
+        insert into flb.t_xw_funds_transfer (request_no,platform_user_no,other_user_no,income,outcome)
+        values
+        (#{requestNo},#{platformUserNo},#{otherUserNo},#{income},#{outcome})
+    </insert>
+</mapper>

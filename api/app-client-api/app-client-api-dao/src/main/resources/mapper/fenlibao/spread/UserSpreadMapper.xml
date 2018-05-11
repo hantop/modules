@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserSpreadMapper">
+	<insert id="addSpreadAwardStatistics" parameterType="java.util.Map">
+		INSERT INTO S63.T6310
+		  SET F01 = #{userId}
+	</insert>
+
+	<!-- 新增首次充值奖励记录 -->
+	<insert id="addFirstChargeAward" parameterType="java.util.Map">
+		INSERT INTO S63.T6311
+		  SET
+			  F02 = #{spreadUserId},
+			  F03 = #{userId}
+	</insert>
+
+	<!-- 修改推荐人推广奖励统计次数+1 -->
+	<insert id="updateSpreadAwardStatistics" parameterType="java.util.Map">
+		UPDATE S63.T6310
+		  SET F02 = F02 + 1
+		  WHERE F01 = #{userId}
+	</insert>
+
+	<!-- 新增用户推广信息 -->
+	<insert id="addSpreadInfo" parameterType="java.util.Map">
+		INSERT INTO S61.T6111
+		  SET
+			  F01 = #{userId},
+			  F02 = #{phoneNum},
+			  F03 = #{spreadPhoneNum},
+			  F04 = #{spreadPhoneNum}
+	</insert>
+</mapper>

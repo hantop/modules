@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserSecurityMapper">
+	<update id="updateUserSecurity" parameterType="java.util.Map">
+	    update s61.t6118
+	    <set>
+	       <if test="phoneNum!=null">
+	         F06=#{phoneNum,jdbcType=VARCHAR},
+	       </if>
+	       <if test="email!=null">
+	         F07=#{email,jdbcType=VARCHAR},
+	       </if>
+	       <if test="phoneAuth!=null">
+	         F03=#{phoneAuth,jdbcType=VARCHAR},
+	       </if>
+	       <if test="emailAuth!=null">
+	         F04=#{emailAuth,jdbcType=VARCHAR},
+	       </if>
+		   <if test="idcardAuth!=null">
+			 F02=#{idcardAuth,jdbcType=VARCHAR},
+		   </if>
+	    </set>
+		where F01=#{userId}
+	</update>
+	
+	<select id="getUserSecurity" parameterType="String" resultType="UserSecurityAuthentication">
+		SELECT
+		    F01 as userId,
+			F02 as cardIDAuth,
+			F03 as phoneAuth,
+			F04 as emailAuth,
+			F05 as tradPasswordAuth,
+			F06 as phoneNum,
+			F07 as email,
+			F09 as videoAuth
+		FROM s61.t6118 where F01=#{userId}
+	</select>
+
+	<select id="getApplyUnbindTimes" parameterType="java.util.Map" resultType="int">
+		SELECT
+			COUNT(1)
+		FROM
+			pms.da_unbind_bankcard card
+		LEFT JOIN pms.da_unbind_bankcard_audit audit ON audit.unbind_bankcard_id = card.id
+		WHERE
+			card.user_id = #{userId}
+		AND audit.user_role = #{userRole}
+		AND audit.audit_status = 1
+		AND card.unbind_status = 0
+		AND audit.expiry_time <![CDATA[>]]> NOW()
+	</select>
+
+	<insert id="addUserLog" parameterType="java.util.Map">
+		insert into log.t_user_log (user_id,ip,conduct,status,create_time,request_message,remarks)
+		values (#{userId},#{ip},#{conduct},#{status},now(),#{requestStr},#{remarks})
+	</insert>
+</mapper>

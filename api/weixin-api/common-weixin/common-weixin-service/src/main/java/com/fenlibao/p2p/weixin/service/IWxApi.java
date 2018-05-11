@@ -1,0 +1,184 @@
+package com.fenlibao.p2p.weixin.service;
+
+import com.fenlibao.p2p.weixin.crypt.AesException;
+import com.fenlibao.p2p.weixin.defines.Lang;
+import com.fenlibao.p2p.weixin.defines.OauthDefines;
+import com.fenlibao.p2p.weixin.defines.SnsapiScope;
+import com.fenlibao.p2p.weixin.exception.WeixinException;
+import com.fenlibao.p2p.weixin.message.*;
+import com.fenlibao.p2p.weixin.message.template.TemplateMsg;
+import com.fenlibao.p2p.weixin.message.ticket.ReqTicket;
+import org.springframework.scheduling.annotation.Async;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
+
+/**
+ * Created by Administrator on 2015/8/17.
+ */
+public interface IWxApi {
+
+
+    /**
+     * 在开发者首次提交验证申请时，微信服务器将发送GET请求到填写的URL上，
+     * 并且带上四个参数（signature、timestamp、nonce、echostr），开发者通过对签名
+     * （即signature）的效验，来判断此条消息的真实性。此后，每次开发者接收用户消息的时候，
+     * 微信也都会带上前面三个参数（signature、timestamp、nonce）访问开发者设置的URL，
+     * 开发者依然通过对签名的效验判断此条消息的真实性。效验方式与首次提交验证申请一致。
+     * 加密/校验流程如下：
+     * 1. 将token、timestamp、nonce三个参数进行字典序排序
+     * 2. 将三个参数字符串拼接成一个字符串进行sha1加密
+     * 3. 开发者获得加密后的字符串可与signature对比，标识该请求来源于微信
+     *
+     * @param signature
+     * @param timestamp
+     * @param nonce
+     * @return
+     */
+    boolean checkSignature(String signature, String timestamp,
+                           String nonce);
+
+    /**
+     * 微信页面config接入
+     *
+     * @param url
+     * @return
+     */
+    Map<String, String> signature(final String url);
+
+    /**
+     * 获取基础交互的access_token信息
+     *
+     * @return
+     */
+    Token getToken() throws WeixinException;
+
+    /**
+     * 网页授权access_token
+     *
+     * @param code
+     * @return
+     */
+    Token getToken(String code) throws WeixinException;
+
+
+    /**
+     * 获取jssdk的ticket
+     * jsapi_ticket是公众号用于调用微信JS接口的临时票据
+     *
+     * @return
+     */
+    Ticket getJsapiTicket() throws WeixinException;
+
+    /**
+     * ticket获取
+     * 1. 投放卡券二维码ticket
+     * 2. 生成带参数的二维码ticket
+     *
+     * @param reqTicket
+     * @return
+     */
+    Ticket getJsapiTicket(ReqTicket reqTicket) throws WeixinException;
+
+    /**
+     * 获取二维码信息
+     *
+     * @param reqTicket
+     * @return
+     */
+    byte[] getQrcode(ReqTicket reqTicket) throws WeixinException;
+
+    /**
+     * 网页授权,获取用户的openid
+     *
+     * @param code
+     * @return
+     */
+    OauthDefines snsapi(String code);
+
+    /**
+     * 根据url生成授权的url
+     *
+     * @param url
+     * @param state
+     * @return
+     */
+    String snsapiUrl(String url, SnsapiScope type, String state);
+
+
+    /**
+     * access_token	是	调用接口凭证
+     * openid	是	普通用户的标识，对当前公众号唯一
+     * lang	否	返回国家地区语言版本，zh_CN 简体，zh_TW 繁体，en 英语
+     *
+     * @return
+     */
+    Fans getFans(String openid, Lang lang) throws WeixinException;
+
+    /**
+     * 发送模板消息
+     *
+     * @param templateMsgs
+     * @return
+     * @throws WeixinException
+     */
+    Future<List<TemplateMsg>> sendTmplateMsg(List<TemplateMsg> templateMsgs) throws WeixinException;
+
+
+    /**
+     * 自定义菜单
+     * 1、自定义菜单最多包括3个一级菜单，每个一级菜单最多包含5个二级菜单。
+     * 2、一级菜单最多4个汉字，二级菜单最多7个汉字，多出来的部分将会以“...”代替。
+     * 3、创建自定义菜单后，由于微信客户端缓存，需要24小时微信客户端才会展现出来。测试时可以尝试取消关注公众账号后再次关注，则可以看到创建后的效果。
+     * 自定义菜单接口可实现多种类型按钮，如下：
+     * 1、click：点击推事件
+     * 用户点击click类型按钮后，微信服务器会通过消息接口推送消息类型为event	的结构给开发者（参考消息接口指南），并且带上按钮中开发者填写的key值，开发者可以通过自定义的key值与用户进行交互；
+     * 2、view：跳转URL
+     * 用户点击view类型按钮后，微信客户端将会打开开发者在按钮中填写的网页URL，可与网页授权获取用户基本信息接口结合，获得用户基本信息。
+     * 3、scancode_push：扫码推事件
+     * 用户点击按钮后，微信客户端将调起扫一扫工具，完成扫码操作后显示扫描结果（如果是URL，将进入URL），且会将扫码的结果传给开发者，开发者可以下发消息。
+     * 4、scancode_waitmsg：扫码推事件且弹出“消息接收中”提示框
+     * 用户点击按钮后，微信客户端将调起扫一扫工具，完成扫码操作后，将扫码的结果传给开发者，同时收起扫一扫工具，然后弹出“消息接收中”提示框，随后可能会收到开发者下发的消息。
+     * 5、pic_sysphoto：弹出系统拍照发图
+     * 用户点击按钮后，微信客户端将调起系统相机，完成拍照操作后，会将拍摄的相片发送给开发者，并推送事件给开发者，同时收起系统相机，随后可能会收到开发者下发的消息。
+     * 6、pic_photo_or_album：弹出拍照或者相册发图
+     * 用户点击按钮后，微信客户端将弹出选择器供用户选择“拍照”或者“从手机相册选择”。用户选择后即走其他两种流程。
+     * 7、pic_weixin：弹出微信相册发图器
+     * 用户点击按钮后，微信客户端将调起微信相册，完成选择操作后，将选择的相片发送给开发者的服务器，并推送事件给开发者，同时收起相册，随后可能会收到开发者下发的消息。
+     * 8、location_select：弹出地理位置选择器
+     * 用户点击按钮后，微信客户端将调起地理位置选择工具，完成选择操作后，将选择的地理位置发送给开发者的服务器，同时收起位置选择工具，随后可能会收到开发者下发的消息。
+     * 9、media_id：下发消息（除文本消息）
+     * 用户点击media_id类型按钮后，微信服务器会将开发者填写的永久素材id对应的素材下发给用户，永久素材类型可以是图片、音频、视频、图文消息。请注意：永久素材id必须是在“素材管理/新增永久素材”接口上传后获得的合法id。
+     * 10、view_limited：跳转图文消息URL
+     * 用户点击view_limited类型按钮后，微信客户端将打开开发者在按钮中填写的永久素材id对应的图文消息URL，永久素材类型只支持图文消息。请注意：永久素材id必须是在“素材管理/新增永久素材”接口上传后获得的合法id。
+     *
+     * @param buttons
+     * @return
+     */
+    WxMsg customMenu(List<Button> buttons) throws WeixinException;
+
+    /**
+     * 接收处理消息
+     *
+     *
+     * @param timestamp
+     * @param nonce
+     *@param msgSignature
+     * @param encryptType
+     * @param reqMsg  @return
+     */
+    Serializable process(String timestamp, String nonce, String msgSignature, String encryptType, String reqMsg) throws AesException;
+
+
+    /**
+     * 取帐号的关注者列表
+     * @param next_openid   拉取列表的最后一个用户的OPENID
+     * @return
+     */
+    PageFans getFansListOpenid(String next_openid) throws WeixinException;
+
+    @Async
+    void sendTmplateMsgToAllFans(List<TemplateMsg> templateMsgs);
+}

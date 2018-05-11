@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.client.ClientAdvertMapper">
+    <insert id="saveAdvertImage" parameterType="TAdvertImage" keyProperty="id" useGeneratedKeys="true">
+        insert into flb.t_advert_image (
+            original_name,
+            publish_name,
+            server_path,
+            relative_path,
+            client_type,
+            screen_type,
+            client_version,
+            file_size,
+            file_type,
+            response_type,
+            response_link,
+            priority,
+            status,
+            create_user,
+            create_time,
+            advert_type
+        ) values (
+            #{originalName},
+            #{publishName},
+            #{serverPath},
+            #{relativePath},
+            #{clientType},
+            #{screenType},
+            #{clientVersion},
+            #{fileSize},
+            #{fileType},
+            #{responseType},
+            #{responseLink},
+            #{priority},
+            #{status},
+            #{createUser},
+            sysdate(),
+            #{advertType}
+        )
+    </insert>
+
+    <select id="getAdvertImageList" parameterType="TAdvertImage" resultType="TAdvertImage">
+        select
+            id,
+            original_name originalName,
+            publish_name publishName,
+            server_path serverPath,
+            relative_path relativePath,
+            client_type clientType,
+            screen_type screenType,
+            client_version clientVersion,
+            file_size fileSize,
+            file_type fileType,
+            response_type responseType,
+            response_link responseLink,
+            priority priority,
+            advert_type advertType,
+            status status,
+            create_user createUser,
+            create_time createTime
+        from flb.t_advert_image
+        <where>
+            <if test="originalName != null">
+                original_name like concat("%", #{originalName}, "%")
+            </if>
+        </where>
+        order by create_time desc
+    </select>
+
+    <select id="getAdvertImageListByIds" resultType="TAdvertImage">
+        select
+            id,
+            original_name originalName,
+            publish_name publishName,
+            server_path serverPath,
+            relative_path relativePath,
+            client_type clientType,
+            screen_type screenType,
+            client_version clientVersion,
+            file_size fileSize,
+            file_type fileType,
+            response_type responseType,
+            response_link responseLink,
+            priority priority,
+            advert_type advertType,
+            status status,
+            create_user createUser,
+            create_time createTime
+        from flb.t_advert_image
+        <where>
+            <if test="array != null">
+                id in
+                <foreach collection="array" index="index" item="item" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteAdvertImageByIds">
+        delete from flb.t_advert_image
+        <where>
+            <if test="array != null">
+                id in
+                <foreach collection="array" item="item" index="index" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </delete>
+
+    <update id="updateAdvertImage" parameterType="TAdvertImage">
+        update `flb`.`t_advert_image` set
+            client_type=#{clientType},
+            screen_type=#{screenType},
+            client_version=#{clientVersion},
+            status=#{status},
+            priority=#{priority},
+            response_link=#{responseLink},
+            advert_type=#{advertType}
+        where id=#{id}
+    </update>
+</mapper>

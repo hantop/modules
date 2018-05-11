@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PlanLateChargeMapper">
+	<select id="getOverdueDebts" resultType="com.fenlibao.p2p.model.entity.plan.UserPlanRepayment">
+		SELECT
+			a.id userPlanRepaymentId,
+			a.user_plan_id userPlanId,
+			a.user_plan_product_id userPlanProductId,
+			a.payee_id payeeId,
+			a.amount,
+			a.repayment_date repaymentDate,
+			a.trade_type tradeType,
+			c.overdue_rate overdueRate
+		from (
+			SELECT * from flb.t_user_plan_repayment where
+			repayment_date<![CDATA[<]]>CURRENT_DATE()
+			and trade_type=1
+		) a
+		INNER JOIN (
+			SELECT * from flb.t_user_plan where status=2
+		) b ON b.id=a.user_plan_id
+		INNER JOIN flb.t_invest_plan c ON b.plan_id=c.id AND c.is_cg = 1
+	</select>
+	
+	<select id="getUserPlanRepayment" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.entity.plan.UserPlanRepayment">
+	    SELECT a.id userPlanRepaymentId,a.user_plan_id userPlanId,a.user_plan_product_id userPlanProductId,a.payee_id payeeId,a.amount,a.repayment_date repaymentDate,a.trade_type tradeType from flb.t_user_plan_repayment a where a.user_plan_product_id= #{userPlanProductId} and a.trade_type= #{tradeType} limit 1
+	</select>
+	
+	<insert id="insertUserPlanRepayment" parameterType="com.fenlibao.p2p.model.entity.plan.UserPlanRepayment">
+	    insert into flb.t_user_plan_repayment (user_plan_id,user_plan_product_id,payee_id,amount,repayment_date,trade_type) values (#{userPlanId},#{userPlanProductId},#{payeeId},#{amount},#{repaymentDate},#{tradeType})
+	</insert>
+	
+	<update id="updateUserPlanRepayment" parameterType="java.util.Map">
+	    update flb.t_user_plan_repayment set amount= #{amount} where id = #{id}
+	</update>
+	
+	<insert id="batchInsertUserPlanRepayment" parameterType="java.util.List">
+	    insert into flb.t_user_plan_repayment (user_plan_id,user_plan_product_id,payee_id,amount,repayment_date,trade_type)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+        (#{item.userPlanId},#{item.userPlanProductId},#{item.payeeId},#{item.amount},#{item.repaymentDate},#{item.tradeType})
+        </foreach>
+	</insert>
+</mapper>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <properties resource="datasource.properties"/>
+
+    <settings>
+        <setting name="cacheEnabled" value="true"/>
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <setting name="multipleResultSetsEnabled" value="true"/>
+        <setting name="useColumnLabel" value="true"/>
+        <setting name="useGeneratedKeys" value="false"/>
+        <setting name="autoMappingBehavior" value="PARTIAL"/>
+        <setting name="defaultExecutorType" value="SIMPLE"/>
+        <setting name="defaultStatementTimeout" value="25"/>
+        <setting name="safeRowBoundsEnabled" value="false"/>
+        <setting name="mapUnderscoreToCamelCase" value="false"/>
+        <setting name="localCacheScope" value="SESSION"/>
+        <setting name="jdbcTypeForNull" value="OTHER"/>
+        <setting name="lazyLoadTriggerMethods" value="equals,clone,hashCode,toString"/>
+        <setting name="logImpl" value="SLF4J"/>
+    </settings>
+
+    <typeAliases>
+        <package name="com.fenlibao.platform.model"/>
+    </typeAliases>
+
+    <environments default="default">
+        <environment id="default">
+            <transactionManager type="JDBC"/>
+            <dataSource type="com.fenlibao.platform.datasource.C3P0DataSourceFactory">
+                <property name="driverClass" value="${driverClass}"/>
+                <property name="jdbcUrl" value="${jdbcUrl}"/>
+                <property name="user" value="${user}"/>
+                <property name="password" value="${password}"/>
+                <property name="acquireIncrement" value="${acquireIncrement}"/>
+                <property name="initialPoolSize" value="${initialPoolSize}"/>
+                <property name="minPoolSize" value="${minPoolSize}"/>
+                <property name="maxPoolSize" value="${maxPoolSize}"/>
+                <property name="maxIdleTime" value="${maxIdleTime}"/>
+                <property name="maxConnectionAge" value="${maxConnectionAge}"/>
+                <!-- <property name="maxIdleTimeExcessConnections" value="${maxIdleTimeExcessConnections}"/> -->
+            </dataSource>
+        </environment>
+    </environments>
+
+    <mappers>
+        <mapper resource="mapper/TestMapper.xml"/>
+        <mapper resource="mapper/CommonMapper.xml"/>
+        <mapper resource="mapper/MemberMapper.xml"/>
+        <mapper resource="mapper/MessageMapper.xml"/>
+        <mapper resource="mapper/IntegralMapper.xml"/>
+        <mapper resource="mapper/TPUserMapper.xml"/>
+        <mapper resource="mapper/BidInfoMapper.xml"/>
+        <mapper resource="mapper/QueqianmeMapper.xml"/>
+        <mapper resource="mapper/XWEntrusImportUserMapper.xml"/>
+    </mappers>
+</configuration>

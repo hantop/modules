@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="JoinRecordMapper">
+	<select id="getJoinRecord" parameterType="java.util.Map" resultType="TJoinRecord">
+		SELECT
+		    id,
+			f_user_id as fUserId,
+			f_user_name AS fUserName,
+			f_type AS fType,
+			f_day AS fDay,
+			f_amount AS fAmount,
+		  	f_join_time AS fJoinTime		
+		FROM
+			flb.t_join_record inner join s62.t6211 on t_join_record.f_type = t6211.F01
+		<where>
+			<if test="fType != null">
+				AND  t6211.F05 = #{fType}
+			</if>
+			<if test="fDay != null">
+				AND f_day = #{fDay}
+			</if>
+			<if test="fUserId != null">
+				AND f_user_id = #{fUserId}
+			</if>
+			<if test="fJoinTime != null">
+			    <![CDATA[AND f_join_time < #{fJoinTime}]]>
+			</if>
+			order by f_join_time desc limit 10
+		</where>
+	</select>
+</mapper>

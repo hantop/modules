@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition extends="ancestor" name="system/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="system/pmsuser/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/user/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="system/pmsuser/settingUserRole">
+        <put-attribute name="body" value="/WEB-INF/page/system/user/setting-user-role.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="system/pmsuser/user-edit">
+        <put-attribute name="body" value="/WEB-INF/page/system/user/user-edit.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="system/pmsuser/setting-user-role">
+        <put-attribute name="body" value="/WEB-INF/page/system/user/setting-user-role.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="system/pmsuser/setting-department">
+        <put-attribute name="body" value="/WEB-INF/page/system/user/setting-department.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <!-- 角色start -->
+    <definition extends="ancestor" name="system/pmsrole/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/role/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="system/pmsrole/new">
+        <put-attribute name="body" value="/WEB-INF/page/system/role/edit.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="system/pmsrole/edit">
+        <put-attribute name="body" value="/WEB-INF/page/system/role/edit.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <!-- 角色end -->
+    <definition extends="ancestor" name="system/pmspermit/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/permit/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>        
+    </definition>
+    <definition extends="ancestor" name="system/group/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/group/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="system/group/*">
+        <put-attribute name="body" value="/WEB-INF/page/system/group/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+    <!--登录日志-->
+    <definition extends="ancestor" name="system/log/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/log/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-system.jsp"/>
+    </definition>
+</tiles-definitions>

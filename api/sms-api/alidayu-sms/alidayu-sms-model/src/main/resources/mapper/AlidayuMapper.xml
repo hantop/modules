@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fenlibao.p2p.aliday.sms.persistence.AlidayuMapper">
+    <resultMap id="BaseResultMap" type="com.fenlibao.p2p.alidayu.sms.domain.Alidayu">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="template_code" property="templateCode" jdbcType="VARCHAR"/>
+        <result column="biz_name" property="bizName" jdbcType="VARCHAR"/>
+        <result column="biz_code" property="bizCode" jdbcType="VARCHAR"/>
+        <result column="sign_name" property="signName" jdbcType="VARCHAR"/>
+        <collection property="alidayuItems" javaType="list" ofType="com.fenlibao.p2p.alidayu.sms.domain.AlidayuItem" columnPrefix="alidayu_item_">
+            <id column="id" property="id" jdbcType="INTEGER"/>
+            <result column="start_index" property="startIndex" jdbcType="INTEGER"/>
+            <result column="end_index" property="endIndex" jdbcType="INTEGER"/>
+            <result column="pattern" property="pattern" jdbcType="VARCHAR"/>
+            <result column="key_name" property="keyName" jdbcType="VARCHAR"/>
+        </collection>
+    </resultMap>
+
+    <select id="find" resultMap="BaseResultMap">
+        SELECT
+            alidayu.id,
+            alidayu.biz_name,
+            alidayu.biz_code,
+            alidayu.template_code,
+            alidayu.sign_name,
+            alidayu_item.id alidayu_item_id,
+            alidayu_item.start_index alidayu_item_start_index,
+            alidayu_item.end_index alidayu_item_end_index,
+            alidayu_item.pattern alidayu_item_pattern,
+            alidayu_item.key_name alidayu_item_key_name
+        FROM
+            alidayu
+        LEFT JOIN  alidayu_item ON (alidayu_item.alidayu_id = alidayu.id)
+    </select>
+</mapper>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>payment-dm</artifactId>
+        <groupId>com.fenlibao.payment</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>payment-dm-util</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fenlibao.payment</groupId>
+            <artifactId>payment-dm-model</artifactId>
+            <version>${depedency.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fenlibao.api</groupId>
+            <artifactId>common-api-util</artifactId>
+            <version>${depedency.version}</version>
+        </dependency>
+
+        <dependency>
+        <groupId>javax.servlet</groupId>
+        <artifactId>javax.servlet-api</artifactId>
+        <scope>provided</scope>
+    </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

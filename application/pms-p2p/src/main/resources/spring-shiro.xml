@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="http://www.springframework.org/schema/beans" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="algorithmName" class="java.lang.String">
+        <constructor-arg value="md5"/>
+    </bean>
+    <bean id="hashIterations" class="java.lang.Integer">
+        <constructor-arg value="2"/>
+    </bean>
+
+    <bean id="passwordHelper" class="com.fenlibao.service.pms.idmt.user.impl.PasswordHelper">
+        <property name="algorithmName" ref="algorithmName"/>
+        <property name="hashIterations" ref="hashIterations"/>
+    </bean>
+
+    <bean id="userDetailsService" class="com.fenlibao.service.pms.idmt.user.impl.UserDetailsServiceImpl">
+        <property name="passwordHelper" ref="passwordHelper"/>
+    </bean>
+
+    <bean id="shiroEhcacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <property name="cacheManagerConfigFile" value="classpath:ehcache.xml"/>
+    </bean>
+
+    <!-- 凭证匹配器 -->
+    <bean id="credentialsMatcher" class="com.fenlibao.pms.shiro.web.RetryLimitHashedCredentialsMatcher">
+        <constructor-arg ref="shiroEhcacheManager" index="0"/>
+        <property name="hashAlgorithmName" ref="algorithmName"/>
+        <property name="hashIterations" ref="hashIterations"/>
+        <property name="storedCredentialsHexEncoded" value="true"/>
+    </bean>
+
+    <bean id="shirorealm" class="com.fenlibao.pms.realm.ShiroRealm">
+        <property name="userDetailsService" ref="userDetailsService"/>
+        <property name="cacheManager" ref="shiroEhcacheManager"/>
+        <property name="credentialsMatcher" ref="credentialsMatcher"/>
+        <property name="cachingEnabled" value="false"/>
+    </bean>
+    
+    <bean id="PmsLogService" class="com.fenlibao.service.pms.idmt.log.impl.PmsLogServiceImpl">
+        <property name="PmsLogMapper" ref="PmsLogMapper"></property>
+    </bean>
+    
+    <bean id="PmsLogMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">        
+        <property name="mapperInterface" value="com.fenlibao.dao.pms.idmt.log.PmsLogMapper" />       
+        <property name="sqlSessionFactory" ref="sqlSessionFactory" />        
+    </bean>
+
+    <bean id="authenticator" class="org.apache.shiro.authc.pam.ModularRealmAuthenticator">
+        <property name="authenticationListeners">
+            <list>
+                <bean class="com.fenlibao.pms.shiro.listener.CustomAuthenticationListener">
+                    <property name="PmsLogService" ref="PmsLogService"/>
+                </bean>
+            </list>
+        </property>
+        <property name="realms">
+            <list>
+                <ref bean="shirorealm"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <property name="realm" ref="shirorealm"/>
+        <property name="cacheManager" ref="shiroEhcacheManager"/>
+        <property name="sessionManager" ref="sessionManager"/>
+        <property name="authenticator" ref="authenticator"/>
+    </bean>
+
+    <!-- 相当于调用SecurityUtils.setSecurityManager(securityManager) -->
+    <bean class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="staticMethod" value="org.apache.shiro.SecurityUtils.setSecurityManager"/>
+        <property name="arguments" ref="securityManager"/>
+    </bean>
+
+    <bean id="shiroSessionDao" class="com.fenlibao.pms.shiro.ShiroSessionDao"/>
+
+
+    <!-- 会话管理器 -->
+    <bean id="sessionManager" class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+        <property name="sessionDAO" ref="shiroSessionDao"/>
+        <property name="sessionIdCookie">
+            <bean class="org.apache.shiro.web.servlet.SimpleCookie">
+                <constructor-arg name="name" value="${cookie.session.id}"/>
+            </bean>
+        </property>
+    </bean>
+
+    <!-- 基于Form表单的身份验证过滤器 -->
+    <bean id="formAuthenticationFilter" class="com.fenlibao.pms.shiro.web.CustomFormAuthenticationFilter">
+        <property name="usernameParam" value="username"/>
+        <property name="passwordParam" value="password"/>
+        <property name="rememberMeParam" value="rememberMe"/>
+        <property name="loginUrl" value="/login"/>
+        <property name="successUrl" value="/index"/>
+        <property name="pmsUserService" ref="pmsUserService"/>
+        <property name="pmsPermitService" ref="pmsPermitService"/>
+    </bean>
+
+    <bean id="pmsPermitService" class="com.fenlibao.service.pms.idmt.permit.impl.PmsPermitServiceImpl" />
+    <bean id="pmsUserService" class="com.fenlibao.service.pms.idmt.user.impl.UserDetailsServiceImpl" />
+
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="securityManager" ref="securityManager"/>
+        <property name="loginUrl" value="/login"/>
+        <property name="successUrl" value="/index"/>
+        <property name="unauthorizedUrl" value="/unauthorized"/>
+        <property name="filters">
+            <util:map>
+                <entry key="authc" value-ref="formAuthenticationFilter"/>
+            </util:map>
+        </property>
+        <property name="filterChainDefinitions">
+            <value>
+                /static/** = anon
+                /captcha = anon
+                /login = authc
+                /logout = logout
+                /authenticated = authc
+                /404 = anon
+                /500 = anon
+                /** = authc
+            </value>
+        </property>
+    </bean>
+
+</beans>

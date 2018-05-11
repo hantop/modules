@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PmsUserMapper">
+    <select id="getUserByUsername" parameterType="String" resultType="PmsUser">
+		select
+			pms.idmt_user.id id,
+			pms.idmt_user.username username,
+			pms.idmt_user.realname realname,
+			pms.idmt_user.phone,
+			pms.idmt_user.email,
+			pms.idmt_user.status `status`
+		from pms.idmt_user
+		where pms.idmt_user.username = #{username}
+	</select>
+</mapper>

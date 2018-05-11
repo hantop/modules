@@ -1,0 +1,33 @@
+Manifest-Version: 1.0
+Class-Path: payment-dm-service.jar payment-dm-dao.jar payment-dm-model
+ .jar owner.jar payment-dm-util.jar common-api-util.jar trade-service.
+ jar trade-dao.jar trade-model.jar trade-util.jar user-service.jar use
+ r-dao.jar user-model.jar user-util.jar spring-aop.jar aopalliance.jar
+  spring-aspects.jar aspectjweaver.jar spring-beans.jar spring-context
+ .jar spring-context-support.jar spring-core.jar commons-logging.jar s
+ pring-expression.jar spring-instrument.jar spring-instrument-tomcat.j
+ ar spring-jdbc.jar spring-jms.jar spring-messaging.jar spring-orm.jar
+  spring-oxm.jar spring-test.jar spring-tx.jar spring-web.jar spring-w
+ ebmvc.jar spring-webmvc-portlet.jar spring-websocket.jar gson.jar lot
+ tery-service.jar lottery-util.jar lottery-model.jar lottery-dao.jar m
+ p-service.jar mp-util.jar mp-model.jar mp-dao.jar sqlite-jdbc.jar cha
+ nnel-service.jar channel-dao.jar channel-util.jar channel-model.jar a
+ pp-client-api-model.jar commons-lang3.jar common.jar commons-io.jar s
+ lf4j-api.jar bcprov-ext-jdk15on.jar dnsjava.jar poi.jar poi-ooxml.jar
+  poi-ooxml-schemas.jar xmlbeans.jar stax-api.jar framework-common.jar
+  log4j.jar common-api-model.jar app-client-api-service.jar app-client
+ -api-dao.jar mybatis.jar app-client-api-util.jar mail.jar activation.
+ jar httpclient.jar httpcore.jar lianpay-standard.jar third-party.jar 
+ dom4j.jar xml-apis.jar axis.jar javax.xml.rpc-api.jar commons-discove
+ ry.jar wsdl4j.jar log4j-api.jar common-util.jar jsqlparser.jar jedis.
+ jar commons-pool2.jar commons-codec.jar druid.jar mysql-connector-jav
+ a.jar log4j-core.jar log4j-web.jar jackson-core.jar jackson-databind.
+ jar jackson-annotations.jar mybatis-spring.jar fastjson.jar xstream.j
+ ar xmlpull.jar xpp3_min.jar javax.servlet.jsp.jstl-api.jar BestSignSD
+ K-java.jar payment-thirdparty-service.jar payment-thirdparty-dao.jar 
+ payment-thirdparty-model.jar payment-thirdparty-util.jar jcl-over-slf
+ 4j.jar log4j-slf4j-impl.jar joda-time.jar payment-xinwang-service.jar
+  payment-xinwang-dao.jar payment-xinwang-model.jar payment-xinwang-ut
+ il.jar
+Created-By: 1.7.0_80 (Oracle Corporation)
+

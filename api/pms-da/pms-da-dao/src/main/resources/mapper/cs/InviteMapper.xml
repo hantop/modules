@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.InviteMapper">
+   <select id="inviteList" resultType="com.fenlibao.model.pms.da.cs.Invite" parameterType="com.fenlibao.model.pms.da.cs.form.PageForm">
+	   <!--SELECT
+	   tt6110.F04 phoneNum,
+	   CONCAT(
+	   LEFT (tt6141.F02, 1),
+	   REPEAT
+	   (
+	   '*',
+	   CHAR_LENGTH(tt6141.F02) - 1
+	   )
+	   ) userName,
+	   tt6110.F09 regTime,
+	   CASE
+	   WHEN isnull(tt3.repayment) THEN
+	   0
+	   ELSE
+	   tt3.repayment
+	   END + CASE
+	   WHEN isnull(tt1.investmoney) THEN
+	   0
+	   ELSE
+	   tt1.investmoney
+	   END + CASE
+	   WHEN isnull(tt2.holddebt) THEN
+	   0
+	   ELSE
+	   tt2.holddebt
+	   END hasBeenInvest,
+	   CASE
+	   WHEN isnull(tt1.investmoney) THEN
+	   0
+	   ELSE
+	   tt1.investmoney
+	   END + CASE
+	   WHEN isnull(tt2.holddebt) THEN
+	   0
+	   ELSE
+	   tt2.holddebt
+	   END investingMoney
+	   FROM
+	   (
+	   SELECT
+	   t6110.F01 inviteId,
+	   tt6111.F01 beinvitedId
+	   FROM
+	   s61.t6110 t6110
+	   LEFT JOIN s61.t6111 tt6111 ON tt6111.F04 = t6110.F04
+	   WHERE
+	   t6110.F01 = #{userId}
+	   ) tt6111
+	   LEFT JOIN s61.t6110 tt6110 ON tt6111.beinvitedId = tt6110.F01
+	   LEFT JOIN s61.t6141 tt6141 ON tt6111.beinvitedId = tt6141.F01
+	   LEFT JOIN (
+	   SELECT
+	   tt6250.F03 investorid,
+	   SUM(tt6250.F04) investmoney
+	   FROM
+	   s62.t6250 tt6250
+	   LEFT JOIN s62.t6230 tt6230 ON tt6250.F02 = tt6230.F01
+	   WHERE
+	   tt6230.F20 IN ('TBZ', 'DFK')
+	   GROUP BY
+	   tt6250.F03
+	   ) tt1 ON tt6111.beinvitedId = tt1.investorid
+	   LEFT JOIN (
+	   SELECT
+	   tt6251.F04 creditorid,
+	   sum(tt6251.F07) holddebt
+	   FROM
+	   s62.t6251 tt6251
+	   GROUP BY
+	   tt6251.F04
+	   ) tt2 ON tt6111.beinvitedId = tt2.creditorid
+	   LEFT JOIN (
+	   SELECT
+	   tt6252.F04 payeeid,
+	   SUM(tt6252.F07) repayment
+	   FROM
+	   s62.t6252 tt6252
+	   WHERE
+	   tt6252.F05 = '7001'
+	   AND tt6252.F09 = 'YH'
+	   GROUP BY
+	   tt6252.F04
+	   ) tt3 ON tt6111.beinvitedId = tt3.payeeid
+	<where>
+		<if test="startDate!=null">
+		    and tt6110.F09>= #{startDate}
+		</if>
+		<if test="endDate!=null">
+		    <![CDATA[and tt6110.F09<= #{endDate}]]>
+		</if>
+	</where>-->
+	   SELECT
+	   tt6110.f01 beinvitedId,
+	   tt6110.F04 phoneNum,
+	   CONCAT(
+	   LEFT (tt6141.F02, 1),
+	   REPEAT
+	   (
+	   '*',
+	   CHAR_LENGTH(tt6141.F02) - 1
+	   )
+	   ) userName,
+	   tt6110.F09 regTime
+	   FROM
+	   (
+	   SELECT
+	   t6110.F01 inviteId,
+	   tt6111.F01 beinvitedId
+	   FROM
+	   s61.t6110 t6110
+	   LEFT JOIN s61.t6111 tt6111 ON tt6111.F04 = t6110.F04
+	   WHERE
+	   t6110.F01 = #{userId}
+	   ) tt6111
+	   LEFT JOIN s61.t6110 tt6110 ON tt6111.beinvitedId = tt6110.F01
+	   LEFT JOIN s61.t6141 tt6141 ON tt6111.beinvitedId = tt6141.F01
+	   <where>
+		   <if test="startDate!=null">
+			   and tt6110.F09>= #{startDate}
+		   </if>
+		   <if test="endDate!=null">
+			   <![CDATA[and tt6110.F09<= #{endDate}]]>
+		   </if>
+	   </where>
+   </select>
+
+
+	<resultMap id="beinvitedUserMap" type="java.util.Map">
+		<result property="beinvitedId" column="beinvitedId"/>
+		<result property="investMoney" column="investMoney"/>
+		<result property="holddebt" column="holddebt"/>
+		<result property="repayment" column="repayment"/>
+	</resultMap>
+
+	<select id="getInvestMoney" parameterType="map" resultMap="beinvitedUserMap">
+		SELECT
+		tt6250.F03 beinvitedId,
+		SUM(tt6250.F04) investMoney
+		FROM
+		s62.t6250 tt6250
+		LEFT JOIN s62.t6230 tt6230 ON tt6250.F02 = tt6230.F01
+		WHERE
+		tt6230.F20 IN ('TBZ', 'DFK')
+		AND tt6250.F03 IN
+		<foreach collection="beinvitedIds" item="beinvitedId" index="index"
+				 open="(" close=")" separator=",">
+			#{beinvitedId}
+		</foreach>
+		GROUP BY
+		tt6250.F03
+	</select>
+
+	<select id="getHolddebt" parameterType="map" resultMap="beinvitedUserMap">
+		SELECT
+		tt6251.F04 beinvitedId,
+		SUM(tt6251.F07) holddebt
+		FROM
+		s62.t6251 tt6251
+		WHERE tt6251.F04 IN
+		<foreach collection="beinvitedIds" item="beinvitedId" index="index"
+				 open="(" close=")" separator=",">
+			#{beinvitedId}
+		</foreach>
+		GROUP BY
+		tt6251.F04
+	</select>
+
+	<select id="getRepayment" parameterType="map" resultMap="beinvitedUserMap">
+		SELECT
+		tt6252.F04 beinvitedId,
+		SUM(tt6252.F07) repayment
+		FROM
+		s62.t6252 tt6252
+		WHERE
+		tt6252.F05 = '7001'
+		AND tt6252.F09 = 'YH'
+		AND tt6252.F04 IN
+		<foreach collection="beinvitedIds" item="beinvitedId" index="index"
+				 open="(" close=")" separator=",">
+			#{beinvitedId}
+		</foreach>
+		GROUP BY
+		tt6252.F04
+	</select>
+</mapper>

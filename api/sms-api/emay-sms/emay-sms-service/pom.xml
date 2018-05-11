@@ -1,0 +1,53 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+	<groupId>com.fenlibao.sms-api.emay-sms</groupId>
+    <artifactId>emay-sms-service</artifactId>
+    <name>emay-sms-service</name>
+	
+	<parent>
+        <artifactId>emay-sms</artifactId>
+        <groupId>com.fenlibao.sms-api</groupId>
+		 <version>1.0-SNAPSHOT</version>
+    </parent>
+	
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+        <dependency>
+            <groupId>com.fenlibao.sms-api.emay-sms</groupId>
+            <artifactId>emay-sms-config</artifactId>
+			<version>${depedency.version}</version>
+        </dependency>		
+    </dependencies>
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jvnet.jaxb2.maven2</groupId>
+                <artifactId>maven-jaxb2-plugin</artifactId>
+                <version>0.12.3</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <schemaLanguage>WSDL</schemaLanguage>
+                    <generatePackage>com.fenlibao.p2p.emay.wsdl</generatePackage>
+                    <schemas>
+                        <schema>
+                            <url>http://sdk4rptws.eucp.b2m.cn:8080/sdk/SDKService?wsdl</url>
+                        </schema>
+                    </schemas>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

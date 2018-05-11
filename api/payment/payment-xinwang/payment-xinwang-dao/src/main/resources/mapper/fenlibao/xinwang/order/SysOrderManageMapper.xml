@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysOrderManageMapper">
+
+    <insert id="add" parameterType="SystemOrder" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO s65.t6501 (F02,F03,F04,F07,F08,F09,F10) VALUES (#{typeCode},#{orderStatus},NOW(),#{source},#{userId},#{backstageId},#{flowNo})
+    </insert>
+    
+    <update id="update" parameterType="java.util.Map">
+        UPDATE s65.t6501 SET F03 = #{orderStatus}
+        <if test="commitTime != null">
+            ,F05 = #{commitTime}
+        </if>
+        <if test="completeTime != null">
+            ,F06 = #{completeTime}
+        </if>
+        <if test="flowNo != null">
+            ,F10 = #{flowNo}
+        </if>
+        WHERE F01 = #{id} LIMIT 1
+    </update>
+    
+    <select id="get" parameterType="java.util.Map" resultType="SystemOrder">
+        SELECT F01 id,F02 typeCode,F03 orderStatus,F04 createTime,F05 commitTime,F06 completeTime,F07 source,F08 userId,F09 backstageId,F10 flowNo FROM s65.t6501 WHERE F01 = #{id} LIMIT 1
+        <if test="lock !=null">
+            FOR UPDATE
+        </if>
+    </select>
+    
+    <update id="updateByFlowNo" parameterType="SystemOrder">
+        UPDATE s65.t6501 SET F03 = #{orderStatus}, F05= CURRENT_TIMESTAMP()
+        WHERE F10 = #{flowNo}
+    </update>
+
+    <select id="getByFlowNo" parameterType="java.lang.String" resultType="SystemOrder">
+        SELECT F01,F02,F03,F04,F05,F06,F07,F08,F09,F10 FROM s65.t6501 WHERE F10 = #{code} 
+    </select>
+    
+    <insert id="addTenderOrder" parameterType="BidOrder">
+        INSERT INTO S65.T6504 SET F01 = #{id}, F02 = #{userId}, F03 = #{bidId}, F04 = #{amount}
+    </insert>
+    
+    <select id="getBySerialNum" parameterType="java.lang.String" resultType="SystemOrder">
+        SELECT F01,F02,F03,F04,F05,F06,F07,F08,F09,F10 FROM s65.t6501 WHERE F10 = #{serialNum} limit 1
+    </select>
+
+    <insert id="insertOrderExceptionLog" parameterType="java.util.Map">
+        INSERT INTO S65.T6550 SET F02 = #{orderId}, F03 = #{log}
+    </insert>
+</mapper>

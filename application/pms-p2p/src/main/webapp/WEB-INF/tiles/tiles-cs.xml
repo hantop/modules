@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition extends="ancestor" name="cs/index">
+        <put-attribute name="body" value="/WEB-INF/page/cs/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+    
+    <definition extends="ancestor" name="cs/unbindBankCards">
+        <put-attribute name="body" value="/WEB-INF/page/cs/unbindBankCard/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/userUnbindBankCards">
+        <put-attribute name="body" value="/WEB-INF/page/cs/unbindBankCard/userUnbindBankCards.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/account/*">
+        <put-attribute name="body" value="/WEB-INF/page/cs/account/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/phone">
+        <put-attribute name="body" value="/WEB-INF/page/cs/replacePhone/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/borrower/*">
+        <put-attribute name="body" value="/WEB-INF/page/cs/borrowerAccount/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/guarantee/*">
+        <put-attribute name="body" value="/WEB-INF/page/cs/guarantee/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/guarantor/*">
+        <put-attribute name="body" value="/WEB-INF/page/cs/guarantor/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/investUser/*">
+        <put-attribute name="body" value="/WEB-INF/page/cs/investUser/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/investUser/*/*">
+        <put-attribute name="body" value="/WEB-INF/page/cs/investUser/{1}/{2}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="cs/logInfo/*">
+        <put-attribute name="body" value="/WEB-INF/page/cs/logInfo/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-cs.jsp"/>
+    </definition>
+
+</tiles-definitions>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.platform.dao.thirdparty.XWEntrusImportUserMapper">
+
+	<insert id="createRequest" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest"  useGeneratedKeys="true" keyProperty="id">
+		INSERT flb.t_xw_request (interface_name,batch_no,request_no,order_id,platform_user_no,request_time,state,user_id) VALUES (#{interfaceName}, #{batchNo},#{requestNo}, #{orderId},#{platformUserNo},#{requestTime},#{state},#{userId})
+	</insert>
+
+	<insert id="saveRequestMessage" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWResponseMessage" >
+		INSERT flb.t_xw_response_message (batch_no,request_no,request_params,response_msg,update_time) VALUES (#{batchNo},#{requestNo},#{requestParams},#{responseMsg},now())
+	</insert>
+
+	<update id="updateRequest" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+		update flb.t_xw_request
+		SET state= #{state},update_time= now()
+		<where>
+			<if test="requestNo!=null">
+				and request_no = #{requestNo}
+			</if>
+			<if test="batchNo!=null">
+				and batch_no = #{batchNo}
+			</if>
+		</where>
+	</update>
+
+	<update id="saveResponseMessage" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWResponseMessage" >
+		UPDATE flb.t_xw_response_message SET response_msg = #{responseMsg},update_time = now()
+		<where>
+			<if test="requestNo!=null">
+				and request_no = #{requestNo}
+			</if>
+			<if test="batchNo!=null">
+				and batch_no = #{batchNo}
+			</if>
+		</where>
+	</update>
+
+	<insert id="createXWAccount" parameterType="com.fenlibao.p2p.model.xinwang.entity.account.XinwangAccount" >
+		INSERT flb.t_xw_account (platform_user_no,user_id,user_role,audit_status,user_type,bankcard_no,bankcode,mobile,import_user_activate) VALUES (#{platformUserNo}, #{userId}, #{userRole},#{auditStatus},#{userType},#{bankcardNo},#{bankcode},#{mobile},#{importUserActivate})
+	</insert>
+
+	<insert id="createPTAssetAccount" parameterType="java.util.Map" >
+		INSERT s61.t6101 (F02,F03,F04,F05) select #{userId},#{ptAssetAccountType},#{ptAssetAccountName},F02 from s61.t6110 WHERE F01 = #{userId}
+	</insert>
+
+	<select id="getIdentityAuthState" parameterType="java.lang.Integer" resultType="java.lang.Boolean" >
+		select case F02 when 'TG' then true else false end from s61.t6118 where F01= #{userId}
+	</select>
+
+	<update id="updatePTAccountIdentityState" parameterType="java.lang.Integer" >
+		update s61.t6118 set F02='TG' where F01= #{userId}
+	</update>
+
+	<update id="updatePTAccountInfo" parameterType="java.util.Map" >
+		update s61.t6141
+		<set>
+			<if test="realName!=null">
+				F02=#{realName},
+			</if>
+			<if test="authState!=null">
+				F04=#{authState},
+			</if>
+			<if test="idcardStar!=null">
+				F06=#{idcardStar},
+			</if>
+			<if test="idcardEncrypt!=null">
+				F07=#{idcardEncrypt},
+			</if>
+			<if test="birthday!=null">
+				F08=#{birthday},
+			</if>
+		</set>
+		where F01=#{userId}
+	</update>
+</mapper>

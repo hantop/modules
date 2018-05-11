@@ -1,0 +1,931 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ShopTreasureMapper">
+	<select id="getUserEarnStatistics" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(T6252.F07), 0)
+		FROM
+			S62.T6252,
+			S62.T6230,
+			S61.T6110
+		WHERE
+			T6252.F02 = T6230.F01
+		AND T6252.F04 = T6110.F01
+		AND T6110.F01 = #{userId}
+		AND T6252.F05 IN <foreach collection="feeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND T6252.F09 = #{status}
+		AND T6230.F27 = 'F'
+		AND T6110.F06 = #{userType}
+	</select>
+
+	<select id="getUserEarnByDate" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(T6252.F07),0)
+		FROM
+			s62.T6252,
+			s62.T6230,
+			s61.T6110,
+			s62.t6211
+		WHERE
+			T6211.F05 = 'KDB'
+		AND T6211.F01 = T6230.F04
+		AND T6252.F02 = T6230.F01
+		AND T6252.F04 = T6110.F01
+		AND T6110.F01 = #{userId}
+		AND T6252.F05 IN <foreach collection="feeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND T6252.F09 = #{status}
+		AND T6230.F27 = 'F'
+		AND T6110.F06 = #{userType}
+		AND (DATEDIFF(T6252.F10, DATE(#{earnDate})) = 0)
+	</select>
+
+	<select id="getShopTreasure" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		T6230.F01 AS id,
+		T6230.F02 AS userId,
+		T6230.F03 AS NAME,
+		T6230.F05 AS loanAmount,
+		T6230.F06 AS rate,
+		T6230.F07 AS voteAmount,
+		T6230.F09 AS MONTH,
+		t6230.F10 AS repaymentMode,
+		T6230.F22 AS publishDate,
+		T6230.F20 AS STATUS,
+		T6231.f18 AS endDate,
+		T6230.F28 AS isNoviceBid,
+		t6230.F31 AS fundraisDate,
+		T6230.F32 AS loanDays,
+		T6230.F33 AS assetsType,
+		T6211.F05 AS bidType,
+		flb.t_directional_bid.total_user_assets AS userTotalAssets,
+		flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+		flb.t_directional_bid.bid AS directionalBid
+		FROM
+		S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		WHERE t6230.F20 in
+        <foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+
+		<if test="isFull != null">
+           and T6230.F07=0
+        </if>
+        <if test="proType != null">
+           and T6211.F05=#{proType}
+        </if>
+        <if test="isNoviceBid != null">
+           and t6230.F28 = #{isNoviceBid}
+        </if>
+        <if test="month != null">
+           and t6230.F09=#{month}
+		</if>
+        <if test="time != null">
+           <![CDATA[and T6230.F22 < #{time}]]>
+		</if>
+		<if test="s != null">
+			and t6230.F09=#{month}
+		</if>
+        <if test="limit != null">
+           order by T6230.F22 desc limit #{limit}
+		</if>
+		<if test="limit == null">
+           order by T6230.F22 desc
+		</if>
+	</select>
+
+    <select id="getShopTreasureOrderby" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		T6230.F01 AS id,
+		T6230.F02 AS userId,
+		T6230.F03 AS NAME,
+		T6230.F05 AS loanAmount,
+		T6230.F06 AS rate,
+		T6230.F07 AS voteAmount,
+		T6230.F09 AS MONTH,
+		t6230.F10 AS repaymentMode,
+		T6230.F22 AS publishDate,
+		T6230.F20 AS STATUS,
+		T6231.f18 AS endDate,
+		T6230.F28 AS isNoviceBid,
+		t6230.F31 AS fundraisDate,
+		T6230.F32 AS loanDays,
+		T6230.F33 AS assetsType,
+		T6211.F05 AS bidType,
+		T6230.F39 AS anytimeQuit,
+		flb.t_directional_bid.total_user_assets AS userTotalAssets,
+		flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+		flb.t_directional_bid.bid AS directionalBid,
+		T6238.F09 AS bidInterestRise,
+		T6230.F39 AS anytimeQuit,
+		s62.t6231.F27 AS bidLabel,
+		T6230.F38 AS isDepository,
+		T6230.F35 AS panicBuyingTime
+		FROM
+		S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+		WHERE
+		t6230.F20 IN<foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND T6231.F30 = 0
+		AND T6230.F36 = '0001'
+		AND (T6230.F35 IS NULL OR t6230.F35 <![CDATA[<=]]> NOW())
+		AND NOT EXISTS (SELECT product_id FROM  flb.t_plan_product_lib WHERE product_id = T6230.F01)
+		<if test="isNoviceBid != null">
+           and t6230.F28 = #{isNoviceBid}
+        </if>
+		<if test="cgNum != null">
+			and t6230.F38 = #{cgNum}
+		</if>
+		<if test="sortType == 'BIDTIME'">
+			<if test="minDays != null and minDays != -1">
+				AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ >= ]]> #{minDays}
+			</if>
+			<if test="maxDays != null and maxDays != -1">
+				AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ < ]]> #{maxDays}
+			</if>
+			<if test="bidType != null and bidType != ''">
+				AND T6211.F05 = #{bidType}
+				<if test="bidType == 'XFXD'">
+					and T6230.F07>=100
+				</if>
+			</if>
+           order by t6230.F22 ${sortBy}
+		</if>
+		
+		<if test="sortType == 'RATE'">
+		<if test="bidType == null or bidType == ''">
+			AND T6211.F05 != 'XFXD'
+		</if>
+			and T6230.F07>=100 order by t6230.F06+T6238.F09 ${sortBy},t6230.F22 asc
+		</if>
+
+		<if test="sortType == 'PROGRESS'">
+			<if test="bidType == null or bidType == ''">
+				AND T6211.F05 != 'XFXD'
+			</if>
+			and T6230.F07>=100 order by CAST(t6230.F07/t6230.F05 AS DECIMAL(8,4) ) ${sortBy},t6230.F22 asc
+		</if>
+
+		<if test="sortType == 'PERIOD'">
+			<if test="bidType == null or bidType == ''">
+				AND T6211.F05 != 'XFXD'
+			</if>
+			and T6230.F07>=100  order by IF(T6230.F09!=0,T6230.F09*30,T6230.F32) ${sortBy},t6230.F22 asc
+		</if>
+
+		<if test="sortType == 'BIDSTATUS'">
+			<if test="bidType != null and bidType != ''">
+			<if test="bidType == 'NXFXD'">
+					and T6211.F05 != 'XFXD'
+				</if>
+		    </if>
+			order by FIELD(T6230.F20,'YFB','TBZ','DFK','HKZ','YJQ') ASC,T6231.F11 desc
+		</if>
+
+
+		<if test="sortType == null or sortType == ''">
+           order by t6230.F22 asc
+		</if>
+
+		<if test="limit != null and limit != 0">
+		    limit #{limit}
+		</if>
+	</select>
+
+	<select id="getShopTreasureByMap" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+        T6230.F01 AS id,
+        T6230.F02 AS userId,
+        T6230.F03 AS NAME,
+        T6230.F05 AS loanAmount,
+        T6230.F06 AS rate,
+        T6230.F07 AS voteAmount,
+        T6230.F09 AS MONTH,
+        t6230.F10 AS repaymentMode,
+        T6230.F22 AS publishDate,
+        T6230.F20 AS STATUS,
+        T6231.f18 AS endDate,
+        T6230.F28 AS isNoviceBid,
+        t6230.F31 AS fundraisDate,
+        T6230.F32 AS loanDays,
+        T6230.F33 AS assetsType,
+        T6211.F05 AS bidType,
+        flb.t_directional_bid.total_user_assets AS userTotalAssets,
+        flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+        flb.t_directional_bid.bid AS directionalBid
+		FROM
+		S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		WHERE T6230.F20 IN ('TBZ','DFK','HKZ','YJQ')
+		AND T6211.F05 = 'KDB'
+		AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ >= ]]> 0
+		AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ < ]]> 2
+		ORDER BY FIELD(T6230.F20,'TBZ','DFK','HKZ','YJQ') asc,T6230.F28 desc,T6230.F22 desc
+	</select>
+
+	<select id="getShopTreasureInfo" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		T6230.F01 AS id,
+		T6230.F02 AS userId,
+		T6230.F03 AS name,
+		T6230.F05 AS loanAmount,
+		T6230.F06 AS rate,
+		T6230.F07 AS voteAmount,
+		T6230.F09 AS month,
+		T6230.F10 AS repaymentMode,
+		T6230.F20 AS status,
+		T6230.F35 AS panicBuyingTime,
+		T6230.F22 AS publishDate,
+		T6231.f18 AS endDate,
+		T6230.F28 AS isNoviceBid,
+		t6230.F31 AS fundraisDate,
+		T6230.F32 AS loanDays,
+		T6230.F33 AS assetsType,
+		T6211.F05 AS bidType,
+		T6231.F09 AS borrowingDescribe,
+		T6231.f10 AS bidReviewedTime,
+		T6231.f11 AS bidFullTime,
+		(select count(1) from s62.t6250 where t6250.F02 = t6230.F01) totalInvestPers,
+
+		s62.t6230.F35 AS panicBuyingTime,
+		flb.t_directional_bid.total_user_assets AS userTotalAssets,
+		flb.t_directional_bid.user_investing_amount AS userInvestAmount,
+		flb.t_directional_bid.user_accumulated_income as accumulatedIncome,
+		flb.t_directional_bid.target_user AS targetUser,
+		flb.t_directional_bid.bid AS directionalBid,
+		T6230.F38 AS isDepository,
+		0 AS itemType,
+		T6238.F09 AS bidInterestRise,
+		T6230.F39 AS anytimeQuit,
+		s62.t6231.F27 AS bidLabel,
+		s62.t6231.F17 AS interestDate,
+		s62.t6231.F08 AS loanUsage,
+		s62.t6231.F16 AS repaymentOrigin,
+		T6230.guarantee_measure AS guaranteeMeasure
+		FROM S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+		WHERE  t6230.F01=#{id}
+		<if test="proType != null">
+			and T6211.F05=#{proType}
+		</if>
+	</select>
+
+	<select id="getInvestStatistics" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(T6230.F05 - T6230.F07),0) FROM S62.T6230,S61.T6110
+		WHERE T6230.F02 = T6110.F01 AND T6230.F20 IN
+		<foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND T6230.F27 = 'F'
+	</select>
+
+	<select id="getEarnStatistics" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT IFNULL(SUM(T6252.F07),0) FROM S62.T6252,S62.T6230,S61.T6110
+		WHERE T6252.F02 = T6230.F01 AND T6230.F02 = T6110.F01 AND T6252.F05 IN
+		<foreach collection="feeTypes" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		AND T6252.F09 =#{status}  AND  T6230.F27 = 'F'
+	</select>
+
+	<select id="getShopTreasureByZpid" parameterType="java.lang.Integer" resultType="ShopTreasureInfo">
+		SELECT T6230.F01 AS id, T6230.F03 AS name,T6231.F09 AS description FROM S62.T6230 INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S62.T6251 ON T6230.F01 = T6251.F03
+		WHERE T6251.F01 =#{zpId}
+	</select>
+	
+	<select id="getShopInfomationByBid" parameterType="java.lang.Integer" resultType="ShopInformation">
+		select F01 as bidId,F23 as shopName,F24 as shopAddress,F25 as shopPicture from s62.T6231 where F01=#{bidId}
+	</select>
+	
+	<select id="isUserInvest" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+	   select count(id) from (
+	   	select t.F01 id from s62.t6250 t where t.F03 = #{userId} limit 1 
+	  	union all select s.F01 id from s62.t6251 s where s.F04 = #{userId} limit 1
+	   ) a 
+	</select>
+
+	<select id="getShopTreasureOderByStatus" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		T6230.F01 AS id,
+		T6230.F02 AS userId,
+		T6230.F03 AS NAME,
+		T6230.F05 AS loanAmount,
+		T6230.F06 AS rate,
+		T6230.F07 AS voteAmount,
+		T6230.F09 AS MONTH,
+		t6230.F10 AS repaymentMode,
+		T6230.F22 AS publishDate,
+		T6230.F20 AS STATUS,
+		T6231.f18 AS endDate,
+		T6230.F28 AS isNoviceBid,
+		t6230.F31 AS fundraisDate,
+		T6230.F32 AS loanDays,
+		T6230.F33 AS assetsType,
+		T6211.F05 AS bidType,
+		flb.t_directional_bid.total_user_assets AS userTotalAssets,
+		flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+		flb.t_directional_bid.bid AS directionalBid,
+		T6238.F09 AS bidInterestRise,
+		T6230.F39 AS anytimeQuit,
+		s62.t6231.F27 AS bidLabel
+		FROM
+		S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+		WHERE t6230.F20 in
+		<foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+        AND T6231.F29 IS NULL
+	    AND T6231.F30 = 0
+		<if test="isFull != null">
+			and T6230.F07=0
+		</if>
+		<if test="item == 'TBZ'">
+			and T6230.F07>=100
+		</if>
+		<if test="proType != null">
+			and T6211.F05=#{proType}
+		</if>
+		<if test="isNoviceBid != null">
+			and t6230.F28 = #{isNoviceBid}
+		</if>
+		<if test="bidType != null">
+		  AND T6211.F05 = #{bidType}
+	    </if>
+		<if test="month != null">
+			and t6230.F09=#{month}
+		</if>
+		<if test="minDays != null and minDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ >= ]]> #{minDays}
+		</if>
+		<if test="maxDays != null and maxDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ < ]]> #{maxDays}
+		</if>
+		<if test="time != null">
+			<![CDATA[and T6230.F22 < #{time}]]>
+		</if>
+		<if test="limit != null">
+			order by
+			(
+			CASE
+			WHEN t6230.F20 = 'TBZ' THEN 1
+			ELSE 0
+			END
+			) DESC ,
+			T6231.F11 desc,
+			T6230.F22 asc limit #{limit}
+		</if>
+		<if test="limit == null">
+			order by  (
+			CASE
+			WHEN t6230.F20 = 'TBZ' THEN 1
+			ELSE 0
+			END
+			) DESC ,
+			T6231.F11 desc,
+			T6230.F22 asc
+		</if>
+	</select>
+	<select id="timingBid" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		s62.t6230.F01 AS id,
+		s62.t6230.F02 AS userId,
+		s62.t6230.F03 AS `NAME`,
+		s62.t6230.F05 AS loanAmount,
+		s62.t6230.F06 AS rate,
+		s62.t6230.F07 AS voteAmount,
+		s62.t6230.F09 AS `MONTH`,
+		s62.t6230.F10 AS repaymentMode,
+		s62.t6230.F22 AS publishDate,
+		s62.t6230.F20 AS `STATUS`,
+		s62.t6230.F35 AS panicBuyingTime,
+		s62.t6231.F18 AS endDate,
+		s62.t6230.F28 AS isNoviceBid,
+		s62.t6230.F31 AS fundraisDate,
+		s62.t6230.F32 AS loanDays,
+		s62.t6230.F33 AS assetsType,
+		s62.t6211.F05 AS bidType,
+		flb.t_directional_bid.total_user_assets AS userTotalAssets,
+		flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+		flb.t_directional_bid.bid AS directionalBid,
+		T6238.F09 AS bidInterestRise,
+		T6230.F39 AS anytimeQuit,
+		s62.t6231.F27 AS bidLabel
+		FROM S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+		WHERE t6230.F20 = 'TBZ'
+		AND T6230.F35 is not null
+		AND T6231.F29 IS NULL
+		AND T6231.F30 = 0
+		<if test="bidOrigin != null">
+			and t6230.F36 = #{bidOrigin}
+		</if>
+		<if test="bidType != null">
+			and t6211.F05 = #{bidType}
+		</if>
+		<if test="minDays != null and minDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ >= ]]> #{minDays}
+		</if>
+		<if test="maxDays != null and maxDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ < ]]> #{maxDays}
+		</if>
+		<if test="bidOrigin == null">
+			and (t6230.F36 is null OR t6230.F36 = '0001')
+		</if>
+		AND T6230.F28 = 'F'
+		ORDER by T6230.F35 asc
+		limit #{limit}
+	</select>
+	<select id="getPreSaleBid" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		T6230.F01 AS id,
+		T6230.F02 AS userId,
+		T6230.F03 AS NAME,
+		T6230.F05 AS loanAmount,
+		T6230.F06 AS rate,
+		T6230.F07 AS voteAmount,
+		T6230.F09 AS MONTH,
+		T6230.F10 AS repaymentMode,
+		T6230.F22 AS publishDate,
+		T6230.F20 AS STATUS,
+		T6230.F28 AS isNoviceBid,
+		t6230.F31 AS fundraisDate,
+		T6230.F32 AS loanDays,
+		T6230.F33 AS assetsType,
+		T6230.F35 AS panicBuyingTime,
+		T6231.f18 AS endDate,
+		T6211.F05 AS bidType,
+		flb.t_directional_bid.total_user_assets AS userTotalAssets,
+		flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+		flb.t_directional_bid.bid AS directionalBid,
+		T6238.F09 AS bidInterestRise,
+		T6230.F39 AS anytimeQuit,
+		s62.t6231.F27 AS bidLabel
+		FROM
+		S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+		WHERE t6230.F20 IN ('YFB') AND t6230.F35 <![CDATA[<=]]> NOW()
+		AND T6230.F28 = 'F'
+		AND T6231.F29 IS NULL
+		AND T6231.F30 = 0
+		<if test="bidOrigin != null">
+			and t6230.F36 = #{bidOrigin}
+		</if>
+		<if test="bidType != null">
+			and t6211.F05 = #{bidType}
+		</if>
+		<if test="minDays != null and minDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ >= ]]> #{minDays}
+		</if>
+		<if test="maxDays != null and maxDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ < ]]> #{maxDays}
+		</if>
+		<if test="bidOrigin == null">
+			and (t6230.F36 is null OR t6230.F36 = '0001')
+		</if>
+		order by t6230.F22 ASC
+		limit #{limit}
+	</select>
+
+	<select id="getBidPlansList" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		DISTINCT(t_plan.id) AS id,
+		t_plan.title AS NAME,
+		t_plan.amount AS loanAmount,
+		t_plan.rate AS rate,
+		IFNULL((select sum(_a.F07) FROM s62.T6230 as _a
+		WHERE _a.F01 in (SELECT bid_id FROM flb.t_plan_bid p where p.plan_id =t_plan.id) AND _a.F07>=100),0) AS voteAmount,
+		t_plan.raised_rate AS bidInterestRise,
+		t_plan.repayment_type AS repaymentMode,
+		t_plan.is_novice_bid AS isNoviceBid,
+		t_plan.cycle AS loanDays,
+		t_plan.create_time AS publishDate,
+		1 AS itemType
+		FROM
+		flb.t_plan
+		LEFT JOIN flb.t_plan_bid b ON t_plan.id = b.plan_id
+		LEFT JOIN s62.t6230 bid ON bid.F01 =  b.bid_id
+		WHERE  1=1
+		<if test="status != null">
+			AND t_plan.status IN <foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		</if>
+		<if test="isNoviceBid != null">
+			AND t_plan.is_novice_bid = #{isNoviceBid}
+		</if>
+		<if test="minDays != null and minDays != -1">
+			AND IF(t_plan.cycle_type='m',t_plan.cycle*30,t_plan.cycle) <![CDATA[ >= ]]> #{minDays}
+		</if>
+		<if test="maxDays != null and maxDays != -1">
+			AND IF(t_plan.cycle_type='m',t_plan.cycle*30,t_plan.cycle) <![CDATA[ <= ]]> #{maxDays}
+		</if>
+		ORDER BY
+		t_plan.cycle desc
+		<if test="limit != null">
+			limit #{limit}
+		</if>
+	</select>
+
+	<select id="getPlanBidsStatus" parameterType="java.util.Map" resultType="PlanBidsStatus">
+		SELECT
+		t.plan_id AS planId,
+		t.bid_id AS bidId,
+		bid.F20 AS status,
+		bid.F07 AS surplusAmount
+		FROM
+		flb.t_plan_bid t
+		LEFT JOIN s62.t6230 bid ON t.bid_id = bid.F01
+		WHERE
+		t.plan_id = #{planId}
+	</select>
+
+	<select id="getPlanInfo" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		t_plan.id AS id,
+		t_plan.title AS NAME,
+		t_plan.amount AS loanAmount,
+		t_plan.rate AS rate,
+		IFNULL((select sum(a.F07) FROM s62.T6230 as a
+		WHERE a.F01 in (SELECT bid_id FROM flb.t_plan_bid p where p.plan_id =t_plan.id )),0) AS voteAmount,
+		t_plan.repayment_type AS repaymentMode,
+		t_plan.is_novice_bid AS isNoviceBid,
+		t_plan.cycle AS loanDays,
+		t_plan.create_time AS panicBuyingTime,
+		t_plan.update_time AS publishDate,
+		t_plan.status AS status,
+		t_plan.raised_rate AS bidInterestRise,
+		1 AS itemType,
+		t_plan.description as borrowingDescribe,
+		(select count(1) from flb.t_plan_record  where t_plan_record.plan_id = #{id})  totalInvestPers
+		FROM
+		flb.t_plan
+		WHERE
+		t_plan.id =#{id}
+	</select>
+
+	<select id="getdirectionalBid" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+	SELECT
+	T6230.F01 AS id,
+	T6230.F02 AS userId,
+	T6230.F03 AS NAME,
+	T6230.F05 AS loanAmount,
+	T6230.F06 AS rate,
+	T6230.F07 AS voteAmount,
+	T6230.F09 AS MONTH,
+	t6230.F10 AS repaymentMode,
+	T6230.F22 AS publishDate,
+	T6230.F20 AS STATUS,
+	T6231.f18 AS endDate,
+	T6230.F28 AS isNoviceBid,
+	t6230.F31 AS fundraisDate,
+	T6230.F32 AS loanDays,
+	T6230.F33 AS assetsType,
+	T6211.F05 AS bidType,
+	flb.t_directional_bid.total_user_assets AS userTotalAssets,
+	flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+	flb.t_directional_bid.user_accumulated_income as userAccumulatedIncome,
+	flb.t_directional_bid.target_user AS targetUser,
+	flb.t_directional_bid.bid AS directionalBid
+	FROM
+	S62.T6230
+	INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+	INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02
+	INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+	LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+	WHERE t6230.F20 = 'TBZ'
+		<if test="bidType != null">
+			and t6211.F05 = #{bidType}
+		</if>
+		<if test="minDays != null and minDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ >= ]]> #{minDays}
+		</if>
+		<if test="maxDays != null and maxDays != -1">
+			AND IF(T6230.F32=0,T6230.F09*30,T6230.F32) <![CDATA[ < ]]> #{maxDays}
+		</if>
+	AND flb.t_directional_bid.total_user_assets > 0
+	order by t6230.F22 DESC LIMIT #{limit}
+	</select>
+
+	<select id="getpurchasedPlan" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(*) FROM flb.t_plan_record pb WHERE pb.user_id = #{userId} AND  pb.plan_id = #{planId}
+	</select>
+
+	<select id="getStickShopTreasure" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		T6230.F01 AS id,
+		T6230.F02 AS userId,
+		T6230.F03 AS NAME,
+		T6230.F05 AS loanAmount,
+		T6230.F06 AS rate,
+		T6230.F07 AS voteAmount,
+		T6230.F09 AS MONTH,
+		t6230.F10 AS repaymentMode,
+		T6230.F22 AS publishDate,
+		T6230.F20 AS STATUS,
+		T6231.f18 AS endDate,
+		T6230.F28 AS isNoviceBid,
+		t6230.F31 AS fundraisDate,
+		T6230.F32 AS loanDays,
+		T6230.F33 AS assetsType,
+		T6211.F05 AS bidType,
+		flb.t_directional_bid.total_user_assets AS userTotalAssets,
+		flb.t_directional_bid.user_investing_amount AS userInvestingAmount,
+		flb.t_directional_bid.bid AS directionalBid,
+		T6238.F09 AS bidInterestRise,
+		T6230.F39 AS anytimeQuit,
+		s62.t6231.F27 AS bidLabel
+		FROM
+		S62.T6230
+		INNER JOIN S62.T6231 ON T6231.F01 = T6230.F01
+		INNER JOIN S61.T6110 ON T6110.F01 = T6230.F02
+		INNER JOIN S62.T6211 ON T6211.F01 = T6230.F04
+		LEFT  JOIN flb.t_directional_bid ON s62.t6230.F01 = flb.t_directional_bid.bid
+		LEFT  JOIN S62.T6238 ON T6238.F01 = T6230.F01
+		WHERE t6230.F20 in
+		<foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+
+		AND T6231.F29 IS NOT NULL
+		AND T6231.F30 = 0
+		<if test="status == 'TBZ'">
+			AND t6230.F07>=100
+		</if>
+		<if test="isNoviceBid != null">
+			and t6230.F28 = #{isNoviceBid}
+		</if>
+		<if test="limit != null">
+			order by
+			T6231.F29 DESC limit #{limit}
+		</if>
+		<if test="limit == null">
+			order by
+			T6231.F29 DESC
+		</if>
+	</select>
+
+	<select id="getPlansList" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		DISTINCT(t_invest_plan.id) AS id,
+		0 AS userId,
+		t_invest_plan.name AS NAME,
+		t_invest_plan.amount AS loanAmount,
+		t_invest_plan.invest_rate AS rate,
+		t_invest_plan.surplus_amount AS voteAmount,
+		IF (t_invest_plan.cycle_type = 'm',t_invest_plan.cycle,0) AS MONTH,
+		t_invest_plan.repay_mode AS repaymentMode,
+		t_invest_plan.release_time AS publishDate,
+		t_invest_plan.status AS STATUS,
+		IF(t_invest_plan.is_novice=1,'S','F') AS isNoviceBid,
+		t_invest_plan.expire_time AS fundraisDate,
+		IF (t_invest_plan.cycle_type = 'd',t_invest_plan.cycle,0) AS loanDays,
+		null AS assetsType,
+		t_invest_plan.display_time AS panicBuyingTime,
+		1 AS isCG,
+		t_invest_plan.raise_rate AS bidInterestRise,
+		t_invest_plan.settle_time AS endDate,
+		t_invest_plan.can_quit AS anytimeQuit,
+		null AS bidType,
+		lable.label AS bidLabel,
+		mark.total_user_assets AS userTotalAssets,
+		mark.user_investing_amount AS userInvestAmount,
+		mark.user_accumulated_income AS accumulatedIncome,
+		mark.id AS directionalBid,
+		1 AS itemType,
+		t_invest_plan.type AS planType,
+		t_invest_plan.min_yearly_rate AS lowRate,
+		t_invest_plan.max_yearly_rate AS highRate,
+		lable.comment AS comment,
+		t_invest_plan.mo_increase_rate AS bonusRate,
+		t_invest_plan.number AS number,
+		t_invest_plan.is_cg AS isDepository
+		FROM
+		flb.t_invest_plan
+		LEFT JOIN (select * FROM flb.t_market_setting  where t_market_setting.product_type=1) mark ON mark.product_id = t_invest_plan.id
+		LEFT JOIN (SELECT t_product_label.product_id,t_product_label.product_type,t_product_label.comment,t_product_label.label FROM flb.t_product_label WHERE t_product_label.product_type =1) lable ON lable.product_id = t_invest_plan.id
+		WHERE  1=1
+		<if test="status != null">
+			AND t_invest_plan.status IN <foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		</if>
+		<if test="fullTime == null">
+            AND t_invest_plan.surplus_amount<![CDATA[>]]> 100
+		</if>
+		<if test="status == 'YFB'">
+			AND t_invest_plan.display_time <![CDATA[<=]]> NOW()
+		</if>
+		<if test="timeBid != null">
+			AND t_invest_plan.display_time is NOT NULL
+		</if>
+		<if test="isNoviceBid != null">
+			AND t_invest_plan.is_novice = #{isNoviceBid}
+		</if>
+		<if test="type != null">
+			AND t_invest_plan.type = #{type}
+		</if>
+		<if test="cgNum != null">
+			AND t_invest_plan.is_cg = #{cgNum}
+		</if>
+		<if test="minDays != null and minDays != -1">
+			AND IF(t_invest_plan.cycle_type='m',t_invest_plan.cycle*30,t_invest_plan.cycle) <![CDATA[ >= ]]> #{minDays}
+		</if>
+		<if test="maxDays != null and maxDays != -1">
+			AND IF(t_invest_plan.cycle_type='m',t_invest_plan.cycle*30,t_invest_plan.cycle) <![CDATA[ <= ]]> #{maxDays}
+		</if>
+		ORDER BY
+		<if test="sortType == 'PERIOD'">
+			IF(t_invest_plan.cycle_type='m',t_invest_plan.cycle*30,t_invest_plan.cycle) ${sortBy},
+		</if>
+		<if test="sortType == 'BIDSTATUS'">
+			FIELD(t_invest_plan.status,'4','5','6') asc,
+		</if>
+		<if test="sortType == 'RATE'">
+		  <if test="type != null and type ==1 ">
+			  t_invest_plan.max_yearly_rate ${sortBy},
+			</if>
+			t_invest_plan.invest_rate ${sortBy},
+		</if>
+		<if test="fullTime != null">
+			t_invest_plan.full_time DESC,
+		</if>
+		<if test="type=='2'">
+			t_invest_plan.cycle asc,
+		</if>
+		t_invest_plan.update_time DESC
+
+		<if test="limit!=null">
+			limit #{limit}
+		</if>
+	</select>
+
+	<select id="getPlanDetail" parameterType="java.util.Map" resultType="ShopTreasureInfo">
+		SELECT
+		t_invest_plan.id AS id,
+		t_invest_plan.name AS NAME,
+		t_invest_plan.amount AS loanAmount,
+		t_invest_plan.invest_rate AS rate,
+		t_invest_plan.surplus_amount AS voteAmount,
+		t_invest_plan.repay_mode AS repaymentMode,
+		IF(t_invest_plan.is_novice=1,'S','F') AS isNoviceBid,
+		IF (t_invest_plan.cycle_type = 'd',t_invest_plan.cycle,0) AS loanDays,
+		IF (t_invest_plan.cycle_type = 'm',t_invest_plan.cycle,0) AS MONTH,
+		t_invest_plan.expire_time AS fundraisDate,
+		t_invest_plan.display_time AS panicBuyingTime,
+		t_invest_plan.release_time AS publishDate,
+		t_invest_plan.status AS status,
+		t_invest_plan.raise_rate AS bidInterestRise,
+		1 AS itemType,
+		t_invest_plan.description as borrowingDescribe,
+		mark.total_user_assets AS userTotalAssets,
+		mark.user_investing_amount AS userInvestAmount,
+		mark.user_accumulated_income AS accumulatedIncome,
+		mark.id AS directionalBid,
+		1 AS itemType,
+		t_invest_plan.type AS planType,
+		t_invest_plan.min_yearly_rate AS lowRate,
+		t_invest_plan.max_yearly_rate AS highRate,
+		lable.comment AS comment,
+		lable.label AS bidLabel,
+		t_invest_plan.mo_increase_rate AS bonusRate,
+		mark.target_user AS targetUser,
+		(select count(1) from flb.t_user_plan  where t_user_plan.plan_id = t_invest_plan.id)  totalInvestPers,
+		t_invest_plan.number AS number,
+		t_invest_plan.can_quit AS anytimeQuit,
+		t_invest_plan.bearrate_date AS interestDate,
+		t_invest_plan.guarantee_measure AS guaranteeMeasure
+		FROM
+		flb.t_invest_plan
+		LEFT JOIN (select * FROM flb.t_market_setting  where t_market_setting.product_type=1) mark ON mark.product_id = t_invest_plan.id
+		LEFT JOIN (SELECT t_product_label.product_id,t_product_label.product_type,t_product_label.comment,t_product_label.label FROM flb.t_product_label WHERE t_product_label.product_type =1) lable ON lable.product_id = t_invest_plan.id
+		WHERE
+		t_invest_plan.id =#{id}
+	</select>
+
+	<select id="getNearBid" parameterType="java.util.Map" resultType="InvestInfo">
+		SELECT
+			tif.*,
+			IFNUll(tif.bidInterestRiseTemp + IFNULL(tcc.scope, 0), 0) AS bidInterestRise,
+			(
+				CASE
+					WHEN IFNULL(tcc.scope, 0) = 0 THEN FALSE
+					ELSE TRUE
+				END
+			) AS jxFlag
+		FROM
+		(
+			SELECT
+				T6230.F01 AS bidId,
+				T6230.F03 AS bidTitle,
+				T6251.F01 AS creditId,
+				T6250.F05 AS investAmount,
+				T6230.F09 AS loanMonths,
+				T6230.F32 AS loanDays,
+				T6230.F20 AS bidStatus,
+				T6250.F06 AS purchaseTime,
+				T6231.F18 AS expireDate,
+				T6250.F01 AS T6250F01Temp,
+				0 AS zrId,
+				0 AS itemType,
+				T6238.F09 AS bidInterestRiseTemp,
+				T6230.F06 AS yearYield,
+				T6230.F38 AS isDepository,
+				NULL AS planId,
+				T6230.F07 AS surplusAmount,
+				NULL AS planTitle
+			FROM
+				S62.T6250
+			INNER JOIN S62.T6230 ON T6230.F01 = T6250.F02
+			INNER JOIN S62.T6231 ON T6231.F01 = T6250.F02
+			LEFT JOIN s62.T6251 ON T6251.F11 = T6250.F01
+			LEFT JOIN s62.T6238 ON T6238.F01 = T6230.F01
+			WHERE
+				t6250.F03 = #{userId}
+				AND t6230.F38 = #{versionType}
+				AND (
+					T6251.F12 = 0
+					OR T6251.F12 IS NULL
+				)
+				AND T6231.F30 = 0
+				AND NOT EXISTS (
+					SELECT
+						1
+					FROM
+						s62.T6260
+					INNER JOIN s62.T6262 ON T6262.F02 = T6260.F01
+					WHERE T6260.F02 = T6251.F01
+				)
+				AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			ORDER BY purchaseTime DESC
+			LIMIT #{num}
+		) tif
+		LEFT JOIN
+		(
+			SELECT
+				flb.t_coupon.scope AS scope,
+				flb.t_user_coupon.tender_id AS tender_id
+			FROM
+				flb.t_user_coupon
+			LEFT JOIN flb.t_coupon ON flb.t_coupon.id = flb.t_user_coupon.coupon_id
+			WHERE
+				flb.t_user_coupon.tender_id IN (
+			SELECT
+				T6250.F01 AS T6250F01Temp
+			FROM
+				S62.T6250
+			INNER JOIN S62.T6230 ON T6230.F01 = T6250.F02
+			LEFT JOIN s62.T6251 ON T6251.F11 = T6250.F01
+			WHERE
+				t6250.F03 = #{userId}
+				AND t6230.F38 = #{versionType}
+				AND (
+					T6251.F12 = 0
+					OR T6251.F12 IS NULL
+				)
+				AND NOT EXISTS (
+					SELECT
+						1
+					FROM
+						s62.T6260
+					INNER JOIN s62.T6262 ON T6262.F02 = T6260.F01
+					WHERE T6260.F02 = T6251.F01
+				)
+				AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE product_id = T6251.F01)
+			)
+		) tcc ON tif.T6250F01Temp = tcc.tender_id
+	</select>
+
+	<select id="getNewPurchasedPlan" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(*) FROM flb.t_user_plan up WHERE up.user_id = #{userId} AND  up.plan_id = #{planId}
+	</select>
+
+	<select id="isCGBid" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT F38 FROM s62.t6230 WHERE F01=#{bidId}
+	</select>
+
+	<select id="countIvestProduct" parameterType="java.util.Map" resultType="java.lang.Integer">
+		<if test="type != null and type == 'plan'">
+		    SELECT IFNULL(COUNT(*),0) FROM flb.t_invest_plan plan
+		    WHERE plan.status in (4,8)
+			AND <![CDATA[plan.surplus_amount >= 100 ]]>
+			AND plan.is_cg = #{versionType}
+		</if>
+		<if test="type != null and type == 'bid'">
+			SELECT IFNULL(COUNT(*),0) FROM s62.t6230
+			WHERE F20 in ('TBZ','YFB') AND  F36 = '0001' AND F38 = #{versionType}
+			AND <![CDATA[ T6230.F07 >= 100 ]]>;
+		</if>
+	</select>
+</mapper>

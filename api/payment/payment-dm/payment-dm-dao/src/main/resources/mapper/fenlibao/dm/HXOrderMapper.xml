@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="HXOrderMapper">
+
+    <select id="get" parameterType="java.util.Map" resultType="HXOrder">
+        SELECT
+        id,
+        user_id userId,
+        type_code typeCode,
+        flow_num flowNum,
+        order_status `status`,
+        business_id businessId,
+        create_time createTime,
+        thirdparty_flow_num thirdpartyFlowNum,
+        parent_flow_num parentFlowNum
+        FROM
+        flb.t_hx_order
+        WHERE
+        <if test="typeCode != null">
+            type_code = #{typeCode} AND
+        </if>
+        order_status = #{state}
+        AND create_time <![CDATA[ < ]]> DATE_SUB(NOW(),INTERVAL 5 MINUTE)
+        <if test="typeCode == null">
+            AND type_code in (1003,1005,1006,1007,1011,1004,11004,1013,1015)
+        </if>
+        ORDER BY create_time DESC LIMIT 500
+    </select>
+
+</mapper>

@@ -1,0 +1,399 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.investUser.InvestUserMapper">
+
+    <select id="getInvestRecordList" resultType="InvestRecord">
+        (SELECT
+        S62.T6250.F01 AS investId,
+        S62.T6250.F02 AS bidId,
+        S62.T6250.f06 AS investTime,
+        S62.t6231.F17 AS sealedTime,
+        S62.t6231.F18 AS expireTime,
+        t6250.F05 AS rightsMoney,
+        t6250.F04 AS tradeAmount,
+        T6230.F03 AS productName,
+        T6230.F20 AS bidStatus,
+        (
+        IFNULL(t6238.F09, 0) + IFNULL(tcp.scope, 0) + T6230.F06
+        ) AS yearRate,
+        T6230.F32 AS loanDays,
+        T6230.F09 AS loanMonths,
+        T6230.F10 AS paybackWay,
+        t6211.F02 AS bidType,
+        S62.T6250.F06,
+        S62.t6231.F17
+        FROM
+        S62.T6250
+        JOIN s62.T6230 ON S62.T6250.F02 = s62.T6230.F01
+        INNER JOIN s62.t6238 t6238 ON t6250.F02 = t6238.F01
+        JOIN S62.t6231 ON s62.T6230.F01 = S62.t6231.F01
+        JOIN s62.t6211 ON T6230.f04 = t6211.F01
+        LEFT JOIN s62.t6251 ON s62.T6250.F01 = s62.t6251.F11 AND s62.t6251.F04 = t6250.F03
+        LEFT JOIN flb.t_user_coupon tuc ON tuc.tender_id = t6250.F01
+        LEFT JOIN flb.t_coupon tcp ON tuc.coupon_id = tcp.id
+        WHERE
+        t6250.F03 = #{userId}
+        AND NOT EXISTS(
+        SELECT * FROM s62.t6262 t6262 WHERE t6262.F11 = s62.t6251.F01
+        )
+        AND s62.T6230.F38 = 2
+        AND s62.T6230.F36 = '0001'
+        <if test="investRecord.productName != null and investRecord.productName != ''">
+            and T6230.F03 LIKE concat('%', #{investRecord.productName}, '%')
+        </if>
+        <if test="investRecord.bidStatus != null and investRecord.bidStatus!=''">
+            and T6230.F20 = #{investRecord.bidStatus}
+        </if>
+        <if test="startTime != null and startTime !=''">
+            and DATE_FORMAT(t6250.F06, "%Y-%m-%d") >= DATE_FORMAT(#{startTime}, "%Y-%m-%d")
+        </if>
+        <if test="endTime != null and endTime != ''">
+            and DATE_FORMAT(t6250.F06, "%Y-%m-%d") &lt;= DATE_FORMAT(#{endTime}, "%Y-%m-%d")
+        </if>
+        )
+        UNION ALL
+        (SELECT
+        S62.T6250.F01 AS investId,
+        S62.T6250.F02 AS bidId,
+        S62.T6250.f06 AS investTime,
+        S62.t6231.F17 AS sealedTime,
+        S62.t6231.F18 AS expireTime,
+        t6250.F05 AS rightsMoney,
+        t6262.F05 AS tradeAmount,
+        T6230.F03 AS productName,
+        T6230.F20 AS bidStatus,
+        (
+        IFNULL(t6238.F09, 0) + IFNULL(tcp.scope, 0) + T6230.F06
+        ) AS yearRate,
+        T6230.F32 AS loanDays,
+        T6230.F09 AS loanMonths,
+        T6230.F10 AS paybackWay,
+        t6211.F02 AS bidType,
+        S62.T6250.F06,
+        S62.t6231.F17
+        FROM
+        S62.T6251
+        JOIN s62.T6230 ON S62.T6251.F03 = s62.T6230.F01
+        INNER JOIN s62.t6238 t6238 ON t6251.F03 = t6238.F01
+        JOIN S62.t6231 ON S62.T6251.F03 = S62.t6231.F01
+        JOIN s62.t6211 ON T6230.f04 = t6211.F01
+        INNER JOIN s62.t6250 ON s62.T6250.F01 = s62.t6251.F11
+        INNER JOIN s65.t6507 ON s65.t6507.F01 = S62.T6251.F12
+        INNER JOIN s62.t6260 ON s62.t6260.F01 = s65.t6507.F02
+        INNER JOIN s62.t6261 ON s62.t6260.F01 = s62.t6261.F01
+        INNER JOIN s62.t6262 ON s62.t6262.F02 = s62.t6261.F01
+        LEFT JOIN flb.t_user_coupon tuc ON tuc.tender_id = t6250.F01
+        LEFT JOIN flb.t_coupon tcp ON tuc.coupon_id = tcp.id
+        WHERE
+        t6251.F04 = #{userId}
+        AND s62.T6230.F38 = 2
+        AND s62.T6230.F36 = '0001'
+        <if test="investRecord.productName != null and investRecord.productName != ''">
+            and  T6230.F03  LIKE concat('%', #{investRecord.productName}, '%')
+        </if>
+        <if test="startTime != null and startTime !=''">
+            and DATE_FORMAT(t6251.F09, "%Y-%m-%d") >= DATE_FORMAT(#{startTime}, "%Y-%m-%d")
+        </if>
+        <if test="endTime != null and endTime != ''">
+            and  DATE_FORMAT(t6251.F09, "%Y-%m-%d")  &lt;= DATE_FORMAT(#{endTime}, "%Y-%m-%d")
+        </if>
+        )
+        ORDER BY
+        F06 DESC,
+        F17 DESC
+    </select>
+
+    <select id="getInvestBuyOutList" resultType="InvestRecord">
+        SELECT
+        S62.T6250.F01 AS investId,
+        S62.T6250.F02 AS bidId,
+        S62.T6250.f06 AS investTime,
+        S62.t6231.F17 AS sealedTime,
+        S62.t6231.F18 AS expireTime,
+        t6250.F05 AS rightsMoney,
+        t6262.F05 AS tradeAmount,
+        T6230.F03 AS productName,
+        T6230.F20 AS bidStatus,
+        (
+        IFNULL(t6238.F09, 0) + IFNULL(tcp.scope, 0) + T6230.F06
+        ) AS yearRate,
+        T6230.F32 AS loanDays,
+        T6230.F09 AS loanMonths,
+        T6230.F10 AS paybackWay,
+        t6211.F02 AS bidType,
+        S62.T6250.F06,
+        S62.t6231.F17
+        FROM
+        S62.T6251
+        JOIN s62.T6230 ON S62.T6251.F03 = s62.T6230.F01
+        INNER JOIN s62.t6238 t6238 ON t6251.F03 = t6238.F01
+        JOIN S62.t6231 ON S62.T6251.F03 = S62.t6231.F01
+        JOIN s62.t6211 ON T6230.f04 = t6211.F01
+        INNER JOIN s62.t6250 ON s62.T6250.F01 = s62.t6251.F11
+        INNER JOIN s62.t6262 ON s62.t6262.F11 = s62.t6251.F01
+        LEFT JOIN flb.t_user_coupon tuc ON tuc.tender_id = t6250.F01
+        LEFT JOIN flb.t_coupon tcp ON tuc.coupon_id = tcp.id
+        WHERE
+        t6251.F04 = #{userId}
+        AND s62.T6230.F38 = 2
+        AND s62.T6230.F36 = '0001'
+        <if test="investRecord.productName != null and investRecord.productName != ''">
+            and  T6230.F03  LIKE concat('%', #{investRecord.productName}, '%')
+        </if>
+        <if test="startTime != null and startTime !=''">
+            and DATE_FORMAT(t6251.F09, "%Y-%m-%d") >= DATE_FORMAT(#{startTime}, "%Y-%m-%d")
+        </if>
+        <if test="endTime != null and endTime != ''">
+            and  DATE_FORMAT(t6251.F09, "%Y-%m-%d")  &lt;= DATE_FORMAT(#{endTime}, "%Y-%m-%d")
+        </if>
+    </select>
+
+    <!--获取标的到期时间-->
+    <select id="getExpireTime"  resultType="InvestRecord"  parameterType="java.util.List">
+
+        <foreach collection="list" separator=" union all " item="item"  >
+            select ifnull(f02,0) as bidId,
+            max(s62.t6252.f08) as expireTime,
+            f01 as investId
+            from s62.t6252 where f02= #{item.bidId}
+        </foreach>
+
+    </select>
+
+    <!--获取债权利息-->
+    <select id="getRightsInterest"  resultType="InvestRecord">
+
+        <foreach collection="list" separator=" union all " item="item"  >
+            select
+            ifnull(sum(case when s62.t6252.f05=7002 then s62.t6252.f07 else 0 end ),0) as bidInterest,
+            ifnull(sum(case when s62.t6252.f05=7022 then s62.t6252.f07 else 0 end ),0) as couponInterest,
+            ifnull(sum(case when s62.t6252.f05=7023 then s62.t6252.f07 else 0 end ),0) as bidRaiseInterest,
+            ifnull(sum(s62.t6252.f07),0) as acutralEarn
+            from s62.t6252 join s62.t6251
+            on s62.t6252.f11 = s62.t6251.f01
+            where s62.t6252.f04=#{userId} and s62.t6252.f02=#{item.bidId} and s62.t6251.f11 =#{item.investId}
+            and s62.t6252.f05 in (7002,7004,7005,7022,7023)
+
+        </foreach>
+
+    </select>
+
+    <!--获取投资卷，标加息，卷加息 返现卷-->
+    <select id="getCouponList"  resultType="InvestRecord">
+        <foreach collection="list" separator=" union all " item="item"  >
+            SELECT
+            IFNULL(t6238.F09, 0) AS bidRaiseInterest,
+            IFNULL(tcp.scope, 0) AS couponInterest,
+            IFNULL(
+            (
+            SELECT SUM(IFNULL(trp.red_money, 0))
+            FROM S62.T6250 t6250 INNER JOIN
+            flb.t_user_redpackets turp ON turp.tender_id = t6250.F01 AND t6250.F01 = #{item.investId}
+            INNER JOIN flb.t_red_packet trp ON trp.id = turp.redpacket_id AND turp.user_id = #{userId}
+            )
+            ,0) AS investCoupon
+            FROM
+            S62.T6250 t6250 INNER JOIN s62.t6238 t6238 ON t6250.F02 = t6238.F01 AND t6250.F01 = #{item.investId}
+            LEFT JOIN flb.t_user_coupon tuc ON tuc.tender_id = t6250.F01
+            LEFT JOIN flb.t_coupon tcp ON tuc.coupon_id = tcp.id
+        </foreach>
+    </select>
+
+    <!--债权列表-->
+    <select id="getRightsList" resultType="RightsRecord">
+        SELECT
+            S62.T6250.F01 as investId,/*--投资记录id*/
+            S62.T6250.F02 as bidId,/*--标id*/
+            S62.T6250.f06 AS investTime,/*--投资时间*/
+            S62.t6231.F17 AS sealedTime,/*--计息时间*/
+            S62.t6262.F07 AS soldTime,
+            S62.t6262.F04 AS rightsMoney,
+            S62.t6262.F05 AS soldAmount,
+            S62.T6230.F03 AS productName,
+            S62.T6230.F06 AS yearRate,/*--年利率*/
+            S62.T6230.F32 AS loanDays,
+            S62.T6230.F09 AS loanMonths, /*--期限*/
+            S62.T6230.F10 AS paybackWay,/*--还款方式*/
+            S62.t6211.F02 AS bidType/*--标的类型*/
+        FROM S62.t6251
+        JOIN S62.T6250 ON T6250.F01 = t6251.F11
+        JOIN S62.T6230 ON T6230.F01 = t6251.F03
+        JOIN S62.t6231 ON S62.t6231.F01 = s62.t6251.F03
+        JOIN s62.t6262 ON s62.t6262.F11 = t6251.F01
+        JOIN s62.t6211 ON T6230.f04 = t6211.F01
+        WHERE s62.t6251.F12 > 0
+        and s62.T6230.F38=2 /*--存管标*/
+    </select>
+
+
+    <!--TODO:获取债权手续费-->
+    <select id="getRightsRecordFeeList">
+      select s61.t6102.f07 from s61.t6102
+      RIGHT  JOIN s65.t6501 on s65.t6501.F01 = s61.t6102.order_id
+      RIGHT  JOIN s65.t6507 on s65.t6507.F01 = s65.t6501.F01
+      RIGHT  JOIN s62.t6260 on s62.t6260.F01 =s65.t6507.f02
+      RIGHT  JOIN s62.t6251 on s62.t6251.f01 = s62.t6260.f02
+
+    </select>
+
+
+    <!--计划记录-->
+    <select id="getPlanList" resultType="UserInvestPlan">
+        SELECT
+        up.id recordId,
+        up.plan_id AS planId,
+        CONCAT(p. NAME, p.number) NAME,
+        p.type AS type,
+        up.invest_amount AS tradeAmount,
+        p.cycle_type AS cycleType,
+        p.cycle,
+        (CASE WHEN p.type = 1
+        THEN IF(p.min_yearly_rate + p.mo_increase_rate * TIMESTAMPDIFF(MONTH, p.bearrate_date, CURRENT_DATE) > p.max_yearly_rate
+        , p.max_yearly_rate, p.min_yearly_rate + p.mo_increase_rate * TIMESTAMPDIFF(MONTH, p.bearrate_date, CURRENT_DATE))
+        WHEN p.type = 2 THEN p.invest_rate END) AS investRate,
+        p.min_yearly_rate AS minYearlyRate,
+        p.max_yearly_rate AS maxYearlyRate,
+        IFNULL(p.raise_rate,0) AS bidScope,
+        up.user_id AS userId,
+        up.create_time AS investTime,
+        p.bearrate_date AS bearrateDate,
+        p.settle_time AS settleTime,
+        p.expire_time AS expireTime,
+        ep.create_time AS applyExitTime,
+        p.STATUS AS `status`
+        FROM
+        flb.t_user_plan up
+        INNER JOIN flb.t_invest_plan p ON up.plan_id = p.id
+        LEFT JOIN flb.t_user_exit_plan ep ON up.id = ep.user_plan_id
+        WHERE
+        p.`status` IN (4, 5, 6)
+        AND p.is_cg = 2
+        and up.user_id = #{userId}
+        <if test="investPlan.name != null and investPlan.name != ''">
+            AND CONCAT(p. NAME, p.number) like concat('%',trim(#{investPlan.name}),'%')
+        </if>
+        order by up.create_time desc, p.expire_time desc
+    </select>
+
+    <!--计划详情-->
+    <select id="getPlanDetail" resultType="PlanDetail">
+
+         select
+          t6211.f02 as bidType,
+          t6230.f03 as bidName,
+          tupp.amount as matchAmount,
+          t6230.F06 as rate,
+          t6230.F32 as loanDays,
+          t6230.F09 as loanMonths,
+          t6230.F10 as paybackWay,
+          t6250.f06 as matchTime,
+          tupp.update_time AS exitTime,
+          t6230.F20 as bidStatus
+        from flb.t_user_plan_product tupp
+        join s62.t6250 t6250 ON tupp.tender_id = t6250.f01
+        join s62.t6230 t6230 ON t6250.f02 = t6230.f01
+        join s62.t6211 t6211 ON t6230.F04 = t6211.F01
+        WHERE
+        tupp.user_plan_id = #{investPlan.planId}
+        AND t6250.F03 = #{userId}
+        order by t6250.f06 desc
+
+    </select>
+
+    <select id="getPlanScope" resultType="java.math.BigDecimal">
+      SELECT
+        IFNULL(tcp.scope, 0)
+      FROM
+        flb.t_user_coupon tuc
+      INNER JOIN flb.t_coupon tcp ON tuc.coupon_id = tcp.id
+      WHERE
+      tuc.user_plan_id = #{recordId}
+      AND tuc.user_id = #{userId}
+    </select>
+
+    <select id="getPlanRedPacketMoney" resultType="java.math.BigDecimal">
+      SELECT IFNULL(trp.red_money, 0)
+      FROM
+      flb.t_user_redpackets turp
+      INNER JOIN flb.t_red_packet trp ON trp.id = turp.redpacket_id
+      WHERE
+       turp.user_plan_id = #{recordId}
+      AND turp.user_id = #{userId}
+    </select>
+
+    <select id="getTransactionList" resultType="TradeInfo">
+        SELECT
+         t6501.F04 AS startTime,
+         t5122.F02 AS orderTypeName,
+         t5122.F01 AS orderType,
+         CASE
+            WHEN t6102.F06 > 0 THEN t6102.F06
+          ELSE t6102.F07
+         END AS amount,
+         t6102.F08 AS balance,
+         t6102.F09 AS remark,
+         CASE
+          WHEN t6501.F03 = 'CG' THEN '成功'
+          WHEN t6501.F03 = 'SB' THEN '失败'
+          ELSE '处理中'
+         END AS orderStatusName,
+         t6501.F03 AS orderStatus,
+         t6501.F01 AS orderNum,
+         t6501.F06 AS endTime
+        FROM
+         s65.t6501 t6501
+        INNER JOIN s61.t6102 t6102 ON t6102.order_id = t6501.F01
+        LEFT JOIN s51.t5122 t5122 ON t6102.F03 = t5122.F01
+        WHERE t6102.F13 = 'YH'
+        <if test="tradeForm.startTime != null">
+           AND DATE_FORMAT(t6501.F04, "%Y-%m-%d") <![CDATA[ >= ]]> DATE_FORMAT(#{tradeForm.startTime}, "%Y-%m-%d")
+        </if>
+        <if test="tradeForm.endTime != null">
+           AND DATE_FORMAT(t6501.F04, "%Y-%m-%d") <![CDATA[ <= ]]> DATE_FORMAT(#{tradeForm.endTime}, "%Y-%m-%d")
+        </if>
+        <if test="tradeForm.orderNum != null and tradeForm.orderNum !=''">
+            and  t6501.F01  = #{tradeForm.orderNum}
+        </if>
+        <if test="tradeForm.orderType != null and tradeForm.orderType !=''">
+            and  t6102.F03 = #{tradeForm.orderType}
+        </if>
+        <if test='tradeForm.orderStatus != null and tradeForm.orderStatus !="" and tradeForm.orderStatus == "ING"'>
+            and  (t6501.F03 = 'YTJ' OR t6501.F03 = 'DQR')
+        </if>
+        <if test='tradeForm.orderStatus != null and tradeForm.orderStatus !="" and tradeForm.orderStatus != "ING"'>
+            and  t6501.F03  = #{tradeForm.orderStatus}
+        </if>
+        <if test="id != null and id !=''">
+            and  t6102.F02  = #{id}
+        </if>
+        ORDER BY t6501.F01 DESC
+    </select>
+
+    <select id="getExpectInterest" resultType="java.math.BigDecimal">
+        SELECT
+        IFNULL(SUM(tupr.expect_amount), 0) - tup.invest_amount
+        FROM flb.t_user_plan_repay tupr
+          INNER JOIN flb.t_user_plan tup ON tupr.user_plan_id = tup.id
+        WHERE tupr.user_id = #{userId}
+        AND tupr.plan_id = #{planId}
+        AND tupr.user_plan_id = #{recordId}
+    </select>
+
+    <select id="getActualInterest" resultType="java.math.BigDecimal">
+        SELECT SUM(t6102.F06) - tup.invest_amount FROM
+        flb.t_user_plan_settlement_record tupsr
+        INNER JOIN s61.t6102 t6102 ON tupsr.t6102_f01 = t6102.F01
+        INNER JOIN flb.t_user_plan tup ON tupsr.user_plan_id = tup.id
+        WHERE tupsr.user_plan_id = #{recordId}
+    </select>
+
+    <select id="getTradeTypes" resultType="TradeType">
+        SELECT
+          t5122.F01 AS id,
+          t5122.F02 AS name,
+          t5122.F03 as status
+        FROM s51.t5122 t5122
+        WHERE t5122.F03 = 'QY'
+    </select>
+
+</mapper>

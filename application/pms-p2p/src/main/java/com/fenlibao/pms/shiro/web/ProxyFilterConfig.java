@@ -1,0 +1,45 @@
+package com.fenlibao.pms.shiro.web;
+
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.Map;
+
+/**
+ * FilterConfig封装
+ */
+public class ProxyFilterConfig implements FilterConfig {
+    private String filterName;
+    private ServletContext servletContext;
+    private Map<String, String> map = Collections.EMPTY_MAP;
+
+    public ProxyFilterConfig(ServletContext servletContext) {
+        this.servletContext = servletContext;
+    }
+
+    public String getFilterName() {
+        return filterName;
+    }
+
+    public ServletContext getServletContext() {
+        return servletContext;
+    }
+
+    public String getInitParameter(String name) {
+        return map.get(name);
+    }
+
+    public Enumeration getInitParameterNames() {
+        return Collections.enumeration(map.keySet());
+    }
+
+    // ~ ==================================================
+    public void setFilterName(String filterName) {
+        this.filterName = filterName;
+    }
+
+    public void setMap(Map<String, String> map) {
+        this.map = map;
+    }
+}

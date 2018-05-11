@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PTCommonMapper">
+    <insert id="insertT6123" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO S61.T6123 SET F02 = #{userId}, F03 = #{title}, F04 = CURRENT_TIMESTAMP(), F05 = #{state}, F06 = 2
+    </insert>
+
+    <insert id="insertT6124" parameterType="java.util.Map">
+        INSERT INTO S61.T6124 SET F01 = #{letterId}, F02 = #{content}
+    </insert>
+
+    <insert id="insertT1040" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO S10._1040(F02,F03,F04,F05) values(#{type}, #{content}, CURRENT_TIMESTAMP(),'w')
+    </insert>
+
+    <insert id="insertT1041" parameterType="java.util.Map">
+        INSERT INTO S10._1041(F01,F02) VALUES( #{msgId}, #{mobile})
+    </insert>
+
+    <select id="getSystemVariable" parameterType="java.util.Map" resultType="java.lang.String">
+        select F02 from s10._1010 where F01= #{id} limit 1
+    </select>
+
+    <insert id="insertT6102s" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWCapitalFlow">
+        insert into s61.t6102 (F02,F03,F04,F05,F06,F07,F08,F09,F12,F13,order_id) values
+        (#{fundAccountId}, #{tadeType}, #{otherFundAccountId}, NOW(), #{income}, #{expenditure}, #{balance}, #{remark}, #{projectId},#{level},#{orderId})
+    </insert>
+
+    <select id="getCurrentDate" resultType="java.util.Date">
+        SELECT now()
+    </select>
+
+    <insert id="batchInsertT6102" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        insert into s61.t6102 (F02,F03,F04,F05,F06,F07,F08,F09,F12,F13,order_id)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.fundAccountId},#{item.tadeType},#{item.otherFundAccountId},now(),#{item.income},#{item.expenditure},#{item.balance},#{item.remark},#{item.projectId},#{item.Level},#{item.orderId})
+        </foreach>
+    </insert>
+
+    <insert id="batchInsertTransactionExtend" parameterType="java.util.Map" >
+        insert into flb.t_transaction_flow_extend (flow_id, request_no)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.id}, #{item.requestNo})
+        </foreach>
+    </insert>
+    
+    <select id="getSpecialUserId" resultType="int">
+        SELECT F01 FROM s71.t7101 LIMIT 1
+    </select>
+
+    <insert id="insertErrorLog" parameterType="com.fenlibao.p2p.model.xinwang.param.errorLog.ErrorLogParam">
+        INSERT INTO errorlog.t_errorlog (method_name,error_msg)  VALUES (#{method},#{errorLog});
+    </insert>
+</mapper>

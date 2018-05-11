@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.idmt.rolepermission.RolePermissionMapper">
+    <sql id="Base_Sql">
+        permit.id,
+        permit.pid,
+        permit.name,
+        permit.sort,
+        permit.type,
+        permit.description,
+        permit.code,
+        (
+          case permit.type
+              when 'root' then 'true'
+              when 'topmenu' then 'true'
+              when 'leftmenu' then 'true'
+          else 'false' end
+        ) isParent
+    </sql>
+
+    <select id="getPermitTreeByRoleId" resultType="PermitTreeNode" parameterType="java.lang.Integer">
+        SELECT
+        <include refid="Base_Sql"/>
+        FROM pms.idmt_permission permit
+        INNER JOIN pms.idmt_role_permission rolePermit ON rolePermit.permission_id = permit.id
+        WHERE
+          rolePermit.role_id = #{roleId}
+        ORDER BY pid,sort
+    </select>
+
+    <delete id="removeRolePermissions">
+        DELETE FROM pms.idmt_role_permission
+        WHERE role_id = #{roleId}
+    </delete>
+
+    <insert id="addRolePermissions">
+        INSERT INTO pms.idmt_role_permission(role_id, permission_id, create_time)
+        VALUES
+        <foreach collection="permissionsId" item="permissionId" index="index" separator=",">
+          (#{roleId}, #{permissionId}, NOW())
+        </foreach>
+    </insert>
+
+    <select id="findRolePermissions" resultMap="RolePermissionRM">
+        SELECT
+            role.id roleId,
+            role.name roleName,
+            role.description roleDescription,
+            role.create_time roleCreateTime,
+            permission.id permissionId,
+            permission.parent_id parentId,
+            permission.name permissionName,
+            permission.type permissionType,
+            permission.description permissionDescription,
+            permission.sort permissionSort,
+            permission.code permissionCode
+        FROM pms.idmt_role_permission role_permission
+        INNER JOIN pms.idmt_role role ON role.id = role_permission.role_id
+        INNER JOIN pms.idmt_permission permission ON permission.id = role_permission.permission_id
+        WHERE
+            role.id = #{roleId}
+        ORDER BY permission.type, permission.sort
+    </select>
+
+    <resultMap id="RolePermissionRM" type="RolePermissionVO">
+        <association autoMapping="true" property="role" javaType="RoleVO" column="roleId">
+            <id column="roleId" property="id"/>
+            <result column="roleName" property="name"/>
+            <result column="roleDescription" property="description"/>
+            <result column="roleCreateTime" property="createTime"/>
+        </association>
+        <collection property="permits" ofType="PermitVO" javaType="java.util.List" column="permissionId">
+            <id column="permissionId" property="id"/>
+            <result column="parentId" property="parentId"/>
+            <result column="permissionType" property="type"/>
+            <result column="permissionName" property="name"/>
+            <result column="permissionDescription" property="description"/>
+            <result column="permissionSort" property="sort"/>
+            <result column="permissionCode" property="code"/>
+        </collection>
+    </resultMap>
+</mapper>

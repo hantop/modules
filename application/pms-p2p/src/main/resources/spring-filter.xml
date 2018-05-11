@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="filterProxy" class="com.fenlibao.pms.shiro.web.FilterChainProxy">
+        <property name="filters">
+            <list>
+                <ref bean="characterEncodingFilter"/>
+                <ref bean="druidWebStatFilter"/>
+                <ref bean="httpMethodFilter"/>
+                <ref bean="httpPutFormContentFilter"/>
+                <ref bean="shiroFilterProxy"/>
+                <ref bean="ajaxFilter"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="characterEncodingFilter" class="com.fenlibao.pms.shiro.web.ProxyFilter">
+        <property name="name" value="encode"/>
+        <property name="filter">
+            <bean class="org.springframework.web.filter.CharacterEncodingFilter">
+                <property name="encoding" value="UTF-8"/>
+                <property name="forceEncoding" value="true"/>
+            </bean>
+        </property>
+    </bean>
+
+    <bean id="druidWebStatFilter" class="com.fenlibao.pms.shiro.web.ProxyFilter">
+        <property name="name" value="druidWebStatFilter"/>
+        <property name="filter">
+            <bean class="com.alibaba.druid.support.http.WebStatFilter"/>
+        </property>
+        <property name="map">
+            <map>
+                <entry key="exclusions">
+                    <value>*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*</value>
+                </entry>
+                <entry key="sessionStatMaxCount">
+                    <value>1000</value>
+                </entry>
+                <entry key="sessionStatEnable">
+                    <value>false</value>
+                </entry>
+            </map>
+        </property>
+    </bean>
+
+    <bean id="httpMethodFilter" class="com.fenlibao.pms.shiro.web.ProxyFilter">
+        <property name="name" value="httpMethodFilter"/>
+        <property name="filter">
+            <bean class="org.springframework.web.filter.HiddenHttpMethodFilter"/>
+        </property>
+        <property name="map">
+            <map>
+                <entry key="HttpMethodFilter">
+                    <value>Spring</value>
+                </entry>
+            </map>
+        </property>
+    </bean>
+
+    <bean id="httpPutFormContentFilter" class="com.fenlibao.pms.shiro.web.ProxyFilter">
+        <property name="name" value="httpPutFormContentFilter"/>
+        <property name="filter">
+            <bean class="org.springframework.web.filter.HttpPutFormContentFilter"/>
+        </property>
+    </bean>
+
+    <bean id="shiroFilterProxy" class="com.fenlibao.pms.shiro.web.ProxyFilter">
+        <property name="name" value="shiro"/>
+        <property name="filter" ref="shiroFilter"/>
+        <property name="map">
+            <map>
+                <entry key="targetFilterLifecycle">
+                    <value>true</value>
+                </entry>
+            </map>
+        </property>
+    </bean>
+
+    <bean id="ajaxFilter" class="com.fenlibao.pms.shiro.web.ProxyFilter">
+        <property name="name" value="ajaxFilter"/>
+        <property name="filter">
+            <bean class="com.fenlibao.pms.launch.filter.AjaxFilter"/>
+        </property>
+    </bean>
+</beans>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TFlowSendRecord">
+	<select id="getFlowSendRecord" resultType="TFlowSendRecord" parameterType="java.util.Map">
+		SELECT a.user_id AS userId,d.F04 AS phone FROM (
+			SELECT user_id FROM flb.t_user_origin 
+			WHERE channel_code in
+			<foreach item="item" collection="channelCodes" separator="," open="(" close=")" index="">  
+				#{item}  
+				</foreach>
+			) AS a 
+			LEFT JOIN  s61.t6141 b ON a.user_id = b.F01 LEFT JOIN s61.t6110 d ON a.user_id = d.F01 
+			WHERE b.F04 ='TG' and d.F09 >= '2016-01-10 00:00:00'
+			AND NOT EXISTS (SELECT user_id FROM flb.t_flow_send_record c WHERE c.user_id=a.user_id AND send_status!=2 )
+	</select>
+	
+	<insert id="addFlowSendRecord" parameterType="TFlowSendRecord">
+	   insert into flb.t_flow_send_record (user_id, activity_type, flow_size,create_time,send_status,request_no,remark)
+      values (#{userId,jdbcType=INTEGER}, #{activityType,jdbcType=VARCHAR}, #{flowSize,jdbcType=INTEGER}, 
+              #{createTime,jdbcType=TIMESTAMP},#{sendStatus,jdbcType=INTEGER},#{requestNo,jdbcType=VARCHAR},#{remark,jdbcType=VARCHAR})
+	</insert>
+	<update id="updateSendFlow" parameterType="java.util.Map">
+		 update flb.t_flow_send_record t 
+		 set t.send_status = #{sendStatus}
+		 <if test="sendTime != null ">
+		  ,t.send_time=#{sendTime} 
+		 </if>
+		 where t.request_no = #{requestNo}
+	</update>
+</mapper>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.finance.withdrawLimit.WithdrawLimitMapper">
+    <select id="getWithdrawLimitList" parameterType="java.util.Map" resultType="com.fenlibao.model.pms.da.finance.WithdrawLimit">
+        SELECT
+        user_id AS userId,
+        u.F04 AS phoneNum,
+        limit_money AS limitMoney,
+        remark ,
+        operator,
+        create_time creatTime
+        FROM
+        pms.user_withdraw_limit w
+        LEFT JOIN s61.t6110 u ON u.F01 = w.user_id
+        <where>
+            <if test="phoneNum != null and phoneNum != ''">
+                AND (u.F04 = #{phoneNum})
+            </if>
+            <if test="operator != null and operator != ''">
+                AND operator like '%${operator}%'
+            </if>
+            <if test="startTime != null">
+                <![CDATA[AND create_time >= #{startTime}]]>
+            </if>
+            <if test="endTime != null">
+                <![CDATA[AND create_time  <= #{endTime}]]>
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+	<insert id="insertIntoUserWithdrawLimit" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+		insert into pms.user_withdraw_limit 
+		<trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="userId != null">
+                user_id,
+            </if>
+            <if test="limitMoney != null">
+                limit_money,
+            </if>
+            <if test="remark != null">
+                remark,
+            </if>
+            <if test="operator != null">
+                operator,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="userId != null">
+                #{userId,jdbcType=INTEGER},
+            </if>
+            <if test="limitMoney != null">
+                #{limitMoney,jdbcType=DECIMAL},
+            </if>
+            <if test="remark != null">
+                #{remark,jdbcType=VARCHAR},
+            </if>
+            <if test="operator != null">
+                #{operator,jdbcType=VARCHAR},
+            </if>
+        </trim>
+	</insert>
+</mapper>

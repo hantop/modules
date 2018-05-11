@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition extends="ancestor" name="marketing/index">
+        <put-attribute name="body" value="/WEB-INF/page/marketing/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-marketing.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="marketing/*/*">
+        <put-attribute name="body" value="/WEB-INF/page/marketing/{1}/{2}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-marketing.jsp"/>
+    </definition>
+
+    <definition extends="ancestor" name="marketing/tmr">
+        <put-attribute name="body" value="/WEB-INF/page/marketing/tmr/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-marketing.jsp"/>
+    </definition>
+</tiles-definitions>

@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.publicity.StartupImageMapper">
+    <delete id="deleteStartupImage" parameterType="String">
+        DELETE FROM flb.t_startupimg
+        WHERE id = #{startupImageId}
+    </delete>
+
+    <update id="updateStatus">
+        UPDATE flb.t_startupimg
+        SET status = #{status},
+            update_time = SYSDATE()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteStartupImageFiles" parameterType="String">
+        DELETE FROM flb.t_startupimg_file
+        WHERE
+          startup_image_id = #{startupImageId}
+    </delete>
+
+    <delete id="deleteStartupImageClientTypes" parameterType="String">
+        DELETE FROM flb.t_startupimg_clienttype
+        WHERE
+          startup_image_id = #{startupImageId}
+    </delete>
+
+    <update id="updateStartupImage" parameterType="StartupImageEditVO">
+        UPDATE flb.t_startupimg
+        SET
+         name = #{name},
+         status = #{status},
+         create_user = #{createUser},
+         update_time = SYSDATE()
+        WHERE
+            id = #{id}
+    </update>
+
+    <insert id="addStartupImage" parameterType="StartupImageEditVO" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO flb.t_startupimg
+        (
+            `name`,
+            `status`,
+            `create_user`,
+            `create_time`,
+            `update_time`
+        )
+        VALUES
+        (
+            #{name},
+            #{status},
+            #{createUser},
+            SYSDATE(),
+            SYSDATE()
+        )
+    </insert>
+
+    <insert id="addStartupImageClientTypes">
+        INSERT INTO flb.t_startupimg_clienttype (
+            startup_image_id,
+            client_type
+        )
+        VALUES
+        <foreach collection="clientTypes" item="clientType" separator=",">
+            (
+            #{startupImageId},
+            #{clientType}
+            )
+        </foreach>
+    </insert>
+
+    <insert id="addStartupImageFiles">
+        INSERT INTO flb.t_startupimg_file
+        (
+            startup_image_id,
+            original_name,
+            publish_name,
+            server_path,
+            relative_path,
+            screen_type,
+            file_size,
+            file_type,
+            create_user,
+            create_time
+        )
+        VALUES
+        <foreach collection="startupImageFiles" item="startupImageFile" separator=",">
+            (
+            #{startupImageId},
+            #{startupImageFile.originalName},
+            #{startupImageFile.publishName},
+            #{startupImageFile.serverPath},
+            #{startupImageFile.relativePath},
+            #{startupImageFile.screenType},
+            #{startupImageFile.fileSize},
+            #{startupImageFile.fileType},
+            #{createUser},
+            SYSDATE()
+            )
+        </foreach>
+    </insert>
+
+    <select id="getStartupImageFiles" parameterType="String" resultType="StartupImageFile">
+        SELECT
+            startup_image_id,
+            original_name,
+            publish_name,
+            server_path,
+            relative_path,
+            screen_type,
+            file_size,
+            file_type,
+            create_user,
+            create_time
+        FROM
+            flb.t_startupimg_file
+        WHERE
+            startup_image_id = #{startpageId}
+    </select>
+
+    <select id="getClientTypes" parameterType="String" resultType="Integer">
+        SELECT
+          client_type
+        FROM
+          flb.t_startupimg_clienttype
+        WHERE
+          startup_image_id = #{startpageId}
+    </select>
+
+    <select id="getStartupImage" parameterType="String" resultType="StartupImageVO">
+        SELECT
+          `id`,
+          `name`,
+          `status`,
+          `create_user`,
+          `create_time`,
+          `update_time`
+        FROM
+          flb.t_startupimg
+        WHERE
+          id = #{id}
+    </select>
+
+    <select id="getStartupImages" resultType="StartupImageVO">
+        SELECT
+          `id`,
+          `name`,
+          `status`,
+          `create_user`,
+          `create_time`,
+          `update_time`
+        FROM
+          flb.t_startupimg
+        <where>
+            <if test="name != null">
+                name like concat("%", #{name}, "%")
+            </if>
+            <if test="clientType != null and clientType != ''">
+                AND id IN (SELECT startup_image_id FROM flb.t_startupimg_clienttype WHERE client_type = #{clientType})
+            </if>
+        </where>
+        ORDER BY update_time DESC
+    </select>
+</mapper>

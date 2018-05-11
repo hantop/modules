@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition extends="ancestor" name="publicity/index">
+        <put-attribute name="body" value="/WEB-INF/page/publicity/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-publicity.jsp"/>
+    </definition>
+    <!-- 启动页start -->
+    <definition extends="ancestor" name="publicity/startup/index">
+        <put-attribute name="body" value="/WEB-INF/page/publicity/startup/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-publicity.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="publicity/startup/edit">
+        <put-attribute name="body" value="/WEB-INF/page/publicity/startup/edit.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-publicity.jsp"/>
+    </definition>
+    <!-- 启动页end -->
+    <!-- 广告页start -->
+    <definition extends="ancestor" name="publicity/advert/index">
+        <put-attribute name="body" value="/WEB-INF/page/publicity/advert/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-publicity.jsp"/>        
+    </definition>
+    <definition extends="ancestor" name="publicity/advert/edit">
+        <put-attribute name="body" value="/WEB-INF/page/publicity/advert/edit.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-publicity.jsp"/>
+    </definition>
+    <!-- 广告页end -->
+
+
+    <definition extends="ancestor" name="publicity/class/*">
+        <put-attribute name="body" value="/WEB-INF/page/publicity/class/{1}.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-publicity.jsp"/>
+    </definition>
+
+
+
+
+</tiles-definitions>

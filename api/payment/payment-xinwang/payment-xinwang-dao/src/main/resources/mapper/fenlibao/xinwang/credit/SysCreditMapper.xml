@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysCreditMapper">
+    <select id="getTransferInfoByOrder" parameterType="java.util.Map" resultType="SysTransferInfo">
+        SELECT
+            t6260.F01 applyId,
+            t6260.creditsale_no creditsaleNo,
+            t6251.F01 creditId,
+            t6507.F03 userId,
+            t6230.F01 bidId,
+            t6251.F04 debtUserId,
+            t6251.F07 sourceAmount,
+            t6260.F03 creditAmount,
+            t_xw_request.request_no transactionNo
+        FROM
+            s65.t6507
+        LEFT JOIN s62.t6260 ON t6260.F01 = t6507.F02
+        LEFT JOIN s62.t6251 ON t6260.F02 = t6251.F01
+        LEFT JOIN s62.t6230 ON t6251.F03 = t6230.F01
+        LEFT JOIN flb.t_xw_request ON t6507.F01 = t_xw_request.order_id AND t_xw_request.state = 'CG'
+        WHERE
+            t6507.F01 = #{orderId}
+    </select>
+
+    <insert id="createCredit" parameterType="com.fenlibao.p2p.model.xinwang.entity.credit.SysCredit" useGeneratedKeys="true" keyProperty="id" >
+        INSERT INTO S62.T6251 SET F02 = #{code}, F03 = #{projectId}, F04 = #{creditorId}, F05 = #{purchasePrice}, F06 = #{originCreditAmount}, F07 = #{holdCreditAmount}, F08 = #{transfering}, F09 = #{createDate}, F10 = #{bearInterestDate}, F11 = #{tenderId}
+    </insert>
+
+    <select id="getCreditInfoByProjectId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.credit.SysCredit">
+        select F01 id,F02 code,F03 projectId,F04 creditorId,F05 purchasePrice,F06 originCreditAmount,F07 holdCreditAmount,F08 transfering,F09 createDate,F10 bearInterestDate,F11 tenderId from S62.T6251 where F03= #{projectId} and F08='F'
+    </select>
+
+    <select id="getCreditInfoById" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.credit.SysCredit">
+        select F01 id,F02 code,F03 projectId,F04 creditorId,F05 purchasePrice,F06 originCreditAmount,F07 holdCreditAmount,F08 transfering,F09 createDate,F10 bearInterestDate,F11 tenderId from S62.T6251 where F01= #{id}
+    </select>
+
+    <update id="updateCreditInfoById" parameterType="java.util.Map">
+        UPDATE S62.T6251
+        <set>
+            <if test="holdCreditAmountReduce!=null">
+                F07= F07- #{holdCreditAmountReduce},
+            </if>
+            <if test="transfering!=null">
+                F08= #{transfering},
+            </if>
+        </set>
+        WHERE F01 = #{id}
+    </update>
+    
+    <select id="getTransferingCreditByCreditId" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.credit.SysCreditTransferApply">
+        SELECT F01 id,F02 creditId,F03 price,F04 share,F05 createTime,F06 endDate,F07 status,F08 commission,F09 discount,creditsale_no creditsaleNo
+        FROM s62.t6260
+        where F02 = #{creditId} and F07!='YJS' limit 1
+    </select>
+
+    <select id="getTransferInfoByCreditId" parameterType="java.lang.Integer" resultType="SysTransferInfo">
+        SELECT
+            t6251.F01 creditId,
+            t6230.F01 bidId,
+            t6251.F04 debtUserId,
+            t6251.F06 sourceAmount,
+            t6260.creditsale_no creditsaleNo
+        FROM
+            s62.t6251
+        LEFT JOIN s62.t6230 ON t6251.F03 = t6230.F01
+        LEFT JOIN s62.t6260 ON t6260.F02 = t6251.F01
+        WHERE
+            t6251.F01 = #{creditId}
+        AND t6260.F07 = 'ZRZ'
+        LIMIT 1
+    </select>
+
+    <update id="updateCreditTransferApplyById" parameterType="java.util.Map">
+        update s62.t6260
+        <set>
+            F06= now(),
+            <if test="status!=null">
+                 F07= #{status},
+            </if>
+        </set>
+        where F01= #{id}
+    </update>
+
+    <select id="getBaseCreditInfo" parameterType="java.lang.Integer" resultType="BaseCreditInfo">
+        SELECT
+        t6251.F01 creditId,
+        t6251.F04 userId,
+        t6230.F01 bidId,
+        t6230.F02 debtUserId,
+        t6251.F07 sourceAmount
+        FROM
+        s62.t6251
+        LEFT JOIN s62.t6230 ON t6251.F03 = t6230.F01
+        WHERE
+        t6251.F01 = #{creditId}
+    </select>
+</mapper>

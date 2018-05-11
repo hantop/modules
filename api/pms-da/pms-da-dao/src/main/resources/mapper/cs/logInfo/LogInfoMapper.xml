@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.logInfo.LogInfoMapper">
+    <insert id="addUserLog" parameterType="com.fenlibao.model.pms.da.cs.LogInfo">
+        insert into log.t_user_log (user_id,ip,conduct,status,create_time,remarks,request_message)
+        values (#{userId},#{ip},#{conduct},#{status},now(),#{remarks},#{requestStr})
+    </insert>
+    <select id="getLogInfoList" resultType="LogInfo">
+        SELECT
+        userLog.user_id,
+        info.F02 name,
+        base.F02 phoneNum,
+        AES_DECRYPT(FROM_BASE64(info.F07), '80e36e39f34e678c') idcard,
+        userLog.ip,
+        userLog.conduct,
+        userLog.remarks,
+        userLog.`status`,
+        userLog.create_time
+        FROM
+        log.t_user_log userLog
+        LEFT JOIN s61.t6110 base ON userLog.user_id = base.F01
+        LEFT JOIN s61.t6141 info ON userLog.user_id = info.F01
+        <where>
+            <if test="userIds != null and userIds.size() > 0">
+                AND userLog.user_id IN
+                <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+                    #{userId}
+                </foreach>
+            </if>
+            <if test="types != null and types.size() > 0">
+                AND userLog.conduct IN
+                <foreach collection="types" item="type" open="(" separator="," close=")">
+                    #{type}
+                </foreach>
+            </if>
+            <if test="startTime != null">
+                AND userLog.create_time &gt;= #{startTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="endTime != null">
+                AND userLog.create_time &lt;= #{endTime,jdbcType=TIMESTAMP}
+            </if>
+        </where>
+        ORDER BY userLog.create_time DESC
+    </select>
+</mapper>

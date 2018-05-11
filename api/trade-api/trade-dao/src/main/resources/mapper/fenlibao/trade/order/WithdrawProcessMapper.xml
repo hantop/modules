@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="WithdrawProcessMapper">
+
+    <insert id="addOrder" parameterType="T6503">
+        INSERT INTO s65.t6503 (F01,F02,F03,F04,F05,F06,F07,F08,F09) VALUES (#{F01},#{F02},#{F03},#{F04},#{F05},#{F06},#{F07},#{F08},#{F09})
+    </insert>
+    
+    <select id="getOrder" resultType="com.fenlibao.p2p.model.trade.entity.order.T6503">
+        SELECT F01,F02,F03,F04,F05,F06,F07,F08,F09 FROM s65.t6503 WHERE F01 = #{orderId} LIMIT 1 FOR UPDATE
+    </select>
+
+    <update id="updateOrder" parameterType="com.fenlibao.p2p.model.trade.entity.order.T6503">
+        update s65.t6503 
+        <set>
+			<if test="F08 != null">
+				F08 = #{F08},
+			</if>
+		</set>
+        where F01 = #{F01}
+    </update>
+    
+    <select id="getOrderNeedConfirmed" resultType="java.lang.Integer">
+        SELECT o.F01 FROM s65.t6501 o INNER JOIN s65.t6503 r ON o.f01 = r.f01 WHERE r.F07 = #{paymentInstitutionCode} AND o.F03 = 'DQR' AND o.F02 = '10002' AND o.F04 <![CDATA[<=]]> DATE_SUB(now(), INTERVAL 10 MINUTE) ORDER BY o.F01 ASC LIMIT 100
+    </select>
+</mapper>

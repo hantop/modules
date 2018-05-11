@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="EnumMapper">
+	<select id="getEnum" parameterType="TEnum" resultType="TEnum">
+		SELECT
+			id,
+			enum_table enumTable,
+			enum_column enumColumn,
+			enum_key enumKey,
+			enum_value enumValue
+		FROM flb.t_enum
+		<where>
+			<if test="enumTable != null">
+				enum_table = #{enumTable}
+			</if>
+			<if test="enumColumn != null">
+				and enum_column = #{enumColumn}
+			</if>
+			<if test="enumKey != null">
+				and enum_key = #{enumKey}
+			</if>
+		</where>
+	</select>
+	
+	<insert id="addEnum" parameterType="TEnum" keyProperty="id" useGeneratedKeys="true">
+		insert into flb.t_enum
+			(enum_table, enum_column, enum_key, enum_value)
+		values
+			(#{enumTable}, #{enumColumn}, #{enumKey}, #{enumValue})
+	</insert>
+	
+	<update id="updateEnum" parameterType="TEnum">
+		update flb.t_enum set enum_value=#{enumValue}
+		<where>
+			enum_table=#{enumTable} and
+			enum_column=#{enumColumn} and
+			enum_key=#{enumKey}
+		</where>
+	</update>
+	
+	<delete id="deleteEnum" parameterType="String">
+		delete from flb.t_enum
+		<where>
+			id=#{id}
+		</where>
+	</delete>
+
+	<select id="testMultiDataSource" resultType="Map">
+		select * from flb.t_enum a, temp.t_temp b where a.enum_table=b.f_name
+	</select>
+
+    <update id="testTransaction1" parameterType="TEnum">
+        update flb.t_enum
+          set enum_value=#{enumValue}
+        <where>
+            id = #{id}
+        </where>
+    </update>
+
+    <update id="testTransaction2">
+        update flb.t_enum
+        set enum_value=#{enumValue}
+        <where>
+            id = #{id}
+        </where>
+    </update>
+</mapper>

@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.publicity.AdvertImageMapper">
+    <update id="updateStatus">
+        UPDATE flb.t_adimg
+        SET status = #{status},
+            update_time = SYSDATE()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteAdvertImage" parameterType="String">
+        DELETE FROM flb.t_adimg
+        WHERE id = #{advertImageId}
+    </delete>
+
+    <select id="getAdImgFiles" parameterType="String" resultType="AdvertImageFile">
+        SELECT
+            adimg_id,
+            original_name,
+            publish_name,
+            server_path,
+            relative_path,
+            screen_type,
+            file_size,
+            file_type,
+            create_user,
+            create_time
+        FROM
+            flb.t_adimg_file
+        WHERE
+            adimg_id = #{adImgId}
+    </select>
+
+    <select id="getClientTypes" parameterType="String" resultType="Integer">
+        SELECT
+          client_type
+        FROM
+          flb.t_adimg_clienttype
+        WHERE
+          adimg_id = #{adImgId}
+    </select>
+
+    <select id="getAdImageVersions" parameterType="String" resultType="String">
+        SELECT
+          client_version
+        FROM
+          flb.t_adimg_version
+        WHERE
+          adimg_id = #{adImgId}
+    </select>
+
+    <insert id="addAdvertImageFiles">
+        INSERT INTO flb.t_adimg_file
+        (
+            adimg_id,
+            original_name,
+            publish_name,
+            server_path,
+            relative_path,
+            screen_type,
+            file_size,
+            file_type,
+            create_user,
+            create_time
+        )
+        VALUES
+        <foreach collection="adImgFiles" item="adImgFile" separator=",">
+        (
+            #{advertImageId},
+            #{adImgFile.originalName},
+            #{adImgFile.publishName},
+            #{adImgFile.serverPath},
+            #{adImgFile.relativePath},
+            #{adImgFile.screenType},
+            #{adImgFile.fileSize},
+            #{adImgFile.fileType},
+            #{createUser},
+            SYSDATE()
+        )
+        </foreach>
+    </insert>
+
+    <insert id="addAdvertImageClientTypes">
+        INSERT INTO flb.t_adimg_clienttype (
+        adimg_id,
+        client_type
+        )
+        VALUES
+        <foreach collection="clientTypes" item="clientType" separator=",">
+            (
+            #{advertImageId},
+            #{clientType}
+            )
+        </foreach>
+    </insert>
+
+    <insert id="addAdvertImageVersions">
+        INSERT INTO flb.t_adimg_version (
+            adimg_id,
+            client_version
+        )
+        VALUES
+        <foreach collection="versions" item="version" separator=",">
+        (
+            #{advertImageId},
+            #{version}
+        )
+        </foreach>
+    </insert>
+
+    <select id="getAdvertImage" parameterType="String" resultType="AdvertImageVO">
+        SELECT
+            id,
+            name,
+            priority,
+            advert_type,
+            ad_web_url,
+            status,
+            need_login,
+            create_user,
+            create_time,
+            update_time,
+            is_cg systemType
+        FROM
+            flb.t_adimg
+        WHERE
+            id = #{id}
+    </select>
+
+    <insert id="addAdvertImage" parameterType="AdvertImageEditVO" keyProperty="id" useGeneratedKeys="true">
+          INSERT INTO flb.t_adimg (
+              name,
+              priority,
+              advert_type,
+              ad_web_url,
+              status,
+              need_login,
+              create_user,
+              create_time,
+              update_time,
+              is_cg
+          )
+          VALUES
+              (
+                  #{name},
+                  #{priority},
+                  #{advertType},
+                  #{adWebUrl},
+                  #{status},
+                  #{needLogin},
+                  #{createUser},
+                  SYSDATE(),
+                  SYSDATE(),
+                  #{systemType}
+              );
+    </insert>
+
+    <delete id="deleteAdvertImageClientTypes" parameterType="String">
+        DELETE FROM flb.t_adimg_clienttype
+        WHERE
+          adimg_id = #{advertImageId}
+    </delete>
+
+    <delete id="deleteAdvertImageVersions" parameterType="String">
+        DELETE FROM flb.t_adimg_version
+        WHERE
+          adimg_id = #{advertImageId}
+    </delete>
+
+    <delete id="deleteAdvertImageFiles" parameterType="String">
+        DELETE FROM flb.t_adimg_file
+        WHERE
+          adimg_id = #{advertImageId}
+    </delete>
+
+    <update id="updateAdvertImage" parameterType="AdvertImageEditVO">
+        UPDATE flb.t_adimg
+        SET
+         name = #{name},
+         priority = #{priority},
+         advert_type = #{advertType},
+         ad_web_url = #{adWebUrl},
+         status = #{status},
+         need_login = #{needLogin},
+         create_user = #{createUser},
+         update_time = SYSDATE(),
+         is_cg = #{systemType}
+        WHERE
+            id = #{id}
+    </update>
+
+    <select id="getAdvertImages" resultType="AdvertImageVO">
+        SELECT
+            id,
+            name,
+            priority,
+            advert_type advertType,
+            ad_web_url adWebUrl,
+            status,
+            need_login,
+            create_time createTime,
+            update_time updateTime,
+            is_cg systemType
+        FROM
+          flb.t_adimg
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE '%${name}%'
+            </if>
+            <if test="advertType != null and advertType != ''">
+                AND advert_type LIKE '%${advertType}%'
+            </if>
+            <if test="systemType != 0">
+                AND is_cg = #{systemType}
+            </if>
+        </where>
+        ORDER BY update_time DESC, priority ASC
+    </select>
+</mapper>

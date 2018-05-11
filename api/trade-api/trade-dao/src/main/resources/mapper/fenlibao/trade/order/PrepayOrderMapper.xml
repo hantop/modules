@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PrepayOrderMapper">
+
+    <insert id="add" parameterType="com.fenlibao.p2p.model.trade.entity.order.T6521" >
+        INSERT INTO s65.t6521 (F01,F02,F03,F04,F05,F06,F07,F08,F09) VALUES (#{F01},#{F02},#{F03},#{F04},#{F05},#{F06},#{F07},#{F08},#{F09})
+    </insert>
+    
+    <select id="get" resultType="com.fenlibao.p2p.model.trade.entity.order.T6521">
+        SELECT F01, F02, F03, F04, F05,F06,F07,F08,F09 FROM S65.T6521 WHERE T6521.F01 = #{id} LIMIT 1 for update
+    </select>
+</mapper>

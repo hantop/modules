@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWWithdrawMapper">
+    <select id="getSuccessApplyId" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT F01 FROM s61.t6130 WHERE F09 != 'TXSB' AND F02 = #{userId} LIMIT 1
+    </select>
+
+    <insert id="createWithdrawApply" parameterType="com.fenlibao.p2p.model.xinwang.entity.pay.SysWithdrawApply" useGeneratedKeys="true" keyProperty="id">
+        insert s61.t6130 (F02,F03,F04,F06,F07,F08,F09,F14,F16,F17) values(#{userId},#{bankId},#{amount},#{commissionReceivable},#{paidInCommission},now(),#{status},now(),#{arrival},#{cgMode})
+    </insert>
+
+    <insert id="createWithdrawRequest" parameterType="com.fenlibao.p2p.model.xinwang.entity.pay.XWWithdrawRequest">
+        insert flb.t_xw_withdraw (request_no,platform_user_no,amount,commission,expired_time) VALUES (#{requestNo},#{platformUserNo},#{amount},#{commission},#{expiredTime})
+    </insert>
+
+    <update id="updateWithdrawRequest" parameterType="java.util.Map">
+        update flb.t_xw_withdraw
+        <set>
+            <if test="backrollRechargeRequestNo!=null">
+                backroll_recharge_request_no= #{backrollRechargeRequestNo},
+            </if>
+        </set>
+        where request_no= #{requestNo}
+    </update>
+
+    <update id="updateWithdrawApply" parameterType="java.util.Map">
+        update s61.t6130
+        <set>
+            <if test="status != null">
+                F09 = #{status},
+            </if>
+            <if test="arrival != null">
+                F16 = #{arrival},
+            </if>
+        </set>
+        where F01 = #{id}
+    </update>
+
+    <select id="getPageExpiredRequest" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        select a.id,a.interface_name interfaceName,a.batch_no batchNo,a.request_no requestNo,a.order_id orderId,a.platform_user_no platformUserNo,a.user_id userId,a.request_time requestTime,a.state,a.update_time updateTime
+        from (select * from flb.t_xw_request where state='DTJ') a
+        INNER JOIN flb.t_xw_withdraw b
+        ON a.request_no=b.request_no where b.expired_time<![CDATA[<]]>now()
+    </select>
+
+    <select id="getResultConfirmRequest" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        select id,interface_name interfaceName,batch_no batchNo,request_no requestNo,order_id orderId,platform_user_no platformUserNo,user_id userId,request_time requestTime,state,update_time updateTime
+        from flb.t_xw_request
+        where state='DQR' and interface_name='WITHDRAW' and TIMESTAMPDIFF(MINUTE,update_time,NOW())>5
+    </select>
+</mapper>

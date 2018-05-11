@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.xieyi.XieyiMapper">
+
+    <select id="getXieyis" resultType="com.fenlibao.model.pms.da.biz.xieyi.XieyiInfo">
+        SELECT
+          adr.id as id,
+          adr.type as type,
+          adr.create_time as createTime,
+          adr.yesterday as yesterday,
+          tnau.name as name,
+          REVERSE(left(REVERSE(adr.path_name),LOCATE('/',REVERSE(adr.path_name))-1))
+           as rrename,
+          adr.pk_data as pkData
+        FROM flb.t_business_agreement_download_record adr INNER JOIN flb.t_entrust_agreement_upload tnau ON adr.id = tnau.download_record_id
+        WHERE adr.pk_data = 'WTZFXY-LOCAL-UPLOAD'
+        ORDER BY adr.yesterday DESC, adr.create_time DESC
+    </select>
+
+    <select id="getPlatformUserNoByAccount" resultType="java.util.Map">
+          SELECT xw.platform_user_no as platformUserNo
+          FROM s61.t6110 t6110 LEFT JOIN  flb.t_xw_account xw ON t6110.F01 = xw.user_id AND xw.user_role = 'BORROWERS'
+          WHERE t6110.F02 = #{account}
+    </select>
+
+    <insert id="saveEntrustUpload" >
+        INSERT INTO flb.t_entrust_agreement_upload (download_record_id, name, re_name, size, format, create_time, upload_user)
+        VALUES (#{dId}, #{name}, #{reName}, #{size}, #{format}, #{createTime}, #{uploadUser})
+    </insert>
+
+    <insert id="saveDownloadRecord" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.Map">
+        INSERT INTO flb.t_business_agreement_download_record (type, yesterday, download_suc, path_name, create_time, pk_data)
+        VALUES (#{type}, #{yesterday}, 1, #{realPath}, NOW(), #{pkData})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM flb.t_business_agreement_download_record WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByRecordId">
+        DELETE FROM flb.t_entrust_agreement_upload WHERE download_record_id = #{id}
+    </delete>
+
+</mapper>

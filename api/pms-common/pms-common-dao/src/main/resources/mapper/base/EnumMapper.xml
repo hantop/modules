@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.base.EnumMapper">
+    <select id="getEnumByTableName" resultType="TEnum">
+        select
+        enum_table enumTable,
+        enum_column enumColumn,
+        enum_key enumKey,
+        enum_value enumValue
+        from flb.t_enum
+        <where>
+            enum_table = #{_parameter}
+        </where>
+    </select>
+
+    <select id="getEnumByTableNameAndColumnName" resultType="TEnum">
+        select
+            enum_table enumTable,
+            enum_column enumColumn,
+            enum_key enumKey,
+            enum_value enumValue
+        from flb.t_enum
+        <where>
+            enum_table = #{0}
+            and
+            enum_column = #{1}
+        </where>
+    </select>
+
+    <select id="getEnumValue" resultType="String">
+        select enum_value from flb.t_enum
+        <where>
+            enum_table = #{0}
+            and
+            enum_column = #{1}
+            and
+            enum_key = #{2}
+        </where>
+    </select>
+
+    <select id="getEnumList" parameterType="TEnum" resultType="TEnum">
+        select
+            id,
+            enum_table enumTable,
+            enum_column enumColumn,
+            enum_key enumKey,
+            enum_value enumValue
+        from flb.t_enum
+        <where>
+            <if test="enumTable != null and enumTable != ''">
+                enum_table like '%${enumTable}%'
+            </if>
+            <if test="enumColumn != null and enumColumn != ''">
+                and enum_column like '%${enumColumn}%'
+            </if>
+        </where>
+    </select>
+
+    <select id="getEnumById" parameterType="_int" resultType="TEnum">
+        select
+            id,
+            enum_table enumTable,
+            enum_column enumColumn,
+            enum_key enumKey,
+            enum_value enumValue
+        from flb.t_enum
+        <where>
+            id = #{_parameter}
+        </where>
+    </select>
+
+    <update id="updateEnum" parameterType="TEnum">
+        update flb.t_enum set
+            enum_value=#{enumValue},
+            enum_table=#{enumTable},
+            enum_column=#{enumColumn},
+            enum_key=#{enumKey}
+        <where>
+            id=#{id}
+        </where>
+    </update>
+
+    <insert id="addEnum" parameterType="TEnum" keyProperty="id" useGeneratedKeys="true">
+        insert into flb.t_enum
+        (enum_table, enum_column, enum_key, enum_value)
+        values
+        (#{enumTable}, #{enumColumn}, #{enumKey}, #{enumValue})
+    </insert>
+
+    <delete id="deleteEnum">
+        delete from flb.t_enum
+        <where>
+            <if test="array != null">
+                id in
+                <foreach collection="array" item="item" index="index" open="(" separator="," close=")">
+                    #{item}
+                </foreach>
+            </if>
+        </where>
+    </delete>
+</mapper>

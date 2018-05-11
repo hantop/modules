@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.marketing.activity.ActivityMapper">
+    <select id="getActivityRateCouponCount" resultType="int" parameterType="int">
+        SELECT COUNT(1) FROM flb.t_coupon_activity
+        WHERE coupon_id = #{rateCouponId}
+    </select>
+
+    <select id="getActivityList" resultType="com.fenlibao.model.pms.da.marketing.activity.Activity">
+    	SELECT id, name, code, time_start, time_end, 
+			CASE WHEN time_start &gt; NOW() THEN '未开始'
+			WHEN time_end &lt; NOW() THEN '已结束'  
+			WHEN time_start &lt;= NOW() AND time_end &gt;= NOW() THEN '活动中'
+			ELSE '未知' END AS status
+		FROM flb.t_activity ORDER BY update_time DESC 
+    </select>
+    
+    <select id="getActivityIdByCode" resultType="Integer">
+        SELECT
+            id
+        FROM flb.t_activity
+        WHERE code = #{code}
+    </select>
+
+    <select id="selectActivityCount" resultType="int">
+        SELECT
+        count(1)
+        FROM flb.t_activity activity
+        WHERE activity.code = #{code}
+        <!-- <if test="name != null">
+            AND activity.name = #{name}
+        </if>
+        <if test="id > 0">
+            AND activity.id != #{id}
+        </if> -->
+    </select>
+    
+    <update id="updateByPrimaryKeySelective" parameterType="com.fenlibao.model.pms.da.marketing.activity.Activity">
+        update flb.t_activity
+        <set>
+            <if test="code != null">
+                code = #{code,jdbcType=VARCHAR},
+            </if>
+            <if test="name != null">
+                name = #{name,jdbcType=VARCHAR},
+            </if>
+            <if test="timeStart != null">
+                time_start = #{timeStart,jdbcType=TIMESTAMP},
+            </if>
+            <if test="timeEnd != null">
+                time_end = #{timeEnd,jdbcType=TIMESTAMP},
+            </if>
+            `update_time` = SYSDATE()
+        </set>
+        where id = #{id,jdbcType=INTEGER}
+    </update>
+    
+    <insert id="insertSelective" parameterType="com.fenlibao.model.pms.da.marketing.activity.Activity" useGeneratedKeys="true" keyProperty="id">
+        insert into flb.t_activity
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">
+                id,
+            </if>
+            <if test="code != null">
+                code,
+            </if>
+            <if test="name != null">
+                name,
+            </if>
+            <if test="timeStart != null">
+                time_start,
+            </if>
+            <if test="timeEnd != null">
+                time_end,
+            </if>
+            `create_time`,
+             `update_time`,
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">
+                #{id,jdbcType=INTEGER},
+            </if>
+            <if test="code != null">
+                #{code,jdbcType=VARCHAR},
+            </if>
+            <if test="name != null">
+                #{name,jdbcType=VARCHAR},
+            </if>
+            <if test="timeStart != null">
+                #{timeStart,jdbcType=TIMESTAMP},
+            </if>
+            <if test="timeEnd != null">
+                #{timeEnd,jdbcType=TIMESTAMP},
+            </if>
+            SYSDATE(),
+            SYSDATE(),
+        </trim>
+    </insert>
+    
+    <select id="getActivityById" resultType="com.fenlibao.model.pms.da.marketing.activity.Activity" >
+        select id, name, code, time_start, time_end, 
+			CASE WHEN time_start &gt; NOW() THEN '未开始'
+			WHEN time_end &lt; NOW() THEN '已结束'  
+			WHEN time_start &lt;= NOW() AND time_end &gt;= NOW() THEN '活动中'
+			ELSE '未知' END AS status
+        from flb.t_activity
+        where id = #{id,jdbcType=INTEGER}
+    </select>
+    
+    <insert id="addRateCoupon">
+    	INSERT into flb.t_coupon_activity (coupon_id, activity_id, start_time, end_time, create_time,update_time) 
+    	values (#{rateCouponId}, #{activityId}, #{startTime}, #{endTime}, SYSDATE(), SYSDATE())
+    </insert>
+    
+    <select id="getCouponIdsByActivityId" resultType="int">
+		SELECT a.coupon_id
+		FROM flb.t_coupon_activity a 
+		WHERE a.activity_id = #{activityId}
+	</select>
+	
+	<delete id="deleteActivityCoupon">
+		DELETE FROM flb.t_coupon_activity WHERE activity_id = #{activityId} and coupon_id = #{oldType}
+	</delete>
+	
+	<select id="getCouponListByActivityId" resultType="com.fenlibao.model.pms.da.marketing.activity.ActivityRateCoupon">
+		SELECT a.id as id, a.scope as scope, a.min_invest_money as minInvestMoney FROM flb.t_coupon_activity b
+		LEFT JOIN flb.t_coupon a ON b.coupon_id = a.id
+		WHERE b.activity_id = #{id}
+	</select>
+	
+	<sql id="queryRateCoupon">
+        SELECT
+        id,
+        coupon_code,
+        coupon_type_id,
+        effect_day,
+        max_invest_money,
+        min_invest_money,
+        max_invest_day,
+        min_invest_day,
+        scope,
+        create_time,
+        update_time
+        FROM
+        flb.t_coupon
+    </sql>
+
+	<select id="findAllRateCoupons" resultType="com.fenlibao.model.pms.da.marketing.activity.ActivityRateCoupon">
+    	 <include refid="queryRateCoupon"/>
+        <where>
+            coupon_type_id = 1
+            <if test="couponCode != null and couponCode != ''">
+                AND coupon_code  like concat('%',trim(#{couponCode}),'%')
+            </if>
+        </where>
+    </select>
+    
+    <update id="updateRatrCoupon">
+        update flb.t_coupon_activity
+        <set>
+            <if test="timeStart != null">
+                start_time = #{timeStart,jdbcType=TIMESTAMP},
+            </if>
+            <if test="timeEnd != null">
+                end_time = #{timeEnd,jdbcType=TIMESTAMP},
+            </if>
+            `update_time` = SYSDATE()
+        </set>
+        where activity_id = #{activityId,jdbcType=INTEGER} and coupon_id = #{newId,jdbcType=INTEGER}
+    </update>
+
+</mapper>

@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.channel.channel.ChannelMapper">
+
+    <resultMap id="BaseResultMap" type="ChannelVO">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="parent_id" property="parentId" jdbcType="INTEGER"/>
+        <result column="code" property="code" jdbcType="VARCHAR"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <resultMap id="Association_ResultMap" type="ChannelVO" extends="BaseResultMap">
+        <association property="parent" columnPrefix="p_"
+                     javaType="ChannelVO"
+                     resultMap="BaseResultMap"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, parent_id, code, name, description
+    </sql>
+
+    <select id="getChannels" parameterType="java.util.Map" resultType="ChannelVO">
+        SELECT
+        channel.id,
+        channel.parent_id parentId,
+        channel.code,
+        channel.name
+        FROM flb.t_channel channel
+        <where>
+            <choose>
+                <when test="parentId == null or parentId == ''">
+                    AND channel.parent_id != 0
+                </when>
+                <otherwise>
+                    AND channel.parent_id = #{parentId}
+                </otherwise>
+            </choose>
+            <choose>
+                <when test="channelId == null or channelId == ''">
+                    AND channel.id != 0
+                </when>
+                <otherwise>
+                    AND channel.id = #{channelId}
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <select id="getParentChannels" resultType="ChannelVO">
+        SELECT
+        channel.id,
+        channel.parent_id parentId,
+        channel.code,
+        channel.name
+        FROM flb.t_channel channel
+        <where>
+            channel.parent_id = 0
+        </where>
+        ORDER BY id desc
+    </select>
+
+    <select id="getChannelCountByName" resultType="int">
+        SELECT
+        count(1)
+        FROM flb.t_channel channel
+        WHERE channel.name=#{param1}
+        <if test="param3 > 0">
+            AND channel.id != #{param3}
+        </if>
+        <choose>
+            <when test="param2 > 0">
+                AND channel.parent_id > 0
+            </when>
+            <otherwise>
+                AND (
+                channel.parent_id = 0
+                OR
+                channel.parent_id is NULL
+                )
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="getChannelCountByCode" resultType="int">
+        SELECT
+        count(1)
+        FROM flb.t_channel channel
+        WHERE channel.code=#{code}
+    </select>
+
+    <select id="getChannelsByParent" parameterType="int" resultType="ChannelVO">
+        SELECT
+        channel.id,
+        channel.parent_id parentId,
+        channel.code,
+        channel.name
+        FROM flb.t_channel channel
+        <where>
+            channel.parent_id = #{parentId}
+        </where>
+    </select>
+
+    <select id="getChannel" parameterType="java.util.Map" resultType="ChannelVO">
+        SELECT
+        channel.id,
+        channel.parent_id parentId,
+        channel.code,
+        channel.name
+        FROM flb.t_channel channel
+        <where>
+            <if test="code != null">
+                AND channel.code = #{code}
+            </if>
+        </where>
+    </select>
+
+    <insert id="addUserOrigin" parameterType="java.util.Map">
+		INSERT INTO flb.t_user_origin
+		SET channel_code = #{channelCode},
+		 user_id = #{userId},
+		 client_type_id = #{clientTypeId}
+	</insert>
+
+    <select id="getChannelById" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from flb.t_channel
+        where id = #{id,jdbcType=INTEGER}
+    </select>
+
+    <update id="updateByPrimaryKeySelective" parameterType="ChannelVO">
+        update flb.t_channel
+        <set>
+            <if test="parentId != null">
+                parent_id=#{parentId,jdbcType=INTEGER},
+            </if>
+            <if test="code != null">
+                code=#{code,jdbcType=VARCHAR},
+            </if>
+            <if test="name != null">
+                name=#{name,jdbcType=VARCHAR},
+            </if>
+            <if test="description != null">
+                description=#{description,jdbcType=VARCHAR},
+            </if>
+        </set>
+        where id = #{id,jdbcType=INTEGER}
+    </update>
+
+    <insert id="insertSelective" parameterType="com.fenlibao.model.pms.da.channel.vo.ChannelVO">
+        INSERT INTO
+        flb.t_channel
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="parentId != null">
+                parent_id,
+            </if>
+            <if test="code != null">
+                code,
+            </if>
+            <if test="name != null">
+                name,
+            </if>
+            <if test="description != null">
+                description,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="parentId != null">
+                #{parentId,jdbcType=INTEGER},
+            </if>
+            <if test="code != null">
+                #{code,jdbcType=VARCHAR},
+            </if>
+            <if test="name != null">
+                #{name,jdbcType=VARCHAR},
+            </if>
+            <if test="description != null">
+                #{description,jdbcType=VARCHAR},
+            </if>
+        </trim>
+    </insert>
+
+    <select id="findParentPager" resultMap="BaseResultMap">
+        SELECT
+        channel.id id,
+        channel.name name
+        FROM flb.t_channel channel
+        <where>
+            and (channel.parent_id=0 or channel.parent_id is NULL)
+            <if test="name != null">
+                and channel.name like '%${name}%'
+            </if>
+        </where>
+        ORDER BY id desc
+    </select>
+
+    <select id="findChildPager" resultMap="Association_ResultMap">
+        SELECT
+        channel.id id,
+        channel.parent_id parent_id,
+        channel.code code,
+        channel.name name,
+        parent.id p_id,
+        parent.parent_id p_parent_id,
+        parent.code p_code,
+        parent.name p_name
+        FROM
+        flb.t_channel channel
+        JOIN flb.t_channel parent ON (
+        parent.id = channel.parent_id
+        )
+        <where>
+            and channel.parent_id > 0
+            <if test="name != null">
+                and channel.name like '%${name}%'
+            </if>
+            <if test="code != null">
+                and channel.code like '%${code}%'
+            </if>
+        </where>
+        ORDER BY id desc
+    </select>
+
+    <delete id="delete" parameterType="java.util.List">
+        delete from flb.t_channel where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+</mapper>

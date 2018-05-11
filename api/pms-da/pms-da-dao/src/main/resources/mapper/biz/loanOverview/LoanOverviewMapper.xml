@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.loanOverview.LoanOverviewMapper">
+	<select id="getLoanList" resultType="LoanOverview">
+          SELECT
+	      tt6230.F01 AS bidId,
+	      tt6230.F03 AS bidTitle,
+	      tt6110.F02 AS borrowerAccount,
+          tt6141.F02 AS borrowerName,
+	      tt6230.F05 AS borrowAmount,
+	      case WHEN ISNULL(tt6231.F12) then null else tt6230.F05 - tt6230.F07 end AS loanAmount,
+          bj.principal,
+          lx.interest,
+          ROUND(tt6238.F02*(tt6230.F05 - tt6230.F07),2) AS transactionFee,
+          ofee.otherFee,
+          CONCAT(ROUND(tt6238.F06*100,2),'%') AS borrowRate,
+	      CONCAT(ROUND(tt6230.F06*100,2),'%') AS investRate,
+	      CASE tt6230.F09
+              WHEN 0 THEN CONCAT(tt6230.F32, ' 天')
+          ELSE  CONCAT(tt6230.F09, ' 个月')
+          END AS cycle,
+          date_format(tt6230.f22,'%Y-%m-%d') AS tenderDate,
+          date_format(tt6231.F11,'%Y-%m-%d') AS fullDate,
+          date_format(tt6231.F12,'%Y-%m-%d') AS loanDate,
+          date_format((CASE tt6230.F20 WHEN 'YJQ' THEN tt6231.f13 ELSE tt6231.F06 END),'%Y-%m-%d') AS repayDate,
+	      CASE tt6230.f10
+              WHEN 'DEBX' THEN '等额本息'
+              WHEN 'MYFX' THEN '每月付息,到期还本'
+              ELSE '本息到期一次付清'
+          END
+          AS repayMode,
+          bid_user.operator
+          AS operator,
+	      CASE tt6230.F20
+          WHEN 'DFB' THEN
+          '待发布'
+          WHEN 'YFB' THEN
+          '预发布'
+          WHEN 'TBZ' THEN
+          '投标中'
+          WHEN 'DFK' THEN
+          '待放款'
+          WHEN 'HKZ' THEN
+             CASE WHEN TO_DAYS(NOW())>TO_DAYS(tt6231.F06) THEN '还款中（已逾期）'
+             ELSE '还款中'
+             END
+          WHEN 'YJQ' THEN
+          '已结清'
+          WHEN 'YLB' THEN
+          '已流标'
+          WHEN 'YZF' THEN
+          '已作废'
+          ELSE
+	      '已作废'
+          END
+          AS bidStatus,
+	      CASE tt6230.F20
+          WHEN 'DFB' THEN
+          5
+          WHEN 'YFB' THEN
+          6
+          WHEN 'TBZ' THEN
+          4
+          WHEN 'DFK' THEN
+          3
+          WHEN 'HKZ'  THEN
+             CASE WHEN TO_DAYS(NOW())>TO_DAYS(tt6231.F06) THEN 1
+             ELSE 2
+             END
+          WHEN 'YJQ' THEN
+          7
+          WHEN 'YLB' THEN
+          8
+          WHEN 'YZF' THEN
+          9
+          ELSE
+	      9
+          END
+          AS bidStatusOrder,
+          tt6211.F02 productType,
+          tt6230.F38 sysType
+          FROM
+	          s62.t6230 tt6230
+          LEFT JOIN s62.t6211 tt6211 ON tt6211.F01 = tt6230.F04
+          LEFT JOIN s61.t6110 tt6110 ON tt6230.F02 = tt6110.F01
+          LEFT JOIN s61.t6141 tt6141 ON tt6230.F02 = tt6141.F01
+          LEFT JOIN s62.t6238 tt6238 ON tt6230.F01 = tt6238.F01 
+          LEFT JOIN s62.t6231 tt6231 ON tt6230.F01 = tt6231.F01
+          LEFT JOIN flb.t_bid_ext_user bid_user ON tt6230.F01=bid_user.bid 
+          LEFT JOIN (
+              SELECT zq.F02,SUM(zq.F07) AS principal FROM s62.t6231 AS ext,s62.t6252 AS zq 
+	          WHERE ext.F01 = zq.F02 AND ext.F06 = zq.F08	AND zq.F05 = 7001 
+	          GROUP BY zq.F02
+          ) bj ON tt6230.F01=bj.F02
+          LEFT JOIN (
+              SELECT zq2.F02,SUM(zq2.F07) AS interest FROM s62.t6231 AS ext2,s62.t6252 AS zq2 
+	          WHERE ext2.F01 = zq2.F02 AND ext2.F06 = zq2.F08 AND zq2.F05 = 7002 
+	          GROUP BY zq2.F02
+          ) lx ON tt6230.F01=lx.F02
+          LEFT JOIN (
+              SELECT zq3.F02,SUM(zq3.F07) AS otherFee FROM s62.t6231 AS ext3,s62.t6252 AS zq3 
+	          WHERE ext3.F01 = zq3.F02  AND ext3.F06 = zq3.F08  AND zq3.F05 in (7005,7007,7004,7020)
+	          GROUP BY zq3.F02
+          ) ofee ON tt6230.F01=ofee.F02
+		<where>
+			tt6230.F20 IN ('DFB','YFB','TBZ','DFK','HKZ','YJQ','YLB','YZF')
+            <if test="sysType != null and sysType != ''">
+                AND tt6230.F38 = #{sysType}
+            </if>
+			<if test="tenderStartDate != null">
+                <![CDATA[AND tt6230.f22 >= #{tenderStartDate}]]>
+			</if>
+			<if test="tenderEndDate != null">
+                <![CDATA[AND tt6230.f22 <= #{tenderEndDate}]]>
+			</if>
+			<if test="loanStartDate != null">
+                <![CDATA[AND tt6231.F12 >= #{loanStartDate}]]>
+			</if>
+			<if test="loanEndDate != null">
+                <![CDATA[AND tt6231.F12 <= #{loanEndDate}]]>
+			</if>
+			<if test="repayStartDate != null">
+                <![CDATA[AND tt6231.F06 >= #{repayStartDate}]]>
+			</if>
+			<if test="repayEndDate != null">
+                <![CDATA[AND tt6231.F06 <= #{repayEndDate}]]>
+			</if>
+			<if test="bidStatus != null and bidStatus != ''">
+				AND tt6230.F20 = #{bidStatus}
+			</if>			
+			<if test="bidTitle != null and bidTitle !=''">
+				AND tt6230.F03 like '%${bidTitle}%'
+			</if>
+			<if test="borrowerAccount != null and borrowerAccount !=''">
+				AND tt6110.F02 like '%${borrowerAccount}%'
+			</if>
+			<if test="borrowerName != null and borrowerName !=''">
+				AND tt6141.F02 like '%${borrowerName}%'
+			</if>
+            <if test="productTypes != null">
+                AND tt6230.F04 IN
+                <foreach collection="productTypes" item="productType" open="(" separator="," close=")">
+                    #{productType}
+                </foreach>
+            </if>
+		</where>
+		<if test="sort == 'originOrder'">
+		    ORDER BY bidStatusOrder,repayDate 
+		</if>
+		<if test="sort == 'loanDate'">
+		    ORDER BY loanDate DESC
+		</if>
+		<if test="sort == 'repayDate'">
+		    ORDER BY repayDate DESC
+		</if>
+	</select>
+
+    <resultMap id="totalRM" type="java.util.Map">
+        <result property="principalTotal" column="principalTotal"/>
+        <result property="interestTotal" column="interestTotal"/>
+    </resultMap>
+
+    <select id="getLoanTotal" resultMap="totalRM">
+        SELECT
+            IFNULL(SUM(bj.principal),0) principalTotal,
+            IFNULL(SUM(lx.interest),0) interestTotal
+        FROM
+            s62.t6230 tt6230
+        LEFT JOIN s61.t6110 tt6110 ON tt6230.F02 = tt6110.F01
+        LEFT JOIN s61.t6141 tt6141 ON tt6230.F02 = tt6141.F01
+        LEFT JOIN s62.t6238 tt6238 ON tt6230.F01 = tt6238.F01
+        LEFT JOIN s62.t6231 tt6231 ON tt6230.F01 = tt6231.F01
+        LEFT JOIN flb.t_bid_ext_user bid_user ON tt6230.F01=bid_user.bid
+        LEFT JOIN (
+            SELECT zq.F02,SUM(zq.F07) AS principal FROM s62.t6231 AS ext,s62.t6252 AS zq
+            WHERE ext.F01 = zq.F02 AND ext.F06 = zq.F08 AND zq.F05 = 7001
+            GROUP BY zq.F02
+        ) bj ON tt6230.F01=bj.F02
+        LEFT JOIN (
+            SELECT zq2.F02,SUM(zq2.F07) AS interest FROM s62.t6231 AS ext2,s62.t6252 AS zq2
+            WHERE ext2.F01 = zq2.F02 AND ext2.F06 = zq2.F08 AND zq2.F05 = 7002
+        GROUP BY zq2.F02
+        ) lx ON tt6230.F01=lx.F02
+        <where>
+            tt6230.F20 IN ('DFB','YFB','TBZ','DFK','HKZ','YJQ','YLB','YZF')
+            <if test="tenderStartDate != null">
+                <![CDATA[AND tt6230.f22 >= #{tenderStartDate}]]>
+            </if>
+            <if test="tenderEndDate != null">
+                <![CDATA[AND tt6230.f22 <= #{tenderEndDate}]]>
+            </if>
+            <if test="loanStartDate != null">
+                <![CDATA[AND tt6231.F12 >= #{loanStartDate}]]>
+            </if>
+            <if test="loanEndDate != null">
+                <![CDATA[AND tt6231.F12 <= #{loanEndDate}]]>
+            </if>
+            <if test="repayStartDate != null">
+                <![CDATA[AND tt6231.F06 >= #{repayStartDate}]]>
+            </if>
+            <if test="repayEndDate != null">
+                <![CDATA[AND tt6231.F06 <= #{repayEndDate}]]>
+            </if>
+            <if test="bidStatus != null and bidStatus != ''">
+                AND tt6230.F20 = #{bidStatus}
+            </if>
+            <if test="bidTitle != null and bidTitle !=''">
+                AND tt6230.F03 like '%${bidTitle}%'
+            </if>
+            <if test="borrowerAccount != null and borrowerAccount !=''">
+                AND tt6110.F02 like '%${borrowerAccount}%'
+            </if>
+            <if test="borrowerName != null and borrowerName !=''">
+                AND tt6141.F02 like '%${borrowerName}%'
+            </if>
+            <if test="productTypes != null">
+                AND tt6230.F04 IN
+                <foreach collection="productTypes" item="productType" open="(" separator="," close=")">
+                    #{productType}
+                </foreach>
+            </if>
+        </where>
+    </select>
+
+</mapper>

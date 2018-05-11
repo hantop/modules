@@ -1,0 +1,1313 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.account.TransactionMapper">
+
+    <!-- 充值流水 -->
+    <select id="findRechargeHistory" resultType="Transaction">
+        SELECT
+        funds_flow.F05 AS tradeTime,
+        CONVERT (
+        funds_flow.F06,
+        DECIMAL (20, 2)
+        ) - CONVERT (
+        funds_flow.F07,
+        DECIMAL (20, 2)
+        ) AS tradeAmount,
+        trade_type.F02 AS tradeTypeName
+        FROM
+        S61.T6102 AS funds_flow
+        INNER JOIN S61.T6101 AS funds_account ON funds_flow.F02 = funds_account.F01
+        INNER JOIN S51.T5122 AS trade_type ON trade_type.F01 = funds_flow.F03
+        INNER JOIN s61.t6110 ON s61.t6110.F01 = funds_account.F02
+        WHERE
+        s61.t6110.F01 = #{userId}
+        AND funds_flow.F03 = '1001'
+        AND funds_account.F03 = 'WLZH'
+        <if test="startTime != null">
+            AND funds_flow.F05 &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND funds_flow.F05 &lt;= #{endTime}
+        </if>
+        ORDER BY
+        funds_flow.F05 DESC
+    </select>
+
+    <!-- 交易流水 -->
+    <select id="findTractionHistoryByPhone" resultType="Transaction">
+        SELECT
+        funds_flow.F05 AS tradeTime,
+        CONVERT (
+        funds_flow.F06,
+        DECIMAL (20, 2)
+        ) - CONVERT (
+        funds_flow.F07,
+        DECIMAL (20, 2)
+        ) AS tradeAmount,
+        trade_type.F02 AS tradeTypeName,
+        CONVERT (
+        funds_flow.F08,
+        DECIMAL (20, 2)
+        ) AS balance,
+        funds_flow.F09 remarks
+        FROM
+        S61.T6102 AS funds_flow
+        INNER JOIN S61.T6101 AS funds_account ON funds_flow.F02 = funds_account.F01
+        INNER JOIN S51.T5122 AS trade_type ON trade_type.F01 = funds_flow.F03
+        INNER JOIN s61.t6110 ON s61.t6110.F01 = funds_account.F02
+        WHERE
+        s61.t6110.F01 = #{userId}
+        AND funds_flow.F03 != '5101'
+        AND funds_account.F03 = 'WLZH'
+        <if test="startTime != null">
+            AND funds_flow.F05 &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND funds_flow.F05 &lt;= #{endTime}
+        </if>
+        ORDER BY
+        funds_flow.F05 DESC
+    </select>
+
+    <!-- 提现记录 -->
+    <select id="findwithdrawalHistoryByPhone" resultType="Transaction">
+        SELECT
+            s61.t6130.F01,
+            s61.t6130.F08 tradeTime,
+            s65.T6501.F06 finishTime,
+            s65.t6503.F03 tradeAmount,
+            s65.t6503.F05 handleAmount,
+            s61.T6114.F05 bankName,
+            s61.T6114.F06 bankShortNum,
+            CASE s61.t6130.F16
+                WHEN 'S' THEN '已到账'
+                ELSE
+                    CASE s61.t6130.F09
+                    WHEN 'DSH' THEN '待审核'
+                    WHEN 'DFK' THEN '待放款'
+                    WHEN 'YFK' THEN '已放款'
+                    WHEN 'TXSB' THEN '提现失败'
+                    WHEN 'FKZ' THEN '放款中'
+                    ELSE
+                    '未知状态'
+                END
+            END status
+        FROM
+        s65.t6503
+        RIGHT JOIN s61.t6130 ON s61.t6130.F01 = s65.t6503.F09
+        JOIN s65.T6501 ON s65.T6501.F01 = s65.t6503.F01
+        JOIN s61.T6114 ON s61.T6114.F01 = s61.t6130.F03
+        JOIN s61.T6110 ON s61.T6110.F01 = s65.t6503.F02
+        WHERE
+        s61.T6110.F01 = #{userId}
+        <if test="startTime != null">
+            AND s65.T6501.F05 &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND s65.T6501.F05 &lt;= #{endTime}
+        </if>
+        ORDER BY s65.T6501.F05 DESC
+    </select>
+
+    <!-- 投资记录(买入)  DATE_ADD(date_format(sealedTime,'%Y-%m-%d'),INTERVAL 1 DAY) sealedTime T+1 -->
+    <select id="findInvestHistoryByPhone" resultType="Transaction">
+        SELECT
+        NAME,
+        fullTime,
+        backTime,
+        originMoney,
+        origenRate,
+        interestSum,
+        bidInterestSum,
+        acturalEarn,
+        money tradeAmount,
+        MONTH,
+        rateStr,
+        isNoviceBid noviceBid,
+        loanDays,
+        createTime tradeTime,
+        sealedTime,
+        bidType,
+        CASE bidStatus
+        WHEN 'SQZ' THEN
+        '申请中'
+        WHEN 'DSH' THEN
+        '待审核'
+        WHEN 'DFB' THEN
+        '待发布'
+        WHEN 'YFB' THEN
+        '预发布'
+        WHEN 'TBZ' THEN
+        '投标中'
+        WHEN 'DFK' THEN
+        '待放款'
+        WHEN 'HKZ' THEN
+        '还款中'
+        WHEN 'YJQ' THEN
+        '已结清'
+        WHEN 'YLB' THEN
+        '已流标'
+        WHEN 'YDF' THEN
+        '已垫付'
+        WHEN 'YZF' THEN
+        '已作废'
+        WHEN 'DFZ' THEN
+        '垫付中'
+        ELSE
+        '未知状态'
+        END AS STATUS,
+        CASE paymentType
+        WHEN 'DEBX' THEN
+        '等额本息'
+        WHEN 'MYFX' THEN
+        '每月付息,到期还本'
+        WHEN 'YCFQ' THEN
+        '本息到期一次付清'
+        WHEN 'DEBJ' THEN
+        '等额本金'
+        ELSE
+        '未知状态'
+        END AS paymentType,
+        scope,
+        bidScope,
+        redPacketMoney
+        FROM
+        (
+        /**债券转让记录*/
+        SELECT
+        T6230.F03 AS NAME,
+        temp1.dqrq AS fullTime,
+        DATE_ADD(
+        DATE_FORMAT(temp1.dqrq, '%Y-%m-%d'),
+        INTERVAL - 1 DAY
+        ) backTime,
+        t6262.F04 AS originMoney,
+        temp1.zqlx AS origenRate,
+        temp2.jxlx AS interestSum,
+        temp3.bjxlx AS bidInterestSum,
+        CASE T6230.F20
+        WHEN 'YJQ' THEN
+        temp.sjsy
+        ELSE
+        NULL
+        END AS acturalEarn,
+        t6251.F05 AS money,
+        T6230.F09 AS MONTH,
+        CONCAT(
+        FORMAT((T6230.F06 * 100), 2),
+        '%'
+        ) AS rateStr,
+        T6230.F28 AS isNoviceBid,
+        T6230.F32 AS loanDays,
+        DATE_FORMAT(
+        t6262.F07,
+        '%Y-%m-%d %H:%i:%s'
+        ) AS createTime,
+        DATE_FORMAT(S62.t6231.F17, '%Y-%m-%d') AS sealedTime,
+        T6230.F20 AS bidStatus,
+        T6230.F10 AS paymentType,
+        '债权转让' AS bidType,
+        coupon.scope AS scope,
+        t6238.F09 AS bidScope,
+        redPacket.redPacketMoney AS redPacketMoney
+        FROM
+        S62.t6251
+        INNER JOIN S62.T6230 ON t6251.F03 = T6230.F01
+        INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+        INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01
+        INNER JOIN s62.t6238 ON t6238.F01 = T6230.F01
+        LEFT JOIN s62.t6262 ON s62.t6262.F12 = t6251.F01
+        LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.product_id = s62.t6251.F01
+        LEFT JOIN (
+        SELECT
+        a.F04,
+        a.F02,
+        SUM(a.f07) zqlx,
+        MAX(a.F08) AS dqrq,
+        a.F11 bid,
+        b.F11
+        FROM
+        S62.t6252 a
+        LEFT JOIN s62.t6251 b ON a.f11 = b.F01
+        LEFT JOIN s62.t6230 c ON c.F01 = a.F02
+        WHERE
+        a.`F04` = #{userId}
+        AND a.F05 = '7002'
+        GROUP BY
+        a.f04,
+        a.f02,
+        b.F01
+        ) AS temp1 ON t6251.F01 = temp1.bid
+        LEFT JOIN (
+        SELECT
+        a.F04,
+        a.F02,
+        SUM(a.f07) jxlx,
+        MAX(a.F08) AS dqrq,
+        a.F11 bid,
+        b.F11
+        FROM
+        S62.t6252 a
+        LEFT JOIN s62.t6251 b ON a.f11 = b.F01
+        LEFT JOIN s62.t6230 c ON c.F01 = a.F02
+        WHERE
+        a.`F04` = #{userId} AND a.F05 = '7022' GROUP BY a.f04,a.f02,b.F01
+        ) AS temp2 ON t6251.F01 = temp2.bid
+        LEFT JOIN (
+        SELECT
+        a.F04,
+        a.F02,
+        SUM(a.f07) bjxlx,
+        a.F11 bid,
+        b.F11
+        FROM
+        S62.t6252 a
+        LEFT JOIN s62.t6251 b ON a.f11 = b.F01
+        LEFT JOIN s62.t6230 c ON c.F01 = a.F02
+        WHERE
+        a.`F04` = #{userId} AND a.F05 = '7023' GROUP BY a.f04,a.f02,b.F01
+        ) AS temp3 ON t6251.F01 = temp3.bid
+        LEFT JOIN (
+        SELECT
+        a.f11,
+        a.f04,
+        a.f02,
+        SUM(a.f07) + b.f04 - b.f05 sjsy
+        FROM
+        s62.t6252 a
+        INNER JOIN s62.t6262 b ON a.F11 = b.F12
+        WHERE
+        a.`F04` = #{userId} AND (a.f05 = '7002' OR a.f05 = '7005' OR a.f05 = '7004' OR a.f05 = '7022' OR a.f05 = '7023') GROUP BY a.f04,a.f02,b.F01
+        ) AS temp ON temp.f11 = t6251.f01 /*加息券*/
+        LEFT JOIN (
+        SELECT
+        flb.t_coupon.scope scope,
+        flb.t_user_coupon.tender_id tenderId
+        FROM
+        flb.t_user_coupon
+        LEFT JOIN S62.t6251 ON flb.t_user_coupon.tender_id = S62.t6251.F12
+        LEFT JOIN flb.t_coupon ON flb.t_user_coupon.coupon_id = flb.t_coupon.id
+        WHERE
+        flb.t_user_coupon.`user_id` = #{userId} AND flb.t_user_coupon.coupon_status = 2 AND flb.t_user_coupon.grant_status = 1
+        GROUP BY
+        flb.t_user_coupon.tender_id
+        ) coupon ON coupon.tenderId = S62.t6251.F12 /*返现券*/
+        LEFT JOIN (
+        SELECT
+        SUM(
+        flb.t_red_packet.red_money
+        ) redPacketMoney,
+        flb.t_user_redpackets.tender_id tenderId
+        FROM
+        flb.t_user_redpackets
+        LEFT JOIN S62.t6251 ON flb.t_user_redpackets.tender_id = S62.t6251.F12
+        LEFT JOIN flb.t_red_packet ON flb.t_user_redpackets.redpacket_id = flb.t_red_packet.id
+        WHERE
+        flb.t_user_redpackets.`user_id` = #{userId} AND flb.t_user_redpackets.`status` = 2 AND flb.t_user_redpackets.grant_status = 1
+        GROUP BY
+        flb.t_user_redpackets.tender_id
+        ) redPacket ON redPacket.tenderId = S62.t6251.F12
+        WHERE
+        s61.T6110.F01 = #{userId}
+        AND S62.T6251.F12 > 0
+        AND t_user_plan_product.id IS NULL
+        <if test="title != null and title != ''">
+            AND S62.t6230.F03 like concat('%',trim(#{title}),'%')
+        </if>
+        AND S62.T6251.f09 &gt;= #{startTime}
+        AND S62.T6251.f09 &lt;= #{endTime}
+        UNION ALL
+        /*非债券转让*/
+        SELECT
+        T6230.F03 AS NAME,
+        temp1.dqrq AS fullTime,
+        DATE_ADD(
+        DATE_FORMAT(temp1.dqrq, '%Y-%m-%d'),
+        INTERVAL - 1 DAY
+        ) backTime,
+        t6250.F04 AS originMoney,
+        temp1.zqlx AS origenRate,
+        temp2.jxlx AS interestSum,
+        temp3.bjxlx AS bidInterestSum,
+        CASE T6230.F20
+        WHEN 'YJQ' THEN
+        temp.sjsy
+        ELSE
+        NULL
+        END AS acturalEarn,
+        t6250.F04 AS money,
+        T6230.F09 AS MONTH,
+        CONCAT(
+        FORMAT((T6230.F06 * 100), 2),
+        '%'
+        ) AS rateStr,
+        T6230.F28 AS isNoviceBid,
+        T6230.F32 AS loanDays,
+        DATE_FORMAT(
+        T6250.f06,
+        '%Y-%m-%d %H:%i:%s'
+        ) AS createTime,
+        DATE_FORMAT(S62.t6231.F17, '%Y-%m-%d') AS sealedTime,
+        T6230.F20 AS bidStatus,
+        T6230.F10 AS paymentType,
+        t6211.F02 AS bidType,
+        coupon.scope AS scope,
+        t6238.F09 AS bidScope,
+        redPacket.redPacketMoney AS redPacketMoney
+        FROM
+        s62.t6250
+        INNER JOIN S62.T6230 ON T6230.F01 = t6250.F02
+        INNER JOIN s62.t6211 ON T6230.f04 = t6211.F01
+        INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01
+        INNER JOIN s62.t6238 ON t6238.F01 = T6230.F01
+        INNER JOIN s61.T6110 ON s61.T6110.F01 = t6250.F03
+        LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.tender_id = s62.t6250.F01
+        LEFT JOIN (
+        SELECT
+        a.F04,
+        a.F02,
+        SUM(a.f07) zqlx,
+        MAX(a.F08) AS dqrq,
+        b.F11 bid
+        FROM
+        S62.t6252 a
+        LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+        WHERE
+        a.`F04` = #{userId} AND a.F05 = '7002'  GROUP BY a.f04,a.f02,b.F01
+        ) AS temp1 ON temp1.bid = t6250.F01
+        LEFT JOIN (
+        SELECT
+        a.F04,
+        a.F02,
+        SUM(a.f07) jxlx,
+        MAX(a.F08) AS dqrq,
+        b.F11 bid
+        FROM
+        S62.t6252 a
+        LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+        WHERE
+        a.`F04` = #{userId} AND a.F05 = '7022'  GROUP BY a.f04,a.f02,b.F01
+        ) AS temp2 ON temp2.bid = t6250.F01
+        LEFT JOIN (
+        SELECT
+        a.F04,
+        a.F02,
+        SUM(a.f07) bjxlx,
+        b.F11 bid
+        FROM
+        S62.t6252 a
+        LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+        WHERE
+        a.`F04` = #{userId} AND a.F05 = '7023'  GROUP BY a.f04,a.f02,b.F01
+        ) AS temp3 ON temp3.bid = t6250.F01
+        LEFT JOIN (
+        SELECT
+        a.f04,
+        a.f02,
+        SUM(a.f07) sjsy,
+        b.F11 bid
+        FROM
+        S62.t6252 a
+        LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+        WHERE
+        a.`F04` = #{userId} AND (a.f05 = '7002' OR a.f05 = '7005' OR a.f05 = '7004' OR a.f05 = '7022' OR a.f05 = '7023') GROUP BY a.f04,a.f02,b.F01
+        ) AS temp ON temp.bid = t6250.F01 /*加息券*/
+        LEFT JOIN (
+        SELECT
+        flb.t_coupon.scope scope,
+        flb.t_user_coupon.tender_id tenderId
+        FROM
+        flb.t_user_coupon
+        LEFT JOIN S62.t6250 ON flb.t_user_coupon.tender_id = S62.t6250.F01
+        LEFT JOIN flb.t_coupon ON flb.t_user_coupon.coupon_id = flb.t_coupon.id
+        WHERE
+        flb.t_user_coupon.`user_id` = #{userId} AND flb.t_user_coupon.coupon_status = 2 AND flb.t_user_coupon.grant_status = 1
+        GROUP BY
+        flb.t_user_coupon.tender_id
+        ) coupon ON coupon.tenderId = S62.t6250.F01 /*返现券*/
+        LEFT JOIN (
+        SELECT
+        SUM(redpackets.red_money) redPacketMoney,
+        userRedpackets.tender_id tenderId
+        FROM
+        flb.t_user_redpackets userRedpackets
+        LEFT JOIN S62.t6250 tender ON userRedpackets.tender_id = tender.F01
+        LEFT JOIN flb.t_red_packet redpackets ON userRedpackets.redpacket_id = redpackets.id
+        WHERE
+        userRedpackets.user_id = #{userId} AND userRedpackets.`status` = 2 AND userRedpackets.grant_status = 1
+        GROUP BY
+        userRedpackets.tender_id
+        ) redPacket ON redPacket.tenderId = S62.t6250.F01
+        WHERE
+        s61.T6110.F01 = #{userId}
+        AND NOT EXISTS
+        (
+            SELECT
+                bid_record_id
+            FROM
+                flb.t_plan_bid_record
+            WHERE
+                S62.t6250.F01 = bid_record_id
+		)
+		AND t_user_plan_product.id IS NULL
+        AND S62.T6250.f06 &gt;= #{startTime}
+        AND S62.T6250.f06 &lt;= #{endTime}
+        <if test="title != null and title != ''">
+            AND S62.t6230.F03 like concat('%',trim(#{title}),'%')
+        </if>
+        ) A
+        ORDER BY
+        A.createTime DESC
+    </select>
+    
+    <!-- 债权转让卖出部分 -->
+    <select id="findInvestSoldHistoryByPhone" resultType="Transaction">
+        SELECT
+            NAME,
+            fullTime,/*债权卖出时间*/
+            originMoney, 
+            saleMoney,
+            acturalEarn, 
+            money tradeAmount,
+            MONTH,
+            rateStr,
+            loanDays,
+            createTime tradeTime,
+            sealedTime,
+            bidType
+        FROM
+            (
+                /**债券转让记录*/
+               SELECT 
+	               T6230.F03 AS NAME, 
+	               date_format(t6262.F07, '%Y-%m-%d') AS fullTime,
+	               t6262.F04 AS originMoney, 
+	               t6262.F05 AS saleMoney, 
+				   CASE T6230.F20 WHEN 'YJQ' THEN (t6262.F05 - t6262.F04) ELSE NULL END acturalEarn, 
+				   t6251.F05 AS money, 
+				   T6230.F09 AS MONTH, 
+				   CONCAT(FORMAT((T6230.F06 * 100),2),'%') AS rateStr, 
+				   T6230.F32 AS loanDays, 
+				   t6251.F09 AS createTime, 
+				   date_format(S62.t6231.F17,'%Y-%m-%d') AS sealedTime, 
+				   T6230.F10 AS paymentType ,
+				   '债权转让' AS bidType
+			   FROM S62.t6251 
+               INNER JOIN S62.T6230 ON t6251.F03 = T6230.F01 
+			   INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04 
+               INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01 
+               INNER JOIN s62.t6262 ON t6251.F01 = s62.t6262.F11
+                WHERE
+                    s61.T6110.F01 = #{userId}
+                AND (S62.T6251.F12 = 0 
+                	OR S62.T6251.F12 IS NULL)
+                <if test="startTime != null">
+                    AND S62.T6251.f09 &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND S62.T6251.f09 &lt;= #{endTime}
+                </if>
+            ) A
+        ORDER BY
+            A.createTime DESC
+    </select>
+    
+    <!-- 债权金额总计(买入) -->
+    <select id="getTotalOrigrienMoney" resultType="decimal">
+       SELECT
+           SUM(originMoney) origrienMoneyTotal
+        FROM
+            (
+                /**债券转让记录*/
+                SELECT
+                    SUM(t6262.F04) AS originMoney
+                FROM S62.t6251 
+					INNER JOIN S62.T6230 ON t6251.F03 = T6230.F01 
+					INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04 
+					INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01 
+					LEFT JOIN s62.t6262 ON  s62.t6262.F12  = t6251.F01
+                    LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.product_id = s62.t6251.F01
+					LEFT JOIN (
+						SELECT a.F04 , a.F02, SUM(a.f07) zqlx, a.F11 bid, b.F11 FROM S62.t6252 a 
+						LEFT JOIN s62.t6251 b ON a.f11 = b.F01
+						WHERE a.F05 = '7002' GROUP BY a.f04,a.f02,b.F01
+					)AS temp1 ON  t6251.F01 = temp1.bid
+					LEFT JOIN (
+						SELECT a.f11, a.f04, a.f02, SUM(a.f07) + b.f04 -b.f05 sjsy from s62.t6252 a
+						INNER JOIN s62.t6262 b on a.F11 = b.F12 where a.f05 = '7002' OR a.f05 = '7005' OR a.f05 = '7004' GROUP BY a.f04,a.f02,b.F01
+					)AS temp on temp.f11 = t6251.f01
+                WHERE
+                    s61.T6110.F01 = #{userId}
+                AND S62.T6251.F12 > 0
+                AND t_user_plan_product.id IS NULL
+                <if test="title != null and title != ''">
+                    AND S62.t6230.F03 like concat('%',trim(#{title}),'%')
+                </if>
+                <if test="startTime != null">
+                    AND S62.T6251.f09 &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND S62.T6251.f09 &lt;= #{endTime}
+                </if>
+            UNION ALL
+                /*非债券转让*/
+                SELECT 
+	                	SUM(t6250.F04) AS originMoney
+					FROM s62.t6250 
+				INNER JOIN S62.T6230 ON T6230.F01 = t6250.F02 
+				INNER JOIN s62.t6211 ON T6230.f04 = t6211.F01
+				INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01 
+				INNER JOIN s61.T6110 ON s61.T6110.F01 = t6250.F03
+                LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.tender_id = s62.t6250.F01
+				LEFT JOIN (
+					SELECT a.F04, a.F02, a.f07 zqlx, b.F11 bid FROM S62.t6252 a 
+					LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+					WHERE a.F05 = '7002'
+                    AND a.`F04` = #{userId}
+                    GROUP BY a.f04,a.f02,b.F01
+				)AS temp1 ON temp1.bid = t6250.F01
+				LEFT JOIN (
+					SELECT a.f04, a.f02, SUM(a.f07) sjsy, b.F11 bid FROM S62.t6252 a
+					LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+					WHERE (a.f05 = '7002' OR a.f05 = '7005' OR a.f05 = '7004')
+                    AND a.`F04` = #{userId}
+                    GROUP BY a.f04,a.f02,b.F01
+				)AS temp on temp.bid = t6250.F01
+               WHERE
+                    s61.T6110.F01 = #{userId}
+                AND NOT EXISTS
+                (
+                    SELECT
+                    bid_record_id
+                    FROM
+                    flb.t_plan_bid_record
+                    WHERE
+                    S62.t6250.F01 = bid_record_id
+                )
+                AND t_user_plan_product.id IS NULL
+                <if test="title != null and title != ''">
+                    AND S62.t6230.F03 like concat('%',trim(#{title}),'%')
+                </if>
+                <if test="startTime != null">
+                    AND S62.T6250.f06 &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND S62.T6250.f06 &lt;= #{endTime}
+                </if>
+            ) A
+    </select>
+    
+    <!-- 投资金额 (买入)-->
+    <select id="getTotalInvestMoney" resultType="decimal">
+       SELECT
+           SUM(money) investMoneyTotal
+        FROM
+            (
+                /**债券转让记录*/
+                SELECT
+                    SUM(t6251.F05) AS money
+                FROM S62.t6251 
+					INNER JOIN S62.T6230 ON t6251.F03 = T6230.F01 
+					INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04 
+					INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01 
+					LEFT JOIN s62.t6262 ON  s62.t6262.F12  = t6251.F01
+                    LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.product_id = s62.t6251.F01
+					LEFT JOIN (
+						SELECT a.F04 , a.F02, SUM(a.f07) zqlx, a.F11 bid, b.F11 FROM S62.t6252 a 
+						LEFT JOIN s62.t6251 b ON a.f11 = b.F01
+						WHERE a.F05 = '7002' GROUP BY a.f04,a.f02,b.F01
+					)AS temp1 ON  t6251.F01 = temp1.bid
+					LEFT JOIN (
+						SELECT a.f11, a.f04, a.f02, SUM(a.f07) + b.f04 -b.f05 sjsy from s62.t6252 a
+						INNER JOIN s62.t6262 b on a.F11 = b.F12 where a.f05 = '7002' OR a.f05 = '7005' OR a.f05 = '7004' GROUP BY a.f04,a.f02,b.F01
+					)AS temp on temp.f11 = t6251.f01
+                WHERE
+                    s61.T6110.F01 = #{userId}
+                AND S62.T6251.F12 > 0
+                AND t_user_plan_product.id IS NULL
+                <if test="title != null and title != ''">
+                    AND S62.t6230.F03 like concat('%',trim(#{title}),'%')
+                </if>
+                <if test="startTime != null">
+                    AND S62.T6251.f09 &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND S62.T6251.f09 &lt;= #{endTime}
+                </if>
+            UNION ALL
+                /*非债券转让*/
+                SELECT 
+					SUM(t6250.F04) AS money
+				FROM s62.t6250
+				INNER JOIN S62.T6230 ON T6230.F01 = t6250.F02 
+				INNER JOIN s62.t6211 ON T6230.f04 = t6211.F01
+				INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01 
+				INNER JOIN s61.T6110 ON s61.T6110.F01 = t6250.F03
+                LEFT JOIN flb.t_user_plan_product ON flb.t_user_plan_product.tender_id = s62.t6250.F01
+				LEFT JOIN (
+					SELECT a.F04, a.F02, a.f07 zqlx, b.F11 bid FROM S62.t6252 a 
+					LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+					WHERE a.F05 = '7002'
+                    AND a.`F04` = #{userId}
+                    GROUP BY a.f04,a.f02,b.F01
+				)AS temp1 ON temp1.bid = t6250.F01
+				LEFT JOIN (
+					SELECT a.f04, a.f02, SUM(a.f07) sjsy, b.F11 bid FROM S62.t6252 a
+					LEFT JOIN s62.t6251 b ON a.F11 = b.F01
+					WHERE (a.f05 = '7002' OR a.f05 = '7005' OR a.f05 = '7004')
+                    AND a.`F04` = #{userId}
+                    GROUP BY a.f04,a.f02,b.F01
+				)AS temp on temp.bid = t6250.F01
+               WHERE
+                    s61.T6110.F01 = #{userId}
+                AND NOT EXISTS
+                (
+                    SELECT
+                    bid_record_id
+                    FROM
+                    flb.t_plan_bid_record
+                    WHERE
+                    S62.t6250.F01 = bid_record_id
+                )
+                AND t_user_plan_product.id IS NULL
+                <if test="title != null and title != ''">
+                    AND S62.t6230.F03 like concat('%',trim(#{title}),'%')
+                </if>
+                <if test="startTime != null">
+                    AND S62.T6250.f06 &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND S62.T6250.f06 &lt;= #{endTime}
+                </if>
+            ) A
+    </select>
+    
+    <!-- 债权本金统计(卖出) -->
+    <select id="getTotalOrigrienMoneyOut" resultType="decimal">
+      SELECT
+            originMoney origrienMoneyTotal
+        FROM
+            (
+                /**债券转让记录*/
+               SELECT 
+	               SUM(t6262.F04) AS originMoney
+			   FROM S62.t6251 
+               INNER JOIN S62.T6230 ON t6251.F03 = T6230.F01 
+			   INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04 
+               INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01 
+               INNER JOIN s62.t6262 ON t6251.F01 = s62.t6262.F11
+                WHERE
+                    s61.T6110.F01 = #{userId}
+                AND (S62.T6251.F12 = 0 
+                	OR S62.T6251.F12 IS NULL)
+                <if test="startTime != null">
+                    AND S62.T6251.f09 &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND S62.T6251.f09 &lt;= #{endTime}
+                </if>
+            ) A
+    </select>
+    
+    <!--投资统计(卖出)  -->
+    <select id="getTotalInvestMoneyOut" resultType="decimal">
+       SELECT
+            saleMoney investMoneyTotal
+        FROM
+            (
+                /**债券转让记录*/
+               SELECT 
+	               SUM(t6262.F05) AS saleMoney
+			   FROM S62.t6251 
+               INNER JOIN S62.T6230 ON t6251.F03 = T6230.F01 
+			   INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04 
+               INNER JOIN s62.t6231 ON t6231.F01 = T6230.F01 
+               INNER JOIN s62.t6262 ON t6251.F01 = s62.t6262.F11
+                WHERE
+                    s61.T6110.F01 = #{userId}
+                AND (S62.T6251.F12 = 0 
+                	OR S62.T6251.F12 IS NULL)
+                <if test="startTime != null">
+                    AND S62.T6251.f09 &gt;= #{startTime}
+                </if>
+                <if test="endTime != null">
+                    AND S62.T6251.f09 &lt;= #{endTime}
+                </if>
+            ) A
+    </select>
+
+    <select id="findUserIdByPhone" resultType="int">
+        SELECT
+        F01 userId
+        FROM s61.t6110 WHERE F04 = #{phoneNum} AND F06 = 'ZRR'
+    </select>
+
+    <!--用户投资全部计划-->
+    <select id="getUserInvestPlan" resultType="UserInvestPlan">
+        SELECT * FROM (
+            SELECT
+            1 AS planType,
+            up.id recordId,
+            up.plan_id plan_id,
+            CONCAT(p. NAME, p.number) NAME,
+            p.type type,
+            up.invest_amount trade_amount,
+            p.cycle_type,
+            p.cycle,
+            p.invest_rate invest_rate,
+            p.min_yearly_rate min_yearly_rate,
+            p.max_yearly_rate max_yearly_rate,
+            p.raise_rate bidScope,
+            up.user_id user_id,
+            up.create_time invest_time,
+            p.bearrate_date bearrate_date,
+            p.expire_time expire_time,
+            CASE
+            WHEN up.`status` = 2 THEN
+            '退出中'
+            WHEN up.`status` = 3 THEN
+            '已退出'
+            ELSE
+            p. STATUS
+            END AS `status`
+            FROM
+            flb.t_user_plan up
+            LEFT JOIN flb.t_invest_plan p ON up.plan_id = p.id
+            LEFT JOIN flb.t_user_exit_plan ep ON up.id = ep.user_plan_id
+            WHERE
+            p.`status` IN (4, 5, 6)
+            AND up.user_id = #{userId}
+            <if test="title != null and title != ''">
+                AND CONCAT(p. NAME, p.number) like concat('%',trim(#{title}),'%')
+            </if>
+            UNION ALL
+            -- 旧计划
+            SELECT
+            0 AS planType,
+            record.id recordId,
+            record.plan_id plan_id,
+            plan.title NAME,
+            2 AS type,
+            record.amount trade_amount,
+            plan.cycle_type,
+            plan.cycle,
+            plan.rate invest_rate,
+            0 min_yearly_rate,
+            0 max_yearly_rate,
+            plan.raised_rate bidScope,
+            record.user_id user_id,
+            record.create_time invest_time,
+            temp.bearrate_date bearrate_date,
+            CASE
+            WHEN plan.cycle_type = 'm' THEN
+            DATE_ADD(
+            temp.bearrate_date,
+            INTERVAL plan.cycle MONTH
+            )
+            WHEN plan.cycle_type = 'd' THEN
+            DATE_ADD(
+            temp.bearrate_date,
+            INTERVAL plan.cycle DAY
+            )
+            END AS expire_time,
+            plan.status
+            FROM
+            flb.t_plan_record record
+            INNER JOIN flb.t_plan plan ON record.plan_id = plan.id
+            LEFT JOIN (
+                SELECT
+                plan.plan_id pid,
+                s62.t6231.F17 bearrate_date
+                FROM
+                flb.t_plan_record plan
+                LEFT JOIN flb.t_plan_bid_record plan_bid ON plan.id = plan_bid.plan_record_id
+                LEFT JOIN s62.t6250 invest ON invest.F03 = plan.user_id AND plan_bid.bid_record_id = invest.F01
+                INNER JOIN s62.t6231 ON invest.F02 = s62.t6231.F01
+                WHERE plan.user_id = #{userId}
+                GROUP BY
+                plan.plan_id
+            ) temp ON plan.id = temp.pid
+            WHERE
+            record.user_id = #{userId}
+            <if test="title != null and title != ''">
+                AND plan.title like concat('%',trim(#{title}),'%')
+            </if>
+        )all_plan ORDER BY invest_time DESC
+    </select>
+
+    <resultMap id="userCouponMap" type="java.util.Map">
+        <result property="planType" column="planType"/>
+        <result property="recordId" column="recordId"/>
+        <result property="scope" column="scope"/>
+    </resultMap>
+
+    <select id="getUserPlanCoupon" parameterType="map" resultMap="userCouponMap">
+        SELECT
+        1 planType,
+        IFNULL(user_plan.id, 0) recordId,
+        coupon.scope
+        FROM
+        flb.t_user_coupon ucoupon
+        LEFT JOIN flb.t_coupon coupon ON coupon.id = ucoupon.coupon_id
+        LEFT JOIN flb.t_user_plan user_plan ON ucoupon.user_plan_id = user_plan.id
+        WHERE
+        ucoupon.invest_type = 3
+        AND ucoupon.coupon_status = 2
+        AND ucoupon.user_id = #{userId}
+        AND user_plan.id IS NOT NULL
+        UNION ALL
+        SELECT
+        0 planType,
+        IFNULL(pr.id, 0) recordId,
+        coupon.scope
+        FROM
+        flb.t_user_coupon ucoupon
+        LEFT JOIN flb.t_coupon coupon ON coupon.id = ucoupon.coupon_id
+        LEFT JOIN flb.t_user_coupon_ext ext ON ucoupon.id = ext.user_coupon_id
+        LEFT JOIN s62.t6250 invest ON invest.F01 = ext.tender_id
+        LEFT JOIN flb.t_plan_bid_record record ON record.bid_record_id = invest.F01
+        LEFT JOIN flb.t_plan_record pr ON record.plan_record_id = pr.id
+        WHERE
+        ucoupon.user_id = #{userId}
+        AND ucoupon.invest_type = 2
+        AND ucoupon.coupon_status = 2
+        GROUP BY
+        pr.id
+    </select>
+
+    <resultMap id="userRedPacketsMap" type="java.util.Map">
+        <result property="planType" column="planType"/>
+        <result property="recordId" column="recordId"/>
+        <result property="redPacketMoney" column="redPacketMoney"/>
+    </resultMap>
+
+    <select id="getUserPlanRedPackets" parameterType="map" resultMap="userRedPacketsMap">
+        SELECT
+            redpacket.red_money redPacketMoney,
+            CASE
+        WHEN user_redpackets.plan_record_id IS NOT NULL THEN
+            0
+        ELSE
+            1
+        END AS planType,
+         CASE
+        WHEN user_redpackets.plan_record_id IS NOT NULL THEN
+            user_redpackets.plan_record_id
+        WHEN user_redpackets.user_plan_id IS NOT NULL THEN
+            user_redpackets.user_plan_id
+        END AS recordId
+        FROM
+            flb.t_user_redpackets user_redpackets
+        LEFT JOIN flb.t_red_packet redpacket ON user_redpackets.redpacket_id = redpacket.id
+        WHERE
+            user_redpackets.user_id = #{userId}
+        AND user_redpackets.`status` = 2
+        AND user_redpackets.invest_type IN (2, 3)
+        AND (
+            user_redpackets.plan_record_id IS NOT NULL
+            OR user_redpackets.user_plan_id IS NOT NULL
+        )
+    </select>
+
+    <resultMap id="userPlanIncomeMap" type="java.util.Map">
+        <result property="planType" column="planType"/>
+        <result property="planId" column="planId"/>
+        <result property="recordId" column="recordId"/>
+        <result property="origenRate" column="origenRate"/>
+        <result property="interest" column="interest"/>
+        <result property="planInterest" column="planInterest"/>
+        <result property="paymentInterate" column="paymentInterate"/>
+        <result property="penalty" column="penalty"/>
+    </resultMap>
+
+    <!--新旧计划收益-->
+    <select id="getUserPlanIncome" parameterType="map" resultMap="userPlanIncomeMap">
+        SELECT
+        *
+        FROM
+        (
+        SELECT
+        0 planType,
+        plan_id planId,
+        plan_record_id recordId,
+        -- userId,
+        IFNULL(SUM(origenRate), 0) origenRate,
+        IFNULL(SUM(interate), 0) interest,
+        IFNULL(SUM(planInterate), 0) planInterest,
+        IFNULL(SUM(paymentInterate), 0) paymentInterate,
+        IFNULL(SUM(penalty), 0) penalty
+        FROM
+        (
+        SELECT
+        precord.plan_id,
+        record.plan_record_id,
+        a.F04 userId,
+        a.F02,
+        (
+        CASE
+        WHEN a.F05 = 7002 THEN
+        SUM(a.F07)
+        END
+        ) origenRate,
+        (
+        CASE
+        WHEN a.F05 = 7022 THEN
+        SUM(a.F07)
+        END
+        ) interate,
+        (
+        CASE
+        WHEN a.F05 = 7023 THEN
+        SUM(a.F07)
+        END
+        ) planInterate,
+        (
+        CASE
+        WHEN a.F05 = 7004 THEN
+        SUM(a.F07)
+        END
+        ) paymentInterate,
+        (
+        CASE
+        WHEN a.F05 = 7005 THEN
+        SUM(a.F07)
+        END
+        ) penalty,
+        a.F11 bid,
+        b.F11
+        FROM
+        s62.t6230 c
+        LEFT JOIN S62.t6252 a ON c.F01 = a.F02
+        LEFT JOIN s62.t6251 b ON a.f11 = b.F01
+        LEFT JOIN s62.t6262 d ON a.F11 = d.F12
+        LEFT JOIN flb.t_plan_bid_record record ON record.bid_record_id = b.F11
+        LEFT JOIN flb.t_plan_record precord ON record.plan_record_id = precord.id
+        WHERE
+        a.f04 = #{userId}
+        AND record.plan_record_id IS NOT NULL
+        AND precord.plan_id IN
+        <foreach collection="oldPlanIds" item="oldPlanId" index="index"
+                 open="(" close=")" separator=",">
+            #{oldPlanId}
+        </foreach>
+        GROUP BY
+        a.f04,
+        a.f02,
+        b.F01,
+        a.F05
+        ) a
+        GROUP BY
+        plan_record_id
+        ) old
+        -- 新计划
+        UNION ALL
+        SELECT
+        1 planType,
+        plan_id planId,
+        recordId,
+        -- userId,
+        IFNULL(SUM(origenRate), 0) origenRate,
+        IFNULL(SUM(interate), 0) interest,
+        IFNULL(SUM(planInterate), 0) planInterest,
+        IFNULL(SUM(paymentInterate), 0) paymentInterate,
+        IFNULL(SUM(penalty), 0) penalty
+        FROM
+        (
+        SELECT
+        repay.plan_id,
+        repay.user_plan_id recordId,
+        repay.user_id userId,
+        (
+        CASE
+        WHEN repay.transaction_type = 7002 THEN
+        SUM(repay.expect_amount)
+        END
+        ) origenRate,
+        (
+        CASE
+        WHEN repay.transaction_type = 7022 THEN
+        SUM(repay.expect_amount)
+        END
+        ) interate,
+        (
+        CASE
+        WHEN repay.transaction_type = 7028 THEN
+        SUM(repay.expect_amount)
+        END
+        ) planInterate,
+        userPaymentInterate.paymentInterate,
+        0 AS penalty -- 新计划没有提前还款违约金
+        FROM
+        flb.t_user_plan_repay repay
+        LEFT JOIN (
+        SELECT
+        repayment.user_plan_id,
+        repayment.payee_id userId,
+        SUM(repayment.amount) paymentInterate
+        FROM
+        flb.t_user_plan_repayment repayment
+        WHERE
+        repayment.trade_type = 2
+        GROUP BY
+        repayment.user_plan_id
+        ) userPaymentInterate ON userPaymentInterate.user_plan_id = repay.user_plan_id
+        WHERE
+        repay.user_id = #{userId}
+        AND repay.plan_id IN
+        <foreach collection="newPlanIds" item="newPlanId" index="index"
+                 open="(" close=")" separator=",">
+            #{newPlanId}
+        </foreach>
+        GROUP BY
+        repay.user_id,
+        repay.user_plan_id,
+        repay.transaction_type
+        ) new_plan
+        GROUP BY
+        recordId
+    </select>
+
+    <!--旧计划收益-->
+    <select id="getUserOldPlanIncome" parameterType="map" resultMap="userPlanIncomeMap">
+        SELECT
+        0 planType,
+        plan_id planId,
+        plan_record_id recordId,
+        -- userId,
+        IFNULL(SUM(origenRate), 0) origenRate,
+        IFNULL(SUM(interate), 0) interest,
+        IFNULL(SUM(planInterate), 0) planInterest,
+        IFNULL(SUM(paymentInterate), 0) paymentInterate,
+        IFNULL(SUM(penalty), 0) penalty
+        FROM
+        (
+        SELECT
+        precord.plan_id,
+        record.plan_record_id,
+        a.F04 userId,
+        a.F02,
+        (
+        CASE
+        WHEN a.F05 = 7002 THEN
+        SUM(a.F07)
+        END
+        ) origenRate,
+        (
+        CASE
+        WHEN a.F05 = 7022 THEN
+        SUM(a.F07)
+        END
+        ) interate,
+        (
+        CASE
+        WHEN a.F05 = 7023 THEN
+        SUM(a.F07)
+        END
+        ) planInterate,
+        (
+        CASE
+        WHEN a.F05 = 7004 THEN
+        SUM(a.F07)
+        END
+        ) paymentInterate,
+        (
+        CASE
+        WHEN a.F05 = 7005 THEN
+        SUM(a.F07)
+        END
+        ) penalty,
+        a.F11 bid,
+        b.F11
+        FROM
+        s62.t6230 c
+        LEFT JOIN S62.t6252 a ON c.F01 = a.F02
+        LEFT JOIN s62.t6251 b ON a.f11 = b.F01
+        LEFT JOIN s62.t6262 d ON a.F11 = d.F12
+        LEFT JOIN flb.t_plan_bid_record record ON record.bid_record_id = b.F11
+        LEFT JOIN flb.t_plan_record precord ON record.plan_record_id = precord.id
+        WHERE
+        a.f04 = #{userId}
+        AND record.plan_record_id IS NOT NULL
+        AND precord.plan_id IN
+        <foreach collection="oldPlanIds" item="oldPlanId" index="index"
+                 open="(" close=")" separator=",">
+            #{oldPlanId}
+        </foreach>
+        GROUP BY
+        a.f04,
+        a.f02,
+        b.F01,
+        a.F05
+        ) a
+        GROUP BY
+        plan_record_id
+    </select>
+
+    <!--新计划收益-->
+    <select id="getUserNewPlanIncome" parameterType="map" resultMap="userPlanIncomeMap">
+        SELECT
+        1 planType,
+        plan_id planId,
+        recordId,
+        -- userId,
+        IFNULL(SUM(origenRate), 0) origenRate,
+        IFNULL(SUM(interate), 0) interest,
+        IFNULL(SUM(planInterate), 0) planInterest,
+        IFNULL(SUM(paymentInterate), 0) paymentInterate,
+        IFNULL(SUM(penalty), 0) penalty
+        FROM
+        (
+        SELECT
+        repay.plan_id,
+        repay.user_plan_id recordId,
+        repay.user_id userId,
+        (
+        CASE
+        WHEN repay.transaction_type = 7002 THEN
+        SUM(repay.expect_amount)
+        END
+        ) origenRate,
+        (
+        CASE
+        WHEN repay.transaction_type = 7022 THEN
+        SUM(repay.expect_amount)
+        END
+        ) interate,
+        (
+        CASE
+        WHEN repay.transaction_type = 7028 THEN
+        SUM(repay.expect_amount)
+        END
+        ) planInterate,
+        userPaymentInterate.paymentInterate,
+        0 AS penalty -- 新计划没有提前还款违约金
+        FROM
+        flb.t_user_plan_repay repay
+        LEFT JOIN (
+        SELECT
+        repayment.user_plan_id,
+        repayment.payee_id userId,
+        SUM(repayment.amount) paymentInterate
+        FROM
+        flb.t_user_plan_repayment repayment
+        WHERE
+        repayment.trade_type = 2
+        GROUP BY
+        repayment.user_plan_id
+        ) userPaymentInterate ON userPaymentInterate.user_plan_id = repay.user_plan_id
+        WHERE
+        repay.user_id = #{userId}
+        AND repay.plan_id IN
+        <foreach collection="newPlanIds" item="newPlanId" index="index"
+                 open="(" close=")" separator=",">
+            #{newPlanId}
+        </foreach>
+        GROUP BY
+        repay.user_id,
+        repay.user_plan_id,
+        repay.transaction_type
+        ) new_plan
+        GROUP BY
+        recordId
+    </select>
+
+    <!--用户投资旧计划记录相应标的信息-->
+    <select id="findUserOldPlanBid" resultType="UserInvestPlanBid">
+        SELECT
+            record.user_id,
+            record.plan_id,
+            bidRecord.bid_record_id,
+            bidType.F02 bidType,
+            invest.F04 matchMoney,
+            invest.F06 matchTime,
+            bid.F03 bidName,
+            bid.F06 rate,
+            bid.F09 month,
+            bid.F32 day,
+            bid.F10 repayment,
+            bid.F20 STATUS,
+            repay.quitTime quitTime
+        FROM
+            flb.t_plan_record record
+        LEFT JOIN flb.t_plan_bid_record bidRecord ON record.id = bidRecord.plan_record_id
+        LEFT JOIN s62.t6250 invest ON bidRecord.bid_record_id = invest.F01
+        INNER JOIN s62.t6230 bid ON invest.F02 = bid.F01
+        INNER JOIN s62.t6211 bidType ON bid.F04 = bidType.F01
+        LEFT JOIN s62.t6251 debts ON debts.F11 = invest.F01
+        LEFT JOIN (
+            SELECT
+                MAX(repay.F08) quitTime,
+                repay.F11 debtsId
+            FROM
+                s62.t6252 repay
+            WHERE
+                repay.F04 = #{userId}
+            GROUP BY
+                repay.F11
+        ) repay ON repay.debtsId = debts.F01
+        WHERE
+            record.user_id = #{userId}
+        AND record.plan_id = #{planId}
+        AND record.id = #{recordId}
+    </select>
+
+    <!--用户投资新计划记录相应标的信息-->
+    <select id="findUserNewPlanBid" resultType="UserInvestPlanBid">
+        SELECT
+        upp.tender_id,
+        debts.F01,
+        up.user_id,
+        up.plan_id,
+        upp.product_type,
+        bidType.F02 bidType,
+        bid.F03 bidName,
+        bid.F06 rate,
+        bid.F09 month,
+        bid.F32 day,
+        bid.F10 repayment,
+        CASE
+        WHEN assignment.F10 = 1
+        AND assignment.F07 = 'ZRZ'
+        AND debts.F08 = 'S' THEN
+            'ZRZ'
+        WHEN sold.F12 > 0 THEN
+            'YZR'
+        ELSE
+            bid.F20
+        END AS STATUS,
+        invest.F06 matchTime,
+            upp.amount matchMoney,
+        CASE WHEN sold.F11 > 0 THEN sold.F07
+        ELSE repay.quitTime END AS quitTime,
+        sold.F07,
+        sold.F01 solo
+        FROM
+            flb.t_user_plan up
+        LEFT JOIN flb.t_user_plan_product upp ON up.id = upp.user_plan_id
+        LEFT JOIN s62.t6250 invest ON upp.tender_id = invest.F01
+        LEFT JOIN s62.t6251 debts ON upp.product_id = debts.F01
+				LEFT JOIN s62.t6260 assignment ON assignment.F02 = debts.F01
+        INNER JOIN s62.t6230 bid ON invest.F02 = bid.F01
+        INNER JOIN s62.t6211 bidType ON bid.F04 = bidType.F01
+        LEFT JOIN s62.t6262 sold ON sold.F11 = debts.F01
+        LEFT JOIN (
+          SELECT * FROM(
+            SELECT
+                repay.F10 quitTime,
+                repay.F11 debtsId
+            FROM
+                s62.t6252 repay
+            WHERE
+                repay.F04 = #{userId}
+            ORDER BY
+              repay.F01 DESC
+          ) re
+          GROUP BY
+            re.debtsId
+        ) repay ON repay.debtsId = debts.F01
+        WHERE
+            up.user_id = #{userId}
+        AND up.plan_id = #{planId}
+        AND up.id = #{recordId}
+    </select>
+</mapper>

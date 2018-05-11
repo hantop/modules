@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fenlibao.p2p.sms.persistence.MessageDataMapper">
+    <resultMap id="BaseResultMap" type="com.fenlibao.p2p.sms.domain.MessageData">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+        <result column="phone" property="phone" jdbcType="VARCHAR"/>
+        <result column="content" property="content" jdbcType="VARCHAR"/>
+        <result column="custom_msg_id" property="customMsgId" jdbcType="VARCHAR"/>
+        <result column="custom_num" property="customNum" jdbcType="VARCHAR"/>
+        <result column="vip_flag" property="vipFlag" jdbcType="BIT"/>
+        <result column="mt_pack_id" property="mtPackId" jdbcType="BIGINT"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+    id, create_time, phone, content, custom_msg_id, custom_num, vip_flag, mt_pack_id
+  </sql>
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long">
+        select
+        <include refid="Base_Column_List"/>
+        from xuanwu_message_data
+        where id = #{id,jdbcType=BIGINT}
+    </select>
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from xuanwu_message_data
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+    <insert id="insert" parameterType="com.fenlibao.p2p.sms.domain.MessageData">
+        <selectKey resultType="java.lang.Long" keyProperty="id" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        insert into xuanwu_message_data (create_time, phone, content,
+        custom_msg_id, custom_num, vip_flag,
+        mt_pack_id)
+        values (#{createTime,jdbcType=BIGINT}, #{phone,jdbcType=VARCHAR}, #{content,jdbcType=VARCHAR},
+        #{customMsgId,jdbcType=VARCHAR}, #{customNum,jdbcType=VARCHAR}, #{vipFlag,jdbcType=BIT},
+        #{mtPackId,jdbcType=BIGINT})
+    </insert>
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        insert into xuanwu_message_data (create_time, phone, content, custom_msg_id, custom_num, vip_flag, mt_pack_id)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.createTime,jdbcType=BIGINT},
+            #{item.phone,jdbcType=VARCHAR},
+            #{item.content,jdbcType=VARCHAR},
+            #{item.customMsgID,jdbcType=VARCHAR},
+            #{item.customNum,jdbcType=VARCHAR},
+            #{item.vipFlag,jdbcType=BIT},
+            #{item.mtPackId,jdbcType=BIGINT}
+            )
+        </foreach>
+    </insert>
+
+    <insert id="insertSelective" parameterType="com.fenlibao.p2p.sms.domain.MessageData">
+        <selectKey resultType="java.lang.Long" keyProperty="id" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        insert into xuanwu_message_data
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="createTime != null">
+                create_time,
+            </if>
+            <if test="phone != null">
+                phone,
+            </if>
+            <if test="content != null">
+                content,
+            </if>
+            <if test="customMsgId != null">
+                custom_msg_id,
+            </if>
+            <if test="customNum != null">
+                custom_num,
+            </if>
+            <if test="vipFlag != null">
+                vip_flag,
+            </if>
+            <if test="mtPackId != null">
+                mt_pack_id,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="createTime != null">
+                #{createTime,jdbcType=BIGINT},
+            </if>
+            <if test="phone != null">
+                #{phone,jdbcType=VARCHAR},
+            </if>
+            <if test="content != null">
+                #{content,jdbcType=VARCHAR},
+            </if>
+            <if test="customMsgId != null">
+                #{customMsgId,jdbcType=VARCHAR},
+            </if>
+            <if test="customNum != null">
+                #{customNum,jdbcType=VARCHAR},
+            </if>
+            <if test="vipFlag != null">
+                #{vipFlag,jdbcType=BIT},
+            </if>
+            <if test="mtPackId != null">
+                #{mtPackId,jdbcType=BIGINT},
+            </if>
+        </trim>
+    </insert>
+    <update id="updateByPrimaryKeySelective" parameterType="com.fenlibao.p2p.sms.domain.MessageData">
+        update xuanwu_message_data
+        <set>
+            <if test="createTime != null">
+                create_time = #{createTime,jdbcType=BIGINT},
+            </if>
+            <if test="phone != null">
+                phone = #{phone,jdbcType=VARCHAR},
+            </if>
+            <if test="content != null">
+                content = #{content,jdbcType=VARCHAR},
+            </if>
+            <if test="customMsgId != null">
+                custom_msg_id = #{customMsgId,jdbcType=VARCHAR},
+            </if>
+            <if test="customNum != null">
+                custom_num = #{customNum,jdbcType=VARCHAR},
+            </if>
+            <if test="vipFlag != null">
+                vip_flag = #{vipFlag,jdbcType=BIT},
+            </if>
+            <if test="mtPackId != null">
+                mt_pack_id = #{mtPackId,jdbcType=BIGINT},
+            </if>
+        </set>
+        where id = #{id,jdbcType=BIGINT}
+    </update>
+    <update id="updateByPrimaryKey" parameterType="com.fenlibao.p2p.sms.domain.MessageData">
+    update xuanwu_message_data
+    set create_time = #{createTime,jdbcType=BIGINT},
+      phone = #{phone,jdbcType=VARCHAR},
+      content = #{content,jdbcType=VARCHAR},
+      custom_msg_id = #{customMsgId,jdbcType=VARCHAR},
+      custom_num = #{customNum,jdbcType=VARCHAR},
+      vip_flag = #{vipFlag,jdbcType=BIT},
+      mt_pack_id = #{mtPackId,jdbcType=BIGINT}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>

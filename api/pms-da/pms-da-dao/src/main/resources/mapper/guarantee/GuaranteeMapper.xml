@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.guarantee.GuaranteeMapper">
+
+    <select id="getGuaranteeInfoList" resultType="GuaranteeInfo">
+        SELECT
+        xw.id,
+        t6110.F01 userId,
+        xw.user_type userType,
+        t6110.F02 account,
+        CASE xw.user_type
+        WHEN 'PERSONAL' THEN t6141.F02
+        WHEN 'ORGANIZATION' THEN t6161.F04
+        END name,
+        t6101.F06 balance,
+        CASE
+        WHEN xw.bankcard_no IS NULL THEN 0
+        ELSE 1
+        END isBindBank,
+        xw.audit_status auditStatus
+        FROM
+        flb.t_xw_account xw
+        LEFT JOIN s61.t6110 t6110 ON xw.user_id = t6110.F01
+        LEFT JOIN s61.t6161 t6161 ON xw.user_id = t6161.F01
+        INNER JOIN s61.t6141 t6141 ON xw.user_id = t6141.F01
+        INNER JOIN s61.t6101 t6101 ON xw.user_id = t6101.F02
+        <where>
+            xw.user_role = 'GUARANTEECORP'
+            AND xw.active_status = 'ACTIVATED'
+            AND xw.audit_status = 'PASSED'
+            AND t6101.F03 = 'XW_GUARANTEECORP_WLZH'
+            <if test="account != null and account != ''">
+                AND t6110.F02 = trim(#{account})
+            </if>
+            <if test="name != null and name != ''">
+                AND (t6141.F02 = trim(#{name}) OR t6161.F04 = trim(#{name}))
+            </if>
+            <if test="userType != null and userType != ''">
+                AND xw.user_type = #{userType}
+            </if>
+        </where>
+        ORDER BY xw.id DESC
+    </select>
+
+    <select id="isAllowUnbindBank" resultType="Integer">
+        SELECT
+          da_record.unbind_status
+        FROM
+          pms.da_unbind_bankcard_audit da_audit
+        LEFT JOIN pms.da_unbind_bankcard da_record ON da_audit.unbind_bankcard_id = da_record.id
+        WHERE
+          NOT EXISTS (
+            SELECT * FROM pms.da_unbind_bankcard_audit temp
+              WHERE
+              temp.update_time &gt; da_audit.update_time
+              AND temp.user_id = #{userId}
+              AND temp.user_role = #{userRole}
+              AND temp.audit_status = 1
+              AND NOW() &lt; da_audit.expiry_time
+          )
+          AND da_audit.user_id = #{userId}
+          AND da_audit.user_role = #{userRole}
+          AND da_audit.audit_status = 1
+          AND NOW() &lt; da_audit.expiry_time
+          LIMIT 1
+    </select>
+
+    <select id="getRechargePreInfoByUserId" resultType="RechargePreInfo">
+        SELECT
+        t6110.F01 userId,
+        t6110.F02 account,
+        CASE xw.user_type
+        WHEN 'PERSONAL' THEN t6141.F02
+        WHEN 'ORGANIZATION' THEN t6161.F04
+        END name,
+        xw.user_type userType,
+        xw.bankcode bankCode,
+        t6101.F06 balance
+        FROM
+        flb.t_xw_account xw
+        LEFT JOIN s61.t6110 t6110 ON xw.user_id = t6110.F01
+        LEFT JOIN s61.t6161 t6161 ON xw.user_id = t6161.F01
+        INNER JOIN s61.t6141 t6141 ON xw.user_id = t6141.F01
+        INNER JOIN s61.t6101 t6101 ON xw.user_id = t6101.F02
+        <where>
+            xw.user_role = 'GUARANTEECORP'
+            AND xw.active_status = 'ACTIVATED'
+            AND xw.audit_status = 'PASSED'
+            AND t6101.F03 = 'XW_GUARANTEECORP_WLZH'
+            AND t6110.F01 = #{userId}
+        </where>
+    </select>
+
+</mapper>

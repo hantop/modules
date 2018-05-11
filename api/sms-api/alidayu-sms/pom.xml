@@ -1,0 +1,33 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>sms-api</artifactId>
+        <groupId>com.fenlibao</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>alidayu-sms</artifactId>
+    <packaging>pom</packaging>
+
+    <name>alidayu-sms</name>
+    <url>http://maven.apache.org</url>
+    <modules>
+        <module>alidayu-sms-service</module>
+        <module>alidayu-sms-dao</module>
+        <module>alidayu-sms-model</module>
+        <module>alidayu-sms-config</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.fenlibao.sms-api.common-sms</groupId>
+            <artifactId>common-sms-service</artifactId>
+            <version>${depedency.version}</version>
+        </dependency>
+    </dependencies>
+</project>

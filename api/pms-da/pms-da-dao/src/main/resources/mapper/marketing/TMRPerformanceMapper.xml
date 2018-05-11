@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.marketing.tmr.TMRPerformanceMapper">
+    <insert id="createTMRPerformance" parameterType="TMRPerformanceVO" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO pms.da_tmr_info (
+        name,
+        number,
+        filename,
+        createtime
+        ) values
+        (
+        #{tmrName,jdbcType=VARCHAR},
+        #{tmrNumber,jdbcType=VARCHAR},
+        #{fileName,jdbcType=VARCHAR},
+        #{createtime,jdbcType=TIMESTAMP}
+        )
+    </insert>
+    <insert id="saveTMRCallTelList" useGeneratedKeys="true" parameterType="java.util.List">
+        <selectKey resultType="int" keyProperty="id" order="AFTER">
+            SELECT
+            LAST_INSERT_ID()
+        </selectKey>
+        insert into pms.da_tmr_import (tmr_id,number,calltime)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.trmId},#{item.phoneNumber},#{item.callTime})
+        </foreach>
+    </insert>
+
+    <insert id="saveUserInvestBehavior" parameterType="java.util.List">
+        insert into pms.da_tmr_invester (tmr_id,username,phone_number,invest_time,bid_title,bid_date,invest_money,activate_redBag,create_time)
+        values
+        <foreach collection="list" item="item" index="index" separator="," >
+            (#{item.tmrId},#{item.investUser},#{item.investPhone},#{item.investTime},#{item.investBid},#{item.investDate},#{item.investMoney},#{item.activateRedBag},now())
+        </foreach>
+    </insert>
+
+    <!--<select id="getTMRPerformanceList" resultType="TMRPerformanceVO">
+        SELECT info.*,COUNT(info.id) AS numbers FROM
+        (
+        SELECT
+        im.`id`,
+        im.`name` AS tmrName,
+        im.`number` AS tmrNumber,
+        im.`filename` AS fileName,
+        im.`createtime`,
+        im.dispose
+        FROM pms.`da_tmr_info` AS im INNER JOIN pms.`da_tmr_import` AS ida
+        <where>
+            im.id = ida.tmr_id
+            <if test="costStartTime != null">
+                <![CDATA[AND im.createtime >= #{costStartTime}]]>
+            </if>
+            <if test="costEndTime != null">
+                <![CDATA[AND im.createtime  <= #{costEndTime}]]>
+            </if>
+            <if test="tmrName != null and tmrName != ''">
+                AND im.name like '%${tmrName}%'
+            </if>
+            <if test="fileName != null and fileName != ''">
+                AND im.filename like '%${fileName}%'
+            </if>
+            <if test="visible != null and visible != ''">
+                AND im.visible = 1
+            </if>
+        </where>
+        ) AS info GROUP BY info.id ORDER BY info.`createtime` DESC
+    </select>-->
+
+    <select id="getTMRPerformanceList" resultType="TMRPerformanceVO">
+        SELECT info.*,tmprs.numbers FROM
+        (
+        SELECT
+        im.`id`,
+        im.`name` AS tmrName,
+        im.`number` AS tmrNumber,
+        im.`filename` AS fileName,
+        im.`createtime`,
+        im.dispose
+        FROM
+        pms.`da_tmr_info` AS im
+        <where>
+            <if test="costStartTime != null">
+                <![CDATA[AND im.createtime >= #{costStartTime}]]>
+            </if>
+            <if test="costEndTime != null">
+                <![CDATA[AND im.createtime  <= #{costEndTime}]]>
+            </if>
+            <if test="tmrName != null and tmrName != ''">
+                AND im.name LIKE '%${tmrName}%'
+            </if>
+            <if test="fileName != null and fileName != ''">
+                AND im.filename LIKE '%${fileName}%'
+            </if>
+            <if test="visible != null and visible != ''">
+                AND im.visible = 1
+            </if>
+        </where>
+        ) AS info
+        INNER JOIN
+        (
+        SELECT
+        im.`id`,
+        COUNT(DISTINCT ida.`number`) AS numbers
+        FROM
+        pms.`da_tmr_info` AS im
+        INNER JOIN pms.`da_tmr_import` AS ida ON im.id = ida.tmr_id
+        <where>
+            <if test="costStartTime != null">
+                <![CDATA[AND im.createtime >= #{costStartTime}]]>
+            </if>
+            <if test="costEndTime != null">
+                <![CDATA[AND im.createtime  <= #{costEndTime}]]>
+            </if>
+            <if test="tmrName != null and tmrName != ''">
+                AND im.name LIKE '%${tmrName}%'
+            </if>
+            <if test="fileName != null and fileName != ''">
+                AND im.filename LIKE '%${fileName}%'
+            </if>
+            <if test="visible != null and visible != ''">
+                AND im.visible = 1
+            </if>
+        </where>
+        GROUP BY  im.`id`
+        ) AS tmprs
+        ON info.id = tmprs.id
+        ORDER BY info.`createtime` DESC
+    </select>
+
+    <select id="getImportDataById" parameterType="java.lang.Integer" resultType="TMRExcelVO">
+        SELECT da.id, da.tmr_id AS trmId, da.number AS phoneNumber, da.calltime AS endTime FROM pms.`da_tmr_import` AS da WHERE da.`tmr_id` = #{id} ORDER BY phoneNumber
+    </select>
+
+    <select id="getTMRInvesterList" parameterType="java.util.Map" resultType="TMRInvestUserVO">
+        SELECT invest.id,invest.tmr_id AS tmrId,invest.phone_number AS investPhone,invest.invest_time AS investTime,
+        invest.bid_title AS investBid, invest.bid_date AS investDate,invest.invest_money AS investMoney,invest.activate_redBag AS activateRedBag,
+        t6141.`F02` AS investUser FROM
+        pms.`da_tmr_info` AS info
+        LEFT JOIN pms.`da_tmr_invester` AS invest  ON info.`id` = invest.`tmr_id`
+        LEFT JOIN s61.`t6110` ON invest.`phone_number` = t6110.`F04`
+        LEFT JOIN s61.`t6141` ON t6110.`F01` = t6141.`F01`
+        <where>
+            invest.`tmr_id` = #{id}
+            AND info.`visible` = 1
+            <if test="costStartTime != null">
+                <![CDATA[AND invest.invest_time >= #{costStartTime}]]>
+            </if>
+            <if test="costEndTime != null">
+                <![CDATA[AND invest.invest_time  <= #{costEndTime}]]>
+            </if>
+        </where>
+        ORDER BY invest.invest_time DESC
+    </select>
+
+    <select id="getTMRInvesterTotal" parameterType="java.util.Map" resultType="TMRInvestUserVO">
+            SELECT
+              SUM(invest.invest_money )AS investMoney,
+              SUM(invest.activate_redBag) AS activateRedBag,
+              t6110.f01 AS userId
+            FROM
+              pms.`da_tmr_info` AS info
+              LEFT JOIN pms.`da_tmr_invester` AS invest
+                ON info.`id` = invest.`tmr_id`
+              LEFT JOIN s61.`t6110`
+                ON invest.`phone_number` = t6110.`F04`
+              LEFT JOIN s61.`t6141`
+                ON t6110.`F01` = t6141.`F01`
+            <where>
+                invest.`tmr_id` = #{id}
+                AND info.`visible` = 1
+                <if test="costStartTime != null">
+                    <![CDATA[AND invest.invest_time >= #{costStartTime}]]>
+                </if>
+                <if test="costEndTime != null">
+                    <![CDATA[AND invest.invest_time  <= #{costEndTime}]]>
+                </if>
+            </where>
+            GROUP BY t6110.f01
+    </select>
+
+    <select id="findUserInvestBehavior" parameterType="java.util.Map" resultType="TMRInvestUserVO">
+        SELECT main1.f01 AS userId,main1.bid,main1.ttime AS investTime,main1.phone AS investPhone,main1.bidtitle AS investBid,
+        main1.invest AS investMoney,main1.deadline AS investDate,COALESCE(fxyh.hb,0) AS activateRedBag,main1.deadday AS investDays FROM
+        (
+        SELECT t6110.f01,
+        t6110.f04 AS phone,
+        t6230.`F01` AS bid,
+        t6230.`F03` AS bidtitle,
+        t6230.`F09` AS deadline,
+        t6250.`F06` AS ttime,
+        t6250.`f04` AS invest,
+        CONCAT_WS('_',t6110.f01,t6230.`F01`) AS uniteIds,
+        t6230.`F32` AS deadday
+        FROM s61.`t6110`
+        LEFT JOIN s62.`t6250`
+        ON t6110.f01 = t6250.f03
+        LEFT JOIN s62.`t6230`
+        ON t6250.f02 = t6230.F01
+        <where>
+            AND t6250.`f04` > 0
+            <if test="callTime != null">
+                <![CDATA[AND t6250.f06 >= #{callTime}]]>
+            </if>
+            <if test="investTime != null">
+                <![CDATA[AND t6250.f06 <= #{investTime}]]>
+            </if>
+            <if test="callPhone != null and callPhone != ''">
+                AND t6110.f04 = #{callPhone}
+            </if>
+        </where>
+        ) AS main1
+        LEFT JOIN
+        (
+        SELECT tmp1.userid,userbag.`bid_id`,tmp1.ttime,tmp1.phone,
+        tmp1.bidtitle,tmp1.invest,tmp1.deadline,SUM(red.red_money) AS hb,tmp1.tmpIds FROM
+        (
+        SELECT t6110.f01 AS userid,
+        t6110.f04 AS phone,
+        t6230.`F01` AS bid,
+        t6230.`F03` AS bidtitle,
+        t6230.`F09` AS deadline,
+        t6250.`F06` AS ttime,
+        t6250.`f04` AS invest,
+        CONCAT_WS('_',t6110.f01,t6230.`F01`) AS tmpIds
+        FROM s61.`t6110`
+        LEFT JOIN s62.`t6250`
+        ON t6110.f01 = t6250.f03
+        LEFT JOIN s62.`t6230`
+        ON t6250.f02 = t6230.F01
+        <where>
+            AND t6250.`f04` > 0
+            <if test="callTime != null">
+                <![CDATA[AND t6250.f06 >= #{callTime}]]>
+            </if>
+            <if test="investTime != null">
+                <![CDATA[AND t6250.f06 <= #{investTime}]]>
+            </if>
+            <if test="callPhone != null and callPhone != ''">
+                AND t6110.f04 = #{callPhone}
+            </if>
+        </where>
+        ) AS tmp1
+        LEFT JOIN flb.`t_user_redpackets` AS userbag ON (tmp1.userid = userbag.user_id AND tmp1.bid = userbag.bid_id)
+        LEFT JOIN flb.`t_red_packet` AS red ON userbag.redpacket_id = red.id
+        WHERE userbag.status=2
+        GROUP BY tmp1.userid,userbag.bid_id
+        ) AS fxyh
+        ON main1.uniteIds = fxyh.tmpIds
+        ORDER BY main1.ttime
+    </select>
+
+    <update id="deletePerformance" parameterType="java.lang.Integer">
+        UPDATE pms.da_tmr_info AS info SET info.visible = 0 WHERE info.id = #{id}
+    </update>
+
+    <update id="updateTMRInfoDispose" parameterType="java.lang.Integer">
+        UPDATE pms.da_tmr_info AS info SET info.dispose = 1 WHERE info.id = #{id}
+    </update>
+
+    <select id="getTMRinfo" parameterType="java.lang.Integer" resultType="TMRPerformanceVO">
+       SELECT id, info.name AS tmrName,info.`filename` AS fileName FROM pms.`da_tmr_info` AS info
+       WHERE info.`id` = #{id}
+    </select>
+
+    <select id="findRecordByFileName" parameterType="java.lang.String" resultType="TMRPerformanceVO">
+        SELECT name AS tmrName,number AS tmrNumber from pms.`da_tmr_info` WHERE filename = #{fileName}  AND visible = 1
+    </select>
+
+    <select id="getCashBack" parameterType="java.util.Map" resultType="TMRInvestUserVO">
+        SELECT usermsg.f01 AS userId,userlog.`F06` AS activateRedBag FROM s61.`t6110` AS usermsg
+        LEFT JOIN s61.`t6101` AS account
+        ON account.`F02` = usermsg.f01
+        LEFT JOIN s61.`t6102` AS userlog
+        ON userlog.f02 = account.`F01`
+        WHERE
+        usermsg.f01 = #{userId}
+        AND account.`F03` = 'WLZH' AND userlog.`F03` = '5116'
+        AND userlog.`F06`  > 0
+        AND userlog.`F05` = #{createTime}
+    </select>
+
+    <select id="troubleDeals" parameterType="java.util.Map" resultType="TMRExcelVO">
+        SELECT number AS phoneNumber,'账户未注册' AS msg FROM pms.`da_tmr_import` WHERE tmr_id = #{tmrId} AND number NOT IN
+        (
+            SELECT t6110.f04 AS number FROM s61.`t6110`
+            <where>
+                t6110.f04 IN
+                <foreach collection="list" item="item" index="index" open="(" separator="," close=")">
+                    #{item.phoneNumber}
+                </foreach>
+            </where>
+        )
+        UNION ALL
+        SELECT number AS phoneNumber,'重复条目' AS msg FROM pms.`da_tmr_import` WHERE tmr_id = #{tmrId} AND number IN
+        (
+          SELECT number FROM pms.`da_tmr_import` WHERE tmr_id = #{tmrId} GROUP BY number HAVING COUNT(1) > 1
+        )
+    </select>
+</mapper>

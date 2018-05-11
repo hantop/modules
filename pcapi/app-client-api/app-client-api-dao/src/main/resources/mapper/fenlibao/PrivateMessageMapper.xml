@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PrivateMessageMapper">
+	<select id="getPrivateMessage" parameterType="java.util.Map" resultType="PrivateMessage">
+		SELECT
+		    a.F01 as id,
+			a.F02 as userId,
+			a.F03 as title,
+			a.F04 as sendTime,
+			a.F05 as status,
+			b.F02 as content
+		FROM s61.t6123 as a
+		left join s61.t6124 as b on a.F01=b.F01
+		where a.F02=#{userId,jdbcType=VARCHAR}
+		and a.F06 = #{versionType}
+		<if test="status != null">
+		    and F05 in <foreach collection="status" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		</if>
+		order by a.F04 desc
+	</select>
+
+	<insert id="addMessage" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="letterId">
+		INSERT INTO S61.T6123
+		  SET
+			  F02 = #{userId},
+			  F03 = #{title},
+			  F04 = SYSDATE(),
+			  F05 = #{status},
+			  F06 = #{versionType}
+	</insert>
+
+	<insert id="addMessageContent" parameterType="java.util.Map">
+		INSERT INTO S61.T6124
+		  SET
+			 F01 = #{messageId},
+			 F02 = #{content}
+	</insert>
+	
+	<!-- 获取用户消息数量(已读、未读) -->
+	<select id="getUnreadCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(F01) FROM s61.t6123  where F02=#{userId} and F05=#{status}
+	</select>
+	
+	<!-- 修改用户消息状态(已读、未读、删除) -->
+	<update id="updateMessageStatus" parameterType="java.util.Map">
+	   update s61.t6123 set F05=#{status}
+	   <where>
+	     <if test="userId != null">
+	        and F02=#{userId}
+	     </if>
+	     <if test="messageIds != null">
+		    and F01 in <foreach collection="messageIds" item="item" index="index" open="(" separator="," close=")">#{item}</foreach>
+		 </if>
+		 <if test="whereStatus != null">
+		   and F05=#{whereStatus}
+		 </if>
+	   </where>
+	</update>
+</mapper>

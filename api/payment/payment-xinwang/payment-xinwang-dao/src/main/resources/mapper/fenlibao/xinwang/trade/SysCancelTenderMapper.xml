@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="SysCancelTenderMapper">
+    <insert id="createProjectCancelTenderInfo" parameterType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectCancelTenderInfo" useGeneratedKeys="true" keyProperty="id">
+        INSERT flb.t_xw_cancel_tender (project_id,order_id) VALUES (#{projectId},#{orderId})
+    </insert>
+
+    <select id="getProjectCancelTenderInfo" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.trade.SysProjectCancelTenderInfo">
+        select id,order_id orderId,project_id projectId from flb.t_xw_cancel_tender where order_id=#{orderId}
+    </select>
+
+    <update id="saveCancelTenderRequestNo" parameterType="java.util.Map">
+        update flb.t_xw_tender set cancel_tender_request_no= #{cancelTenderRequestNo} where tender_id= #{tenderId}
+    </update>
+
+    <select id="getAcceptFailTenderRecordList" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderRecord">
+        SELECT a.F01 id, a.F02 projectNo, a.F03 investorId, a.F04 amount, a.F05 share, a.F06 investTime, a.F07 cancel, a.F08 makeLoan,b.pre_treat_request_no preTreatRequestNo,b.investor_platform_user_no investorPlatformUserNo,b.borrower_platform_user_no borrowerPlatformUserNo,b.make_loan_request_no makeLoanRequestNo,b.cancel_tender_request_no cancelTenderRequestNo
+        FROM (SELECT * from S62.T6250 where F02 = #{projectId} and F07='F' and F08='F') a
+        INNER JOIN flb.t_xw_tender b ON a.F01=b.tender_id
+        INNER join flb.t_xw_request c ON b.cancel_tender_request_no =c.request_no
+        where c.state='SB'
+    </select>
+
+    <select id="getPlatformCancelTenderFailList" parameterType="java.lang.Integer" resultType="com.fenlibao.p2p.model.xinwang.entity.project.XWTenderRecord">
+        SELECT a.F01 id, a.F02 projectNo, a.F03 investorId, a.F04 amount, a.F05 share, a.F06 investTime, a.F07 cancel, a.F08 makeLoan,b.pre_treat_request_no preTreatRequestNo,b.investor_platform_user_no investorPlatformUserNo,b.borrower_platform_user_no borrowerPlatformUserNo,b.make_loan_request_no makeLoanRequestNo,b.cancel_tender_request_no cancelTenderRequestNo
+        FROM (SELECT * from S62.T6250 where F02 = #{projectId} and F07='F' and F08='F') a
+        INNER JOIN flb.t_xw_tender b ON a.F01=b.tender_id
+        INNER join flb.t_xw_request c ON b.cancel_tender_request_no =c.request_no
+        where c.state='CG'
+    </select>
+
+    <select id="getOngoingCancelTenderOrder" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        SELECT a.order_id FROM (select * from flb.t_xw_cancel_tender where project_id= #{projectId}) a INNER JOIN S65.t6501 b ON a.order_id=b.F01 where b.F03 in ('DTJ','DQR') limit 1
+    </select>
+</mapper>

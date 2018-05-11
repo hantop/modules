@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="RechargeManageMapper">
+
+    <insert id="addOrder" parameterType="T6502">
+        INSERT INTO s65.t6502 (F01,F02,F03,F04,F05,F06,F07) VALUES (#{F01},#{F02},#{F03},#{F04},#{F05},#{F06},#{F07})
+    </insert>
+    
+    <select id="getOrder" resultType="T6502">
+        SELECT F01,F02,F03,F04,F05,F06,F07,F08 FROM s65.t6502 WHERE F01 = #{orderId} LIMIT 1
+    </select>
+
+    <update id="updateOrder" parameterType="java.util.Map">
+        UPDATE s65.t6502 SET F08 = #{serialNum} WHERE F01 = #{orderId} LIMIT 1
+    </update>
+    
+    <select id="getOrderNeedConfirmed"  parameterType="java.util.Map" resultType="java.lang.Integer">
+        SELECT o.F01 FROM s65.t6501 o INNER JOIN s65.t6502 r ON o.f01 = r.f01 WHERE r.F07 = #{paymentInstitutionCode} AND o.F03 = 'DQR' AND o.F02 = '10001' AND o.F04 <![CDATA[<=]]> #{requestTime} ORDER BY o.F01 ASC LIMIT 100
+    </select>
+
+    <select id="getCurdateTotalAmount" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+        SELECT IFNULL(SUM(r.F03),0) FROM s65.t6502 r INNER JOIN s65.t6501 o ON r.F01 = o.F01 WHERE DATE(o.F04) = CURDATE() AND (o.F03 = 'CG' OR o.F03 = 'DQR') AND r.F07 = #{channelCode} AND r.F02 = #{userId} limit 1
+    </select>
+    
+    <select id="getLimitList" parameterType="java.util.Map" resultType="PaymentLimitVO_">
+        SELECT
+        b.F04 bankCode, b.F02 bankName, l.single_limit singleLimit, l.daily_limit dailyLimit, l.monthly_limit monthlyLimit, l.minimum minimum,channel_type channelCode
+        FROM
+        flb.t_payment_limit l INNER JOIN s50.t5020 b ON l.bank_id = b.F01
+        WHERE b.F03 = 'QY'
+        <if test="channelCode != null and channelCode != ''">
+            AND l.channel_type = #{channelCode}
+        </if>
+        <if test="channelCode == null">
+            AND l.channel_type = 101
+        </if>
+        <if test="bankCode != null">
+            AND b.F04 = #{bankCode} limit 1
+        </if>
+    </select>
+</mapper>

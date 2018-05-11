@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.fenlibao.p2p.sms.persistence.GsmsResponseMapper">
+    <resultMap id="BaseResultMap" type="com.fenlibao.p2p.sms.domain.GsmsResponse">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="create_time" property="createTime" jdbcType="BIGINT"/>
+        <result column="uuid" property="uuid" jdbcType="VARCHAR"/>
+        <result column="result" property="result" jdbcType="INTEGER"/>
+        <result column="message" property="message" jdbcType="VARCHAR"/>
+        <result column="attributes" property="attributes" jdbcType="VARCHAR"/>
+    </resultMap>
+    <sql id="Base_Column_List">
+    id, create_time, uuid, result, message, attributes
+  </sql>
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long">
+        select
+        <include refid="Base_Column_List"/>
+        from xuanwu_gsms_response
+        where id = #{id,jdbcType=BIGINT}
+    </select>
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from xuanwu_gsms_response
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+    <insert id="insert" parameterType="com.fenlibao.p2p.sms.domain.GsmsResponse">
+        <selectKey resultType="java.lang.Long" keyProperty="id" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        insert into xuanwu_gsms_response (create_time, uuid, result,
+        message, attributes)
+        values (#{createTime,jdbcType=BIGINT}, #{uuid,jdbcType=VARCHAR}, #{result,jdbcType=INTEGER},
+        #{message,jdbcType=VARCHAR}, #{attributes,jdbcType=VARCHAR})
+    </insert>
+    <insert id="insertSelective" parameterType="com.fenlibao.p2p.sms.domain.GsmsResponse">
+        <selectKey resultType="java.lang.Long" keyProperty="id" order="AFTER">
+            SELECT LAST_INSERT_ID()
+        </selectKey>
+        insert into xuanwu_gsms_response
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="createTime != null">
+                create_time,
+            </if>
+            <if test="uuid != null">
+                uuid,
+            </if>
+            <if test="result != null">
+                result,
+            </if>
+            <if test="message != null">
+                message,
+            </if>
+            <if test="attributes != null">
+                attributes,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="createTime != null">
+                #{createTime,jdbcType=BIGINT},
+            </if>
+            <if test="uuid != null">
+                #{uuid,jdbcType=VARCHAR},
+            </if>
+            <if test="result != null">
+                #{result,jdbcType=INTEGER},
+            </if>
+            <if test="message != null">
+                #{message,jdbcType=VARCHAR},
+            </if>
+            <if test="attributes != null">
+                #{attributes,jdbcType=VARCHAR},
+            </if>
+        </trim>
+    </insert>
+    <update id="updateByPrimaryKeySelective" parameterType="com.fenlibao.p2p.sms.domain.GsmsResponse">
+        update xuanwu_gsms_response
+        <set>
+            <if test="createTime != null">
+                create_time = #{createTime,jdbcType=BIGINT},
+            </if>
+            <if test="uuid != null">
+                uuid = #{uuid,jdbcType=VARCHAR},
+            </if>
+            <if test="result != null">
+                result = #{result,jdbcType=INTEGER},
+            </if>
+            <if test="message != null">
+                message = #{message,jdbcType=VARCHAR},
+            </if>
+            <if test="attributes != null">
+                attributes = #{attributes,jdbcType=VARCHAR},
+            </if>
+        </set>
+        where id = #{id,jdbcType=BIGINT}
+    </update>
+    <update id="updateByPrimaryKey" parameterType="com.fenlibao.p2p.sms.domain.GsmsResponse">
+    update xuanwu_gsms_response
+    set create_time = #{createTime,jdbcType=BIGINT},
+      uuid = #{uuid,jdbcType=VARCHAR},
+      result = #{result,jdbcType=INTEGER},
+      message = #{message,jdbcType=VARCHAR},
+      attributes = #{attributes,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+</mapper>

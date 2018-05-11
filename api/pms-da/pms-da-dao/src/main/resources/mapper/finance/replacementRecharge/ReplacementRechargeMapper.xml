@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.finance.replacementRecharge.ReplacementRechargeMapper">
+
+    <select id="getReplacementRechargeAccountBalance" resultType="decimal">
+        SELECT
+            account.F06 balance
+        FROM
+            flb.t_xw_account xw
+        LEFT JOIN s61.t6101 account ON xw.user_id = account.F02
+        WHERE
+            xw.user_role = 'PLATFORM_ALTERNATIVE_RECHARGE'
+        AND account.F03 = 'XW_PLATFORM_ALTERNATIVE_RECHARGE_WLZH'
+        AND xw.active_status = 'ACTIVATED'
+        LIMIT 1
+    </select>
+
+    <select id="getReplacementRechargeList" resultType="com.fenlibao.model.pms.da.finance.ReplacementRecharge">
+        SELECT
+        recharge.id id,
+        recharge.user_id userId,
+        recharge.user_role userRole,
+        xw.user_type userType,
+        user_info.F02 account,
+        recharge.recharge_money rechargeMoney,
+        recharge.recharge_user_name rechargeUserName,
+        recharge.audit_user_name auditUserName,
+        recharge.create_time rechargeTime,
+        recharge.update_time auditTime,
+        recharge.`status` status,
+        request.state orderState
+        FROM
+        pms.da_replacement_recharge recharge
+        LEFT JOIN flb.t_xw_account xw ON CONCAT(recharge.user_role, recharge.user_id) = xw.platform_user_no
+        LEFT JOIN s61.t6110 user_info ON recharge.user_id = user_info.F01
+        LEFT JOIN flb.t_xw_request request ON request.id = recharge.xw_request_id
+        WHERE user_info.F06 IN ('FZRR', 'ZRR')
+        AND xw.user_type IN ('ORGANIZATION', 'PERSONAL')
+        AND reward_record_id = 0
+        <if test="account != null and account != ''">
+            AND (user_info.F02 = #{account})
+        </if>
+        <if test="userRole != null and userRole != ''">
+            AND (recharge.user_role = #{userRole})
+        </if>
+        <if test="userType != null and userType != ''">
+            AND (xw.user_type = #{userType})
+        </if>
+        <if test="status != null and status != ''">
+            <if test="status == 0 or status == 2">
+                AND (recharge.`status` = #{status})
+            </if>
+            <if test="status == '10'">
+                AND (recharge.`status` = '1'
+                AND request.state = 'SB')
+            </if>
+            <if test="status == '11'">
+                AND (recharge.`status` = '1'
+                AND request.state = 'CG')
+            </if>
+        </if>
+        ORDER BY recharge.create_time DESC
+    </select>
+
+    <resultMap id="userBaseInfoMap" type="java.util.Map">
+        <result property="userId" column="userId"/>
+        <result property="userName" column="userName"/>
+    </resultMap>
+
+    <select id="getUserBaseInfo"  resultMap="userBaseInfoMap">
+        SELECT
+            user_base.F01 userId,
+            user_base.F02 userName
+        FROM s61.t6141 user_base
+        LEFT JOIN s61.t6110 user_info ON user_info.F01 = user_base.F01
+        WHERE user_info.F06 = 'ZRR'
+        AND user_base.F01 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+        UNION ALL
+        SELECT
+            user_base.F01 userId,
+            user_base.F04 userName
+        FROM s61.t6161 user_base
+        LEFT JOIN s61.t6110 user_info ON user_info.F01 = user_base.F01
+        WHERE user_info.F06 = 'FZRR'
+        AND user_base.F01 IN
+        <foreach collection="userIds" item="userId" index="index"
+                 open="(" close=")" separator=",">
+            #{userId}
+        </foreach>
+    </select>
+
+    <select id="getUserRechargeAuthVO"  resultType="UserRechargeAuthVO">
+        SELECT
+            account.id,
+            account.user_id userId,
+            account.user_role userRole,
+            user_base.F02 userName,
+            account.audit_status auditStatus,
+            account.user_type userType,
+            account.bankcard_no bankcardNo,
+            account.bankcode bankcode,
+            account.active_status activeStatus,
+            user_info.F02 account
+        FROM
+            flb.`t_xw_account` account
+        LEFT JOIN s61.t6110 user_info ON account.user_id = user_info.F01
+        LEFT JOIN s61.t6141 user_base ON account.user_id = user_base.F01
+        LEFT JOIN s50.t5020 bank ON bank.F07 = account.bankcode
+        WHERE
+            user_info.F01 = #{userId}
+        AND account.platform_user_no = #{platformUserNo}
+        AND user_info.F06 = 'ZRR'
+    </select>
+
+    <select id="getCompanyRechargeAuthVO" resultType="UserRechargeAuthVO">
+        SELECT
+        account.id,
+        account.user_id userId,
+        account.user_role userRole,
+        user_base.F04 userName,
+        account.audit_status auditStatus,
+        account.user_type userType,
+        account.bankcard_no bankcardNo,
+        account.bankcode bankcode,
+        account.active_status activeStatus,
+        user_info.F02 account
+        FROM
+        flb.`t_xw_account` account
+        LEFT JOIN s61.t6110 user_info ON account.user_id = user_info.F01
+        LEFT JOIN s61.t6161 user_base ON account.user_id = user_base.F01
+        LEFT JOIN s50.t5020 bank ON bank.F07 = account.bankcode
+        WHERE
+            user_info.F01 = #{userId}
+        AND account.platform_user_no = #{platformUserNo}
+        AND user_info.F06 = 'FZRR'
+    </select>
+
+    <insert id="saveReplacementRecharge" parameterType="ReplacementRecharge" useGeneratedKeys="true" keyProperty="id">
+        insert into pms.da_replacement_recharge
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">
+                id,
+            </if>
+            <if test="userId != null">
+                user_id,
+            </if>
+            <if test="userRole != null">
+                user_role,
+            </if>
+            <if test="rechargeMoney != null">
+                recharge_money,
+            </if>
+            <if test="status != null">
+                status,
+            </if>
+            <if test="rechargeUserName != null">
+                recharge_user_name,
+            </if>
+            <if test="auditUserName != null">
+                audit_user_name,
+            </if>
+            <if test="rechargeTime != null">
+                create_time,
+            </if>
+            <if test="auditTime != null">
+                update_time,
+            </if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null">
+                #{id, jdbcType=INTEGER},
+            </if>
+            <if test="userId != null">
+                #{userId, jdbcType=INTEGER},
+            </if>
+            <if test="userRole != null">
+                #{userRole, jdbcType=VARCHAR},
+            </if>
+            <if test="rechargeMoney != null">
+                #{rechargeMoney, jdbcType=DECIMAL},
+            </if>
+            <if test="status != null">
+                #{status, jdbcType=TINYINT},
+            </if>
+            <if test="rechargeUserName != null">
+                #{rechargeUserName, jdbcType=VARCHAR},
+            </if>
+            <if test="auditUserName != null">
+                #{auditUserName, jdbcType=VARCHAR},
+            </if>
+            <if test="rechargeTime != null">
+                #{rechargeTime, jdbcType=TIMESTAMP},
+            </if>
+            <if test="auditTime != null">
+                #{auditTime, jdbcType=TIMESTAMP},
+            </if>
+        </trim>
+    </insert>
+
+    <select id="getRechargeUserName" resultType="string">
+        SELECT
+        recharge.recharge_user_name rechargeUserName
+        FROM
+        pms.da_replacement_recharge recharge
+        WHERE
+        recharge.id = #{id}
+        AND recharge.status = 2
+    </select>
+
+    <update id="updateReplacementRecharge" parameterType="ReplacementRecharge">
+        update pms.da_replacement_recharge
+        <set>
+            <if test="xwRequestId != null">
+                xw_request_id = #{xwRequestId, jdbcType=INTEGER},
+            </if>
+            <if test="auditUserName != null">
+                audit_user_name = #{auditUserName, jdbcType=VARCHAR},
+            </if>
+            <if test="status != null">
+                status = #{status, jdbcType=TINYINT},
+            </if>
+                update_time = SYSDATE(),
+        </set>
+        where id = #{id, jdbcType=INTEGER}
+    </update>
+
+    <select id="getReplacementRechargeState" resultType="string">
+        SELECT
+            xw_request.state state
+        FROM
+            pms.da_replacement_recharge recharge
+        LEFT JOIN flb.t_xw_request xw_request ON recharge.xw_request_id = xw_request.id
+        WHERE
+            recharge.id = #{rechargeId}
+        AND xw_request.id = #{xwRequestId}
+    </select>
+
+    <select id="getUserIdByAccount" resultType="int">
+        SELECT
+        F01
+        FROM
+        s61.t6110
+        WHERE
+        F02 = #{account}
+        AND F07 = 'QY'
+        LIMIT 1
+    </select>
+
+    <select id="getReplacementRechargeId" resultType="int">
+        SELECT id FROM pms.da_replacement_recharge
+        <where>
+            <if test="userId != null">
+               AND user_id = #{userId}
+            </if>
+            <if test="rewardRecordId != null">
+                AND reward_record_id = #{rewardRecordId}
+            </if>
+        </where>
+        LIMIT 1
+    </select>
+</mapper>

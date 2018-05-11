@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.common.publicity.KnowMoreMapper">
+
+
+    <select id="getKnowMoreList" parameterType="knowMore" resultType="knowMore">
+
+        SELECT
+        id as id ,
+        title as title ,
+        sorting as sorting ,
+        url as url ,
+        keyword as keyword ,
+        digest as digest ,
+        content as content ,
+        create_time as createTime ,
+        update_time as updateTime ,
+        publish_time as publishTime ,
+        status as status ,
+        publisher_id as publisherId,
+        all_pic_loaded as allPicUploade
+        FROM
+        flb.class_know_more where 1=1
+
+        <if test="knowMore.id !=0">
+            and id= #{knowMore.id      }
+        </if>
+        <if test="knowMore.status >=0">
+            and status = #{knowMore.status      }
+        </if>
+
+        <if test="knowMore.title !=''and knowMore.title !=null">
+            and title like concat('%',#{knowMore.title      },'%')
+        </if>
+
+        <if test="knowMore.publisherId !=''and knowMore.publisherId !=null">
+            and publisher_id like concat('%',#{knowMore.publisherId      },'%')
+        </if>
+
+        <if test="startTime !=''and startTime !=null">
+            and update_time >= #{startTime      }
+        </if>
+
+        <if test="endTime !=''and endTime !=null">
+            and update_time &lt;= #{endTime      }
+        </if>
+
+        order by id desc
+    </select>
+
+
+    <insert id="editKnowMore" parameterType="knowMore">
+        INSERT
+        INTO
+        flb.class_know_more
+        (
+        id,
+        title,
+        sorting,
+        url,
+        keyword,
+        digest,
+        content,
+        create_time,
+        update_time,
+        publish_time,
+        status,
+        publisher_id,
+        all_pic_loaded
+        )
+        VALUES
+        (
+        #{knowMore.id } ,
+        #{knowMore.title } ,
+        #{knowMore.sorting } ,
+        #{knowMore.url } ,
+        #{knowMore.keyword } ,
+        #{knowMore.digest } ,
+        #{knowMore.content } ,
+        #{knowMore.createTime },
+        now(),
+        #{knowMore.publishTime},
+        #{knowMore.status } ,
+        #{knowMore.publisherId},
+        #{knowMore.allPicUploade}
+        )
+        ON
+        DUPLICATE KEY
+        UPDATE
+        title =#{knowMore.title } ,
+        sorting =#{knowMore.sorting } ,
+        url =#{knowMore.url } ,
+        keyword =#{knowMore.keyword } ,
+        digest =#{knowMore.digest } ,
+        content =#{knowMore.content } ,
+        create_time =#{knowMore.createTime } ,
+        update_time =now() ,
+        publish_time=#{knowMore.publishTime} ,
+        status =#{knowMore.status } ,
+        publisher_id=#{knowMore.publisherId},
+        all_pic_loaded=#{knowMore.allPicUploade}
+
+
+    </insert>
+
+    <update id="updateAllPicUploade"  parameterType="knowMore">
+        update flb.class_know_more
+        set all_pic_loaded=concat(ifnull(all_pic_loaded,''),',',#{newUploaded})
+        where id=#{id };
+    </update>
+    <delete id="deleteKnowMore">
+
+        delete from flb.class_know_more where id IN
+        <foreach collection="idList" item="id" index="index" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+
+    </delete>
+
+
+    <select id="getKnowEarlyListByIds" parameterType="knowMore" resultType="knowMore">
+        SELECT
+        id as id ,
+        title as title ,
+        sorting as sorting ,
+        url as url ,
+        keyword as keyword ,
+        digest as digest ,
+        content as content ,
+        create_time as createTime ,
+        update_time as updateTime ,
+        publish_time as publishTime ,
+        status as status ,
+        publisher_id as publisherId,
+        all_pic_loaded as allPicUploade
+        from
+        flb.class_know_more where id IN
+        <foreach collection="idList" item="id" index="index" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+</mapper>

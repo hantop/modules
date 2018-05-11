@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWCheckfileDateStatusMapper">
+
+
+
+    <insert id="insert" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileDateStatus" >
+        insert into `flb`.`t_xw_checkfile_date_status` (checkfile_date)values ( #{checkfileDate})
+    </insert>
+
+
+    <update id="updateByPrimaryKeySelective" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileDateStatus" >
+
+        update `flb`.`t_xw_checkfile_date_status`
+        <set>
+            <if test="status!=null">
+                status = #{status},
+            </if>
+            <if test="backRollRechargeStatus!=null">
+                backroll_recharge_status = #{backRollRechargeStatus},
+            </if>
+            <if test="commissionStatus!=null">
+                commission_status = #{commissionStatus},
+            </if>
+            <if test="rechargeStatus!=null">
+                recharge_status = #{rechargeStatus},
+            </if>
+            <if test="transactionStatus!=null">
+                transaction_status = #{transactionStatus},
+            </if>
+            <if test="userStatus!=null">
+                user_status = #{userStatus},
+            </if>
+            <if test="withDrawStatus!=null">
+                withdraw_status = #{withDrawStatus},
+            </if>
+        </set>
+        where checkfile_date = #{checkfileDate}
+    </update>
+
+
+    <select id="getCheckFileStatus" parameterType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileDateStatus" resultType="com.fenlibao.p2p.model.xinwang.checkfile.CheckfileDateStatus">
+
+
+        select
+        checkfile_date as checkfileDate,
+        status as status,
+        backroll_recharge_status as backRollRechargeStatus,
+        commission_status as commissionStatus,
+        recharge_status as rechargeStatus,
+        transaction_status as  transactionStatus,
+        user_status as userStatus,
+        withdraw_status as withDrawStatus
+        from `flb`.`t_xw_checkfile_date_status` where checkfile_date = #{checkfileDate}
+
+        <if test="backRollRechargeStatus!=null">
+          and  backroll_recharge_status = #{backRollRechargeStatus}
+        </if>
+        <if test="commissionStatus!=null">
+           and commission_status = #{commissionStatus}
+        </if>
+        <if test="rechargeStatus!=null">
+           and recharge_status = #{rechargeStatus}
+        </if>
+        <if test="transactionStatus!=null">
+           and transaction_status = #{transactionStatus}
+        </if>
+        <if test="userStatus!=null">
+           and user_status = #{userStatus}
+        </if>
+        <if test="withDrawStatus!=null">
+           and withdraw_status = #{withDrawStatus}
+        </if>
+    </select>
+
+
+    <select id="getCheckDiffData" parameterType="java.lang.String" resultType="java.util.HashMap">
+
+
+        SELECT
+            fenlibao.request_no    AS f_request_no,
+            xinwang.request_no     AS x_request_no,
+            fenlibao.amount        AS f_amount,
+            xinwang.amount         AS x_amount,
+            fenlibao.commission    AS f_commission,
+            xinwang.receive_amount AS x_receive_amount
+        FROM
+            (
+                SELECT
+                    request_no,
+                    amount,
+                    commission
+                FROM
+                    flb.t_xw_withdraw
+                    where left(request_no, 8)=#{dateString}
+
+             ) fenlibao
+        INNER JOIN
+            flb.t_xw_request txr
+        ON
+            fenlibao.request_no=txr.request_no
+        AND txr.state='CG'
+        LEFT JOIN
+            flb.t_xw_checkfile_withdraw xinwang
+        ON
+            fenlibao.request_no=xinwang.request_no
+        WHERE
+            fenlibao.amount+fenlibao.commission!=ifnull(xinwang.amount,0)
+    </select>
+
+
+
+    <select id="getCheckRechargeDiffData" parameterType="java.lang.String" resultType="java.util.HashMap">
+		SELECT
+		    fenlibao.request_no    AS f_request_no,
+		    xinwang.request_no     AS x_request_no,
+		    fenlibao.amount        AS f_amount,
+		    xinwang.amount         AS x_amount,
+		    fenlibao.commission    AS f_commission,
+		    xinwang.receive_amount AS x_receive_amount
+		FROM
+		    (
+		        SELECT
+		            request_no,
+		            amount,
+		            commission
+		        FROM
+		            flb.t_xw_recharge
+		        WHERE
+		            LEFT(request_no, 8)=#{dateString} 
+		     ) fenlibao
+		INNER JOIN
+		    flb.t_xw_request txr
+		ON
+		    fenlibao.request_no=txr.request_no
+		AND txr.state='CG'
+		LEFT JOIN
+		    flb.t_xw_checkfile_recharge xinwang
+		ON
+		    fenlibao.request_no=xinwang.request_no
+		WHERE
+		    fenlibao.amount+fenlibao.commission!=ifnull(xinwang.amount,0)
+    </select>
+</mapper>

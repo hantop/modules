@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.interestManagement.InterestManagementMapper">
+
+    <select id="getInterestManagementRecordList" resultType="InterestManagementRecord">
+        SELECT
+        record.operator,
+        record.create_time operateTime,
+        record.auditor,
+        record.update_time auditTime,
+        management.interest_percent updatePercent,
+        management.state,
+        record.pid,
+        record.id recordId
+        FROM
+        pms.interest_management_record record
+        INNER JOIN flb.t_interest_management management ON record.sid = management.id
+        WHERE record.state IN (1, 2, 3)
+        ORDER BY record.id DESC
+    </select>
+
+    <select id="getInterestManagementForm" parameterType="java.util.Map" resultType="InterestManagementForm">
+        SELECT
+        management.id currentPercentId,
+        interest_percent currentPercent,
+        management.state
+        FROM flb.t_interest_management management
+        <where>
+            <if test="state != null">
+                management.state = #{state}
+            </if>
+        </where>
+        ORDER BY management.id DESC LIMIT 1
+    </select>
+
+    <!-- 新增待审核利息管理费 -->
+    <insert id="addInterestManagement" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="interestManagementId">
+        INSERT INTO flb.t_interest_management(interest_percent, state)
+        VALUE(#{interestManagementCostPercent}, 0)
+    </insert>
+
+    <!--新增利息管理费操作记录-->
+    <insert id="saveInterestManagementRecord" parameterType="java.util.Map">
+        INSERT INTO pms.interest_management_record(pid, sid, operator, create_time)
+        VALUE(#{pid}, #{sid}, #{operator}, NOW())
+    </insert>
+
+    <!-- 查询最新待审核利息管理费记录 -->
+    <select id="getAuditInterestManagementInfo" resultType="InterestManagementRecord">
+        SELECT
+            record.id recordId,
+            management.id sid,
+            record.pid pid,
+            management.interest_percent updatePercent,
+            record.operator,
+            record.create_time operateTime
+        FROM
+            pms.interest_management_record record
+        INNER JOIN flb.t_interest_management management ON record.sid = management.id
+        WHERE record.state = 0
+        ORDER BY record.id DESC LIMIT 1
+    </select>
+
+    <select id="getCurrentPercentByPid" resultType="decimal">
+        SELECT
+        management.interest_percent
+        FROM
+        flb.t_interest_management management
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <update id="changeInterestState">
+        UPDATE flb.t_interest_management
+        SET state = #{state}
+        WHERE
+            id = #{id}
+    </update>
+
+    <update id="updateInterestManagementRecord">
+        UPDATE pms.interest_management_record
+        SET state = #{state},
+            auditor = #{auditor}
+        WHERE
+            id = #{recordId}
+    </update>
+
+    <resultMap id="getCurrentInterestMap" type="java.util.Map">
+        <result property="recordId" column="recordId"/>
+        <result property="pid" column="pid"/>
+        <result property="currentPercent" column="currentPercent"/>
+    </resultMap>
+
+    <select id="getCurrentPercents" resultMap="getCurrentInterestMap">
+        SELECT
+        record.id recordId,
+        record.pid,
+        management.interest_percent currentPercent
+        FROM
+        pms.interest_management_record record
+        INNER JOIN flb.t_interest_management management ON record.pid = management.id
+        <where>
+            <if test="pids != null">
+                AND record.pid IN
+                <foreach collection="pids" item="pid" open="(" separator="," close=")">
+                    #{pid}
+                </foreach>
+            </if>
+        </where>
+    </select>
+</mapper>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="StatisticsMapper">
+	<select id="getStatisticsList"  resultType="Statistics">
+	SELECT
+	IFNULL(register_num, 0) registerNum,
+	IFNULL(invest_num , 0) investNum,
+	IFNULL(profitmoney_forinvestor, 0) profitMoneyForInvestor,
+	IFNULL(invest_money, 0) investMoeny
+	FROM
+	pms.da_hourly_statistics
+	ORDER BY id DESC
+	limit 1
+	</select>
+
+	<select id="getReportList"  resultType="ReportDeatil" parameterType="String">
+		SELECT
+		id AS id,
+		title AS  title,
+		report_url AS url
+		FROM
+		flb.t_company_report
+		<if test="type!=null and type!=''">
+		WHERE report_type = #{type}
+		</if>
+		ORDER BY list_order ASC
+	</select>
+</mapper>

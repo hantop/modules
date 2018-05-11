@@ -1,0 +1,36 @@
+package com.fenlibao.model.pms.da.cs.investUser;
+
+/**
+ * @author zeronx on 2018/1/16 10:00.
+ * @version 1.0
+ */
+public class TradeType {
+
+    private Integer id;
+    private String name;
+    private String status;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+}

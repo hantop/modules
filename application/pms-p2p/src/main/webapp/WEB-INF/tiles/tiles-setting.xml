@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition extends="ancestor" name="setting/index">
+        <put-attribute name="body" value="/WEB-INF/page/setting/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-setting.jsp"/>
+    </definition>
+    <definition extends="ancestor" name="setting/enum/index">
+        <put-attribute name="body" value="/WEB-INF/page/system/enum/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-setting.jsp"/>
+    </definition>
+</tiles-definitions>

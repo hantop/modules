@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PlanInfoMapper">
+	<insert id="insertPlanTermination" parameterType="Map">
+		INSERT INTO flb.t_plan_termination(plan_id, operater_id)
+		VALUES(#{planId}, #{operatorId})
+	</insert>
+
+	<update id="updatePlanTermination" parameterType="Map">
+		UPDATE flb.t_invest_plan
+		SET
+			expire_time = #{expireTime},
+			bearrate_date = #{bearrateDate},
+			full_time = #{fullTime},
+			update_time = #{updateTime},
+			status = #{status}
+		WHERE
+			id = #{id}
+	</update>
+
+	<select id="getPlanInfoById" parameterType="int" resultType="com.fenlibao.p2p.model.entity.plan.InvestPlanInfo">
+		SELECT id planId,name planName,type planType,status planStatus,bearrate_date bearrateTime,invest_rate investRate,cycle_type cycleType,cycle,expire_time expireTime,repay_mode repayMode,raise_rate raiseRate,min_yearly_rate minYearlyRate,max_yearly_rate maxYearlyRate  from flb.t_invest_plan where id= #{id} limit 1
+	</select>
+	<select id="getUserPlansByPlanId" parameterType="int" resultType="com.fenlibao.p2p.model.entity.plan.UserPlan">
+		SELECT id userPlanId,plan_id planId,user_id UserId,invest_amount investAmount,status userPlanStatus,exit_time applyQuitTime from flb.t_user_plan where plan_id= #{planId} 
+	</select>
+	<select id="getUserCoupon" parameterType="int" resultType="com.fenlibao.p2p.model.entity.coupons.UserCouponInfo">
+		select a.*,b.scope from (SELECT ID id,user_id userId,coupon_id couponId,activity_id activityId,tender_id investId,coupon_status status,user_plan_id userPlanId,invest_type investType  from flb.t_user_coupon where invest_type=3 and user_plan_id= #{userPlanId}) a INNER JOIN flb.t_coupon b ON a.couponId=b.id limit 1
+	</select>
+	<insert id="batchInsertUserPlanRepayPlan" parameterType="java.util.List">
+        insert into flb.t_user_plan_repay (user_id,plan_id,user_plan_id,transaction_type,term,state,expect_amount,actual_amount,expect_repay_date,actual_repay_time)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">        (#{item.userId},#{item.planId},#{item.userPlanId},#{item.transactionType},#{item.term},#{item.state},#{item.expectAmount},#{item.actualAmount},#{item.expectRepayDate},#{item.actualRepayTime})
+        </foreach>
+    </insert>
+</mapper>

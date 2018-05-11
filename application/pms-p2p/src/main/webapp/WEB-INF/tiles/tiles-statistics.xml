@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition extends="ancestor" name="statistics/index">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    
+    <!-- 统计管理-->
+    <definition extends="ancestor" name="statistics/invest/index">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/invest/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    <!-- 注册统计 -->
+    <definition extends="ancestor" name="statistics/reg/reg-list">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/invest/reg-list.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    <!-- 提款信息 -->
+    <definition extends="ancestor" name="statistics/withdraw/index">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/withdraw/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    <!--首投信息-->
+    <definition extends="ancestor" name="statistics/first/index">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/first/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    <!-- 统计管理 推广详情-->
+    <definition extends="ancestor" name="statistics/invest/details">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/invest/details.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    <!-- 实名认证统计管理-->
+    <definition extends="ancestor" name="statistics/authentication/index">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/authentication/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    <!-- 回款信息 -->
+    <definition extends="ancestor" name="statistics/returnedmoney/index">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/returnedmoney/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+    <!-- 积分统计 -->
+    <definition extends="ancestor" name="statistics/integrate/index">
+        <put-attribute name="body" value="/WEB-INF/page/statistics/integrate/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-statistics.jsp"/>
+    </definition>
+</tiles-definitions>

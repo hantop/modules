@@ -1,0 +1,860 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ActivityMapper">
+	<insert id="insertActivity" parameterType="java.util.Map">
+	  insert into flb.t_join_activity_record (activity_code, phone, join_time,regist_type)
+      values (#{activityCode,jdbcType=VARCHAR},#{phone,jdbcType=VARCHAR},#{joinTime,jdbcType=TIMESTAMP},#{registType,jdbcType=INTEGER})
+	</insert>
+
+	<select id="validRegistActivity" parameterType="java.util.Map" resultType="java.lang.Integer">
+		select t.id FROM flb.t_join_activity_record t
+		WHERE t.activity_code = #{activityCode} and t.phone = #{phone} 
+		order by t.id limit 1
+	</select>
+
+	<select id="getOlympicRedPacketList" parameterType="java.util.Map" resultType="RedPacketOlympicActivityVO">
+		SELECT
+			r.id id,
+			FLOOR(r.red_money) amount,
+			FLOOR(r.invest_money) investAmount,
+			r.invest_deadline investDeadline,
+			r.time_start startTime,
+			r.time_end endTime
+			<if test="userId != null">
+				,IFNULL(u.`status`,0) isReceive
+			</if>
+		FROM
+			flb.t_red_packet r
+		<if test="userId != null">
+			LEFT JOIN
+			(SELECT redpacket_id,`status` FROM flb.t_user_redpackets WHERE user_id = #{userId} AND DATE(DATE_ADD(create_timestamp,INTERVAL 1 DAY)) <![CDATA[ >= ]]> CURDATE() ORDER BY create_timestamp DESC)u ON r.id = u.redpacket_id
+		</if>
+		WHERE
+			r.activity_code = #{activityCode}
+		  GROUP BY r.id ORDER BY r.invest_deadline,r.red_money ASC
+	</select>
+
+	<select id="getCurdateUnusedOlympicRedPacket" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT r.id FROM flb.t_user_redpackets u
+		INNER JOIN flb.t_red_packet r ON u.redpacket_id = r.id
+		WHERE u.user_id = #{userId}
+		AND r.activity_code = #{activityCode}
+		AND DATE(DATE_ADD(u.create_timestamp,INTERVAL 1 DAY)) <![CDATA[ >= ]]> CURDATE()
+		AND u.`status` = 1 LIMIT 1
+	</select>
+
+
+	<insert id="insertUserActivityEvent" parameterType="java.util.Map">
+	  insert into flb.t_user_activity_virusspread (phone_num, event_)
+      values (#{phone,jdbcType=VARCHAR},#{eventType,jdbcType=INTEGER})
+	</insert>
+
+	<select id="getUserActivityEvent" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+			t_user_activity_virusspread.id
+		FROM
+			flb.t_user_activity_virusspread
+		WHERE
+			t_user_activity_virusspread.phone_num=#{phone}
+		and
+			t_user_activity_virusspread.event_=#{eventType}
+ 		LIMIT 1
+	</select>
+
+
+		<select id="getAugustInvitationFriends" parameterType="java.util.Map" resultType="VirusSpreadFreinds">
+		SELECT
+			flb.t_user_icon.pic_url as avatar,
+			flb.t_user_activity_virusspread.phone_num as phone
+		FROM
+			s61.t6110
+		left JOIN flb.t_user_icon ON s61.t6110.F01 = flb.t_user_icon.user_id
+		INNER JOIN s63.t6311 ON s63.t6311.F03 = s61.t6110.F01
+		INNER JOIN flb.t_user_activity_virusspread ON s61.t6110.F04 = flb.t_user_activity_virusspread.phone_num
+		WHERE
+			t6311.F02=(select t6110.f01 FROM s61.t6110 WHERE t6110.f04 = #{phone})
+		GROUP BY
+			t_user_activity_virusspread.phone_num
+		ORDER BY t_user_activity_virusspread.create_time desc
+		limit 10
+	</select>
+	<select id="minisoPhoneCheck" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			flb.t_channel.`code` AS channelCode,
+			s62.t6250.F04 AS investAmout,
+			s61.t6110.F12 AS firstLoginFlag,
+			(case when s61.t6110.F09<![CDATA[<]]>'2017-02-23' then 1
+			when s61.t6110.F09 <![CDATA[>=]]> '2017-02-23' then 2 END) as activity
+		FROM
+			s61.t6110
+		left JOIN flb.t_user_origin ON s61.t6110.F01 = flb.t_user_origin.user_id
+		left JOIN flb.t_channel ON flb.t_user_origin.channel_code = flb.t_channel.`code`
+		left JOIN s62.t6250 ON s61.t6110.F01 = s62.t6250.F03
+		where
+			(t_channel.`code` = 'mcMember' or t_channel.`code` = 'mcxshd'
+			OR t6110.f02 IN(SELECT phone_num from pf.pf_member_info))
+		AND
+			t6110.F04=#{phone}
+		LIMIT 1
+	</select>
+
+	<select id="getMcMembersForCashback" parameterType="java.util.Map" resultType="McMemberForCashback">
+		<![CDATA[
+		SELECT
+			tab6250.F01 as recordId,
+			tab6250.F03 as userId,
+			s61.t6110.F04 as phone
+		FROM
+		(SELECT
+				t.F01,t.F03,t.F04,t.F06,t.F02
+			FROM (
+				select * from(
+					select * from s62.t6250,flb.t_activity
+					where t_activity.`code`='MC_ACTIVITY_CASH'
+					and (t6250.F06 BETWEEN t_activity.time_start and t_activity.time_end)
+					ORDER BY t6250.F01 ASC)
+				tem GROUP BY tem.F03
+				 )t	WHERE NOT EXISTS(
+					SELECT * from s62.t6250 a where a.f03 = t.f03 and a.F06 < t.time_start
+			) )tab6250
+		INNER JOIN s61.t6110 on tab6250.F03=t6110.F01
+		INNER JOIN flb.t_user_origin on t6110.f01 = t_user_origin.user_id
+			and (t_user_origin.channel_code = 'mcMember' OR t_user_origin.channel_code = 'mcxshd'
+			OR t6110.f02 IN(SELECT phone_num from pf.pf_member_info))
+		LEFT JOIN flb.t_plan_bid_record on t_plan_bid_record.bid_record_id = tab6250.F01
+		LEFT JOIN flb.t_plan_record on t_plan_record.id = t_plan_bid_record.plan_record_id
+		where
+			s61.t6110.F09 < '2017-04-01'
+		AND
+			(tab6250.F04 >= 1000 OR t_plan_record.amount >=1000)
+		AND
+		NOT EXISTS (
+		SELECT
+			cash.userId
+		FROM
+			flb.t_activity_mcmember_september_record as cash
+		where cash.userId= t6110.F01
+		)
+		GROUP BY tab6250.F03
+		ORDER BY tab6250.F01 desc
+		LIMIT 50
+		]]>
+	</select>
+
+	<insert id="insertActivityMcmember" parameterType="java.util.Map">
+		INSERT INTO flb.t_activity_mcmember_september_record (
+			userId,
+			amount,
+			recordId
+		)
+		VALUES
+			(#{userId,jdbcType=INTEGER},
+			 #{amount,jdbcType=DECIMAL},
+			 #{recordId,jdbcType=INTEGER})
+	</insert>
+
+	<update id="uptateMcMemberSeptemberRecord" parameterType="java.util.Map">
+		update flb.t_activity_mcmember_september_record record
+		set record.grantState=#{grantState}
+		<if test="failLog != null">
+			,record.failLog=#{failLog}
+		</if>
+		WHERE record.userId=#{userId}
+	</update>
+
+	<select id="getMcMemberForBillSms" parameterType="java.util.Map" resultType="McMemberForBillSms">
+		<![CDATA[
+		SELECT
+			tab6250.F01 as recordId,
+			tab6250.F03 as userId,
+			t6110.F04 as phone,
+			(case WHEN tab6250.F04 >= 5888 OR t_plan_record.amount >= 5888 then 1
+			  WHEN tab6250.F04 >= 2888 OR t_plan_record.amount >= 2888 then 2 END) as parvalue
+		FROM
+		(SELECT
+				t.F01,t.F03,t.F04,t.F06,t.F02
+			FROM (
+				select * from(
+					select * from s62.t6250,flb.t_activity
+					where t_activity.`code`='MC_ACTIVITY_PRIZE'
+					and (t6250.F06 BETWEEN t_activity.time_start and t_activity.time_end)
+					ORDER BY t6250.F01 ASC) tem GROUP BY tem.F03
+				 )t	WHERE NOT EXISTS(
+					SELECT * from s62.t6250 a where a.f03 = t.f03 and a.F06 < t.time_start
+			) )tab6250
+
+		INNER JOIN s61.t6110 on tab6250.F03=t6110.F01
+		INNER JOIN flb.t_user_origin on t6110.f01 = t_user_origin.user_id
+			AND (t_user_origin.channel_code = 'mcMember' OR t_user_origin.channel_code = 'mcxshd'
+			OR t6110.f02 IN(SELECT phone_num from pf.pf_member_info))
+
+		LEFT JOIN flb.t_plan_bid_record on t_plan_bid_record.bid_record_id = tab6250.F01
+		LEFT JOIN flb.t_plan_record on t_plan_record.id = t_plan_bid_record.plan_record_id
+		LEFT JOIN s62.`t6230` ON t6230.F01 = tab6250.F02
+		WHERE
+			s61.t6110.F09 >= '2017-02-23'
+		AND
+			(t6230.f09 >= 6 || t6230.F32 >= 30*6)
+		AND
+			(tab6250.F04 >= 2888 OR t_plan_record.amount >= 2888)
+		AND
+		NOT EXISTS (
+		SELECT
+			prize.userId
+		FROM
+			flb.t_activity_mcMember_september_sms prize
+		where prize.userId= t6110.F01
+		)
+		GROUP BY tab6250.F03
+		ORDER BY tab6250.F01 desc
+		LIMIT 200
+		]]>
+	</select>
+
+	<insert id="insertMcMemberSeptemberSms" parameterType="java.util.Map">
+		INSERT INTO flb.t_activity_mcMember_september_sms (
+			userId,
+			parvalue,
+			recordId
+		)
+		VALUES
+		(#{userId,jdbcType=INTEGER},
+		#{parvalue,jdbcType=INTEGER},
+		#{recordId,jdbcType=INTEGER})
+	</insert>
+
+	<!--判断是否在活动时间范围-->
+	<select id="isActivityTime" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			a.*
+		FROM
+			flb.t_activity a
+		WHERE
+			a.`code` = #{activityCode}
+			and  NOW() between a.time_start and a.time_end
+	</select>
+
+	<!--1周年活动投资记录-->
+	<select id="anniversaryInvestRecords" parameterType="java.util.Map" resultType="AnniversaryInvestRecord">
+		select a1.sumAmout,a1.phone from (
+		SELECT
+			a.user_id,a.phone,SUM(a.invest_amount) sumAmout,a.create_time
+		FROM
+		(
+		SELECT
+			r.invest_amount,
+			r.phone,
+			r.user_id,
+			r.create_time
+		FROM
+			flb.t_user_activity_anniversary_invest_record r
+			WHERE
+		r.create_time  <![CDATA[<=]]> NOW()
+		ORDER BY
+			r.create_time desc
+		)a
+		GROUP BY a.user_id
+		ORDER BY sumAmout desc,create_time asc ) a1
+		LIMIT 15
+	</select>
+
+	<!--1周年活动-我的冲榜信息接口-->
+	<select id="myAnniversaryInvestInfo" parameterType="java.util.Map" resultType="java.util.Map">
+		select IFNULL(e.mySumAmout,0) as total,COUNT(1) as rank from(
+		select * from (
+		SELECT
+			a.user_id,a.phone,SUM(a.invest_amount) sumAmout,a.create_time
+		FROM (
+			SELECT
+				r.invest_amount,
+				r.phone,
+				r.user_id,
+				r.create_time
+			FROM
+				flb.t_user_activity_anniversary_invest_record r
+			WHERE
+				r.create_time  <![CDATA[<=]]> NOW()
+			ORDER BY
+				r.create_time desc
+			)a GROUP BY a.user_id
+		) a1
+		, (
+		SELECT
+			SUM(b.invest_amount) as mySumAmout,b.create_time as mytime
+		from
+			(
+			SELECT
+				r.invest_amount,
+				r.phone,
+				r.user_id,
+				r.create_time
+			FROM
+				flb.t_user_activity_anniversary_invest_record r
+			WHERE
+				r.user_id = #{userId} and r.create_time  <![CDATA[<=]]> NOW()
+			ORDER BY
+				r.create_time desc
+			) b
+		GROUP BY
+			b.user_id) d
+
+		) e
+		WHERE e.sumAmout <![CDATA[>]]> e.mySumAmout
+		or (e.sumAmout=e.mySumAmout AND e.create_time <![CDATA[<=]]> e.mytime)
+	</select>
+
+	<!-- 地铁报活动 - 返现用户列表-->
+	<select id="getDtbForCashBack" parameterType="java.util.Map" resultType="DtbForCashBack">
+		<![CDATA[
+		SELECT
+		tab6250.F01 as recordId,
+		tab6250.F03 as userId,
+		s61.t6110.F04 as phone,
+		(case when tab6250.F04 >=5000 THEN 100 when tab6250.F04 >=500 then 30 end) amount
+		FROM
+		flb.t_user_origin
+		INNER JOIN s61.t6110 ON s61.t6110.F01 = flb.t_user_origin.user_id
+		INNER JOIN (
+		SELECT
+		t.F01,t.F02,t.F03,t.F04,t.F06
+		FROM (
+			select F01,F03,F04,F06,F02
+			from s62.t6250,flb.t_activity
+			where t_activity.`code` = 'DTB_CASHBACK_ACTIVITY'
+			and t6250.F06 BETWEEN t_activity.time_start and t_activity.time_end
+			ORDER BY t6250.F06 ASC
+		 )t GROUP BY t.F03
+		)tab6250 on tab6250.F03 = t6110.F01
+		where
+		t_user_origin.`channel_code` = 'dtb'
+		AND
+		tab6250.F04 >= 500
+		AND
+		NOT EXISTS (
+		SELECT
+		t_activity_cashback_record.userId
+		FROM
+		flb.t_activity_cashback_record
+		where t_activity_cashback_record.userId= t6110.F01
+		and t_activity_cashback_record.activity_code = 'DTB_CASHBACK_ACTIVITY'
+		)
+		ORDER BY tab6250.F01 desc
+		LIMIT 50
+		]]>
+	</select>
+
+	<insert id="insertActivityCashbackRecord" parameterType="java.util.Map">
+		INSERT INTO flb.t_activity_cashback_record (
+		activity_code,
+		userId,
+		amount,
+		recordId
+		)
+		VALUES
+		(#{code,jdbcType=VARCHAR},
+		#{userId,jdbcType=INTEGER},
+		#{amount,jdbcType=DECIMAL},
+		#{recordId,jdbcType=INTEGER})
+	</insert>
+
+	<update id="uptateActivityCashbackRecord" parameterType="java.util.Map">
+		update flb.t_activity_cashback_record record
+		set record.grantState = #{grantState}
+		<if test="failLog != null">
+			,record.failLog = #{failLog}
+		</if>
+		WHERE record.userId = #{userId}
+		AND record.activity_code = #{code}
+	</update>
+
+	<delete id="deleteActivityCashbackRecord" parameterType="java.util.Map">
+		DELETE from flb.t_activity_cashback_record
+		WHERE userId = #{userId}
+		AND activity_code = #{code}
+		AND amount = #{amount}
+	</delete>
+
+	<select id="getUserActivityRecord" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT
+		record.id
+		FROM
+		flb.t_activity_user_record record
+		WHERE
+		record.`code`=#{code}
+		and record.phone=#{phone}
+		LIMIT 1
+	</select>
+
+	<insert id="insertUserActivityRecord" parameterType="java.util.Map">
+		INSERT INTO flb.t_activity_user_record (
+		code,
+		phone
+		) VALUES
+		(#{code,jdbcType=VARCHAR},
+		#{phone,jdbcType=VARCHAR});
+	</insert>
+
+	<insert id="saveDesignated" parameterType="java.util.Map">
+		INSERT INTO flb.t_annual_metting_designated (
+		name,
+		phone,
+		prizeCode
+		) VALUES
+		(#{name,jdbcType=VARCHAR},
+		#{phone,jdbcType=VARCHAR},
+		#{prizeCode,jdbcType=VARCHAR});
+	</insert>
+
+	<!--获取奖品列表-->
+	<select id="getAnnualMeetingPrize" parameterType="java.util.Map"
+			resultType="AnnualMeetingPrize">
+		SELECT
+		prize.id,
+		prize.prizeName prizeName,
+		prize.prizeCode prizeCode,
+		prize.type `type`,
+		prize.qty qty,
+		prize.amout amout
+		FROM
+		flb.t_annual_metting_prize prize
+		<if test="type != null and type != ''">
+			where prize.type = #{type}
+		</if>
+	</select>
+
+	<!--获取奖品-->
+	<select id="getAnnualMeetingPrizeSingle" parameterType="java.util.Map"
+			resultType="AnnualMeetingPrize">
+        SELECT
+        prize.id,
+        prize.prizeName prizeName,
+        prize.prizeCode prizeCode,
+        prize.type `type`,
+        prize.qty qty,
+        prize.amout amout
+        FROM
+        flb.t_annual_metting_prize prize
+        <where>
+            <if test="type != null and type != ''">
+                prize.type = #{type}
+            </if>
+            <if test="prizeCode != null and prizeCode != ''">
+                and prize.prizeCode = #{prizeCode}
+            </if>
+        </where>
+	</select>
+
+	<!--年会抽红包-->
+	<select id="drawRedPacket" parameterType="java.util.Map"
+			resultType="AnnualMettingParticipant">
+		SELECT tamp.`id`, t6141.`F02` AS `name`, tamp.`phone`
+		FROM flb.t_annual_metting_participant tamp
+		INNER JOIN s61.t6110 t6110 ON tamp.`phone` = t6110.`F02`
+		INNER JOIN s61.`t6141` t6141 ON t6141.`F01` = t6110.`F01` AND t6141.`F02` IS NOT NULL
+		INNER JOIN s62.t6250 ON s61.t6110.F01 = s62.t6250.F03 AND t6250.f06>'2017-01-01'
+		WHERE  NOT EXISTS(
+			SELECT * from flb.t_annual_metting_designated d WHERE tamp.phone = d.phone
+		)
+		AND NOT EXISTS(
+			SELECT * from flb.t_annual_metting_record record WHERE tamp.phone = record.phone and record.type = '2'
+		)
+		GROUP BY t6110.F01
+		ORDER BY RAND() LIMIT  #{normalWinnersNum}
+	</select>
+
+	<update id="updatePrizeNum" parameterType="java.util.Map">
+		UPDATE flb.`t_annual_metting_prize` tamp
+		SET tamp.`qty` = tamp.`qty` - #{qty}
+		WHERE tamp.`prizeCode` =  #{prizeCode}
+			AND tamp.`qty` >= #{qty}
+	</update>
+
+	<insert id="saveAnnualMettingRecords" parameterType="java.util.Map">
+		INSERT INTO flb.t_annual_metting_record (`name`, `phone`, `type`, `prizeCode`, `realFlag`)
+		VALUE (#{name}, #{phone}, #{type}, #{prizeCode}, #{realFlag})
+	</insert>
+
+	<select id="getDesignatedistForRedPacket" parameterType="java.util.Map"
+			resultType="AnnualMeetingDesignated">
+		SELECT
+		a.`name`,
+		a.phone,
+		a.realFlag,
+		a.prizeCode
+		FROM
+		flb.t_annual_metting_designated a
+		INNER JOIN flb.t_annual_metting_prize b ON a.prizeCode = b.prizeCode
+		WHERE b.type = '2'
+		and not EXISTS (
+		select *
+		from flb.t_annual_metting_record c
+		where
+		c.phone=a.phone and c.type='2'
+		)
+		ORDER BY RAND()
+		limit #{qty}
+	</select>
+
+	<update id="uptateAnnualMettingRecords" parameterType="java.util.Map">
+		update flb.t_annual_metting_record record
+		set record.grantState = #{grantState}
+		WHERE record.phone = #{phone}
+		AND  record.type = #{type}
+	</update>
+
+	<!--获取奖品详情-->
+	<select id="getAnnualMeetingPrizeInfo" parameterType="java.util.Map"
+			resultType="AnnualMeetingPrize">
+		SELECT
+		prize.id,
+		prize.prizeName prizeName,
+		prize.prizeCode prizeCode,
+		prize.type type,
+		prize.qty
+		FROM
+		flb.t_annual_metting_prize prize
+		WHERE prizeCode=#{code}
+		FOR UPDATE
+	</select>
+
+	<!--随机抽中奖红米手机-->
+	<select id="getRamdomHM" parameterType="java.util.Map" resultType="AnnualMettingRecord">
+		SELECT
+			t6141.F02 as name,
+			t_annual_metting_participant.phone as phone,
+			1 as type,
+			'PHONE_HM' as prizeCode,
+			1 as realFlag
+		FROM flb.t_annual_metting_participant
+		INNER JOIN s61.t6110 ON flb.t_annual_metting_participant.phone = s61.t6110.F02
+		INNER JOIN (
+			SELECT * FROM
+			s62.t6250,flb.t_activity
+			where  t_activity.`code`='ANNUAL_MEETING_ACTIVITY'
+			AND t6250.F06 BETWEEN t_activity.time_start and  t_activity.time_end ) t6250 ON s61.t6110.F01 = s62.t6250.F03
+			INNER JOIN s61.t6141 ON s61.t6110.F01 = s61.t6141.F01 and t6141.F02 is not null
+		WHERE not EXISTS(
+					select * from flb.t_annual_metting_record
+					WHERE t_annual_metting_record.type = 1
+					and t_annual_metting_record.phone = t6110.F04
+		)
+		group by t6110.F01
+		ORDER BY RAND()
+		limit  #{qty}
+	</select>
+
+	<!--保存中奖结果-->
+	<insert id="saveAnnualMettingRecord" parameterType="java.util.Map">
+		INSERT INTO flb.t_annual_metting_record (
+		name,
+		phone,
+		type,
+		prizeCode,
+		realFlag
+		) VALUES
+		(#{name,jdbcType=VARCHAR},
+		#{phone,jdbcType=VARCHAR},
+		#{type,jdbcType=INTEGER},
+		#{prizeCode,jdbcType=VARCHAR},
+		#{realFlag,jdbcType=INTEGER}
+		);
+	</insert>
+	<!--更新奖品信息-->
+	<update id="updateAnnualMeetingPrizeInfo" parameterType="java.util.Map">
+		update flb.t_annual_metting_prize p
+		set p.qty = p.qty-#{qty}
+		WHERE p.prizeCode = #{prizeCode}
+	</update>
+
+	<!--查询指定iphone手机中奖名单-->
+	<select id="getIphoneDesignatedist" parameterType="java.util.Map"
+			resultType="AnnualMettingRecord">
+		SELECT
+		a.`name`,
+		a.phone,
+		a.realFlag,
+		a.prizeCode,
+		b.type
+		FROM
+		flb.t_annual_metting_designated a
+		INNER JOIN flb.t_annual_metting_prize b ON a.prizeCode = b.prizeCode
+		WHERE b.type=3
+		AND b.qty>0
+		and not EXISTS (
+		select * from
+		flb.t_annual_metting_record c
+		where
+		c.phone=a.phone and c.type = 3
+		)
+		ORDER BY a.createtime desc
+		limit #{qty}
+	</select>
+
+	<!--查询iPhone用户中奖概率数据-->
+	<select id="getAnnualMettingDrawRateRecord" parameterType="java.util.Map" resultType="AnnualMettingDrawRateRecord">
+		SELECT
+			t6141.F02 as name,
+			iphone.phone,
+			SUM(t6250.f05)/(SELECT SUM(t6250.f05)
+					FROM flb.t_annual_metting_participant_iphone iphone
+					INNER JOIN s61.t6110 ON flb.iphone.phone = s61.t6110.F04
+					INNER JOIN ( SELECT * FROM
+						s62.t6250,flb.t_activity
+						where  t_activity.`code`='ANNUAL_MEETING_ACTIVITY'
+						AND t6250.F06 BETWEEN t_activity.time_start and  t_activity.time_end
+						AND t6250.F05>=1000) t6250 ON s61.t6110.F01 = s62.t6250.F03
+					WHERE not EXISTS(
+								select * from flb.t_annual_metting_record record
+								WHERE  record.type <![CDATA[<>]]> 2
+								and record.phone = t6110.F04
+					)) drawRate
+			FROM
+			flb.t_annual_metting_participant_iphone iphone
+			INNER JOIN s61.t6110 ON flb.iphone.phone = s61.t6110.F04
+			INNER JOIN s61.t6141 ON s61.t6110.F01 = s61.t6141.F01 and t6141.F02 is not null
+			INNER JOIN (
+				SELECT * FROM
+				s62.t6250,flb.t_activity
+				where  t_activity.`code`='ANNUAL_MEETING_ACTIVITY'
+				AND t6250.F06 BETWEEN t_activity.time_start and  t_activity.time_end
+				AND t6250.F05>=1000) t6250 ON s61.t6110.F01 = s62.t6250.F03
+			WHERE not EXISTS(
+						select * from flb.t_annual_metting_record record
+						WHERE record.type <![CDATA[<>]]> 2
+						and record.phone = t6110.F04
+			)
+			GROUP BY t6110.F01
+	</select>
+
+	<!--查询中奖名单-->
+	<select id="getAnnualMeetingRecords" parameterType="java.util.Map"
+			resultType="AnnualMettingRecord">
+		SELECT tamr.*, tamp.`amout`, tamp.`prizeName`
+		FROM flb.`t_annual_metting_record` tamr
+		LEFT JOIN flb.`t_annual_metting_prize` tamp ON tamr.`prizeCode` = tamp.`prizeCode`
+		WHERE tamr.`type` = #{type}
+	</select>
+
+	<!--查询弹幕-->
+	<select id="getAnnualMeetingParticipants" parameterType="java.util.Map"
+			resultType="AnnualMettingParticipant">
+		SELECT tamp.`id`, t6141.`F02` AS `name`, tamp.phone
+		FROM flb.`t_annual_metting_participant` tamp
+		INNER JOIN s61.t6110 t6110 ON tamp.`phone` = t6110.`F02`
+		LEFT JOIN s61.`t6141` t6141 ON t6141.`F01` = t6110.`F01`
+		WHERE tamp.`phone` NOT IN(
+			SELECT tamr.`phone`
+			FROM flb.`t_annual_metting_record` tamr
+			WHERE tamr.`type` = #{type}
+		)
+		AND t6141.`F02` IS NOT NULL
+		ORDER BY RAND() LIMIT #{qty}
+	</select>
+
+	<!--判断是否在活动状态-->
+	<select id="getActivityState" parameterType="java.util.Map" resultType="java.lang.Integer">
+		<![CDATA[SELECT
+		(case when NOW() <a.time_start then 1
+		when NOW() BETWEEN a.time_start AND a.time_end then 2
+		when NOW() > a.time_end then 3 end) activityState
+		FROM
+		flb.t_activity a
+		WHERE
+		a.`code` = #{activityCode}
+		limit 1]]>
+	</select>
+
+	<!--获取未掉落的果实列表-->
+	<select id="myMoneyTreeFruitList" parameterType="java.util.Map" resultType="MoneyTreeFruit">
+		SELECT
+			tmf.`id` AS id,
+			t6110.`F14` AS friendName,
+			tmf.`create_time` AS bornTime,
+			TIMESTAMPDIFF(SECOND, create_time, expected_drop_time) AS leftTime
+		FROM flb.`t_moneyTree_fruit` tmf
+		LEFT JOIN s61.`t6110` t6110 ON tmf.`invitee_id` = t6110.`F01`
+		WHERE user_id = #{userId}
+		AND status = 'WDL'
+		AND NOW() <![CDATA[<]]> expected_drop_time
+	</select>
+
+	<!--获取摇钱树获奖列表-->
+	<select id="myMoneyTreePrizeList" parameterType="java.util.Map" resultType="MoneyTreePrize">
+		SELECT
+			tmf.`id` AS id,
+			lulr.`prize_id` AS prizeId,
+			llp.prize_type AS prizeType,
+			llp.`prize_name` AS prizeName
+		FROM flb.`t_moneyTree_fruit` tmf
+		LEFT JOIN lt.`lt_user_lottery_record` lulr ON lulr.`id` = tmf.`prize_record_id`
+		LEFT JOIN lt.`lt_lottery_prize` llp ON llp.`prize_id` = lulr.`prize_id`
+		WHERE tmf.user_id = #{userId}
+		AND tmf.status = 'YZQ'
+	</select>
+
+	<select id="checkAndLockFruit" parameterType="java.util.Map" resultType="java.lang.Boolean">
+		SELECT IF(COUNT(id) = 0, FALSE, TRUE)
+		FROM flb.`t_moneyTree_fruit`
+		WHERE STATUS = 'WDL'
+			AND id = #{fruitId}
+			AND user_id = #{userId}
+		FOR UPDATE
+	</select>
+
+	<update id="updateFruitYZQ" parameterType="java.util.Map">
+		UPDATE flb.`t_moneytree_fruit` tmf
+		SET tmf.`status` = 'YZQ',
+			tmf.`prize_record_id` = #{prizeId},
+			tmf.`status_update_time` = NOW()
+		WHERE tmf.`id` = #{fruitId}
+	</update>
+
+	<select id="alreadyGetPrizeSum" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(1)
+		FROM flb.`t_moneyTree_fruit` tmf
+		LEFT JOIN lt.`lt_user_lottery_record` lulr ON lulr.`id` = tmf.`prize_record_id`
+		LEFT JOIN lt.`lt_lottery_prize` llp ON llp.`prize_id` = lulr.`prize_id`
+		WHERE tmf.user_id = #{userId}
+		AND tmf.status = 'YZQ'
+		AND llp.`prize_id` = #{prizeId}
+	</select>
+
+	<!--保存中奖结果-->
+	<insert id="insertLotteryBiz" parameterType="java.util.Map">
+		INSERT INTO lt.`lt_lottery_biz`
+		SET lottery_record_id= #{prizeRecordId},
+		prize_type =  #{prizeType},
+		biz_id = #{bizId}
+	</insert>
+
+	<!--获取摇钱树详情-->
+	<select id="getMoneyTreeActityDetail" parameterType="java.util.Map" resultType="ActivityEntity">
+		SELECT
+		tcy.`id` AS activityId,
+		tcy.`name` AS activityTitle,
+		tcy.code AS activityCode,
+		tcy.`time_start` AS startTime,
+		tcy.`time_end` AS endTime
+		FROM flb.`t_activity` tcy
+		WHERE tcy.`code` = 'flblcj'
+	</select>
+
+	<!--获取摇钱树详情-->
+	<select id="checkAndGetRegister" resultType="MoneyTreeRegisterCheckEntity">
+		SELECT
+			t6110.`F01` AS inviteeId,
+			t6110.`F04` AS inviteePhoneNum,
+			inviterT6110.`F01` AS inviterId,
+			inviterT6110.`F04` AS inviterPhoneNum,
+			combine6250.investAmount AS investAmount,
+			combine6250.investTime AS investTime,
+			COUNT(tmf1.id) AS invitedNumToday
+		FROM s61.`t6110` t6110
+		LEFT JOIN s61.`t6111` t6111 ON t6111.`F01` = t6110.`F01`
+		LEFT JOIN s61.`t6110` inviterT6110 ON inviterT6110.`F04` = t6111.`F04`
+		LEFT JOIN (
+			SELECT *
+			FROM (
+				<!--标-->
+				SELECT
+					t6250.F03 AS userId,
+					t6250.F04 AS investAmount,
+					t6250.F06 AS investTime
+				FROM s62.`t6250` t6250, flb.t_activity
+				WHERE t_activity.`code`='flblcj'
+				AND (t6250.F06 BETWEEN t_activity.time_start AND t_activity.time_end)
+				AND NOT EXISTS (SELECT 1 FROM flb.`t_user_plan_product` WHERE tender_id = t6250.`F01`)
+
+				UNION ALL
+
+				<!--计划-->
+				SELECT
+					tup.user_id AS userId,
+					tup.invest_amount AS investAmount,
+					tup.create_time AS investTime
+				FROM flb.`t_user_plan` tup, flb.t_activity
+				WHERE t_activity.`code`='flblcj'
+				AND (tup.create_time BETWEEN t_activity.time_start AND t_activity.time_end)
+
+				ORDER BY investTime ASC
+			) temp
+			GROUP BY temp.userId
+		) combine6250 ON combine6250.userId = t6110.`F01`
+		LEFT JOIN flb.`t_moneytree_fruit` tmf ON t6110.`F01` = tmf.`invitee_id`
+		LEFT JOIN (SELECT * FROM flb.`t_moneytree_fruit` WHERE DATEDIFF(NOW(),t_moneytree_fruit.create_time) = 0) tmf1 ON inviterT6110.`F01` = tmf1.`inviter_id`
+
+		WHERE (t6110.F09 BETWEEN (SELECT time_start FROM flb.`t_activity` WHERE t_activity.`code` = 'flblcj') AND (SELECT time_end FROM flb.`t_activity` WHERE t_activity.`code` = 'flblcj'))
+		AND t6111.F04 IS NOT NULL AND t6111.F04 != ''
+		AND IFNULL(combine6250.investAmount,0) > 0
+		AND DATEDIFF(NOW(),combine6250.investTime) = 0
+		AND tmf.`id` IS NULL
+		AND (DATEDIFF(NOW(),tmf1.`create_time`) = 0 OR tmf1.`id` IS NULL)
+		GROUP BY t6110.`F01`
+	</select>
+
+	<!--保存分利果-->
+	<insert id="insertMoneyTreeFruit" parameterType="MoneyTreeFruitRecord">
+		INSERT INTO flb.`t_moneytree_fruit`
+		SET user_id = #{userId},
+			inviter_id = #{inviterId},
+			invitee_id = #{inviteeId},
+			invite_amount = #{inviteAmount},
+			STATUS = 'WDL',
+			status_update_time = NOW(),
+			expected_drop_time = DATE_FORMAT(DATE_SUB(NOW(),INTERVAL -1 DAY), '%Y-%m-%d 23:59:59')
+	</insert>
+
+	<select id="getPhoneStatus" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT COUNT(*) FROM flb.t_activity_user_phone u
+		WHERE u.user_id = #{userId}
+		AND u.`code` = 'cgkh' LIMIT 1
+	</select>
+
+	<insert id="addActivityUserPhone" parameterType="java.util.Map">
+		insert into flb.t_activity_user_phone (user_id, phone, code,create_time)
+		values (#{userId},#{phone},#{code},now())
+	</insert>
+
+	<!--批量自动注册用户-->
+	<select id="getAutoRegistList" parameterType="java.util.Map" resultType="AutoRegist">
+         SELECT
+		re.id AS id,
+		re.user_id AS  userId,
+		re.`regist_status` AS registStatus,
+		re.`card_status`  AS cardStatus,
+		re.`mobile` AS  mobile,
+		re.`name` AS name,
+		re.`idcard` AS idCard
+		FROM test.t_auto_regist re
+		where 1=1
+		<if test="registStatus != null and registStatus != ''">
+			and re.regist_status = #{registStatus}
+		</if>
+		<if test="cardStatus != null and cardStatus != ''">
+			and re.card_status = #{cardStatus}
+		</if>
+		limit #{limit}
+	</select>
+
+	<update id="updateAutoRegist" parameterType="java.util.Map">
+		UPDATE test.`t_auto_regist` tar
+		SET
+		tar.`mobile` = #{phone}
+		<if test="registStatus != null and registStatus != ''">
+			,tar.`regist_status` = #{registStatus}
+		</if>
+		<if test="cardStatus != null and cardStatus != ''">
+			 ,tar.card_status = #{cardStatus}
+		</if>
+		<if test="registLog != null and registLog != ''">
+			,tar.regist_log = #{registLog}
+		</if>
+		<if test="cardLog != null and cardLog != ''">
+			,tar.card_log = #{cardLog}
+		</if>
+		<if test="userId != null and userId != ''">
+			,tar.user_id = #{userId}
+		</if>
+		WHERE tar.`id` = #{id}
+	</update>
+</mapper>

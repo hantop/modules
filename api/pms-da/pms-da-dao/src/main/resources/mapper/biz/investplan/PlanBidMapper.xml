@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.biz.investplan.PlanBidMapper">
+
+	<select id="getPlanBindBids" parameterType="java.util.Map" resultType="com.fenlibao.model.pms.da.biz.plan.BidForPlanVO">
+		SELECT
+		tppl.id AS planLibId,
+		tppl.plan_id AS planId,
+		tppl.is_bind as bind,
+		t6230.F01 AS bidId,
+		t6230.F02 AS userId,
+		t6230.F03 AS bidName,
+		t6230.F05 AS loanAmount,
+		t6230.F06 AS rate,
+		t6230.F07 AS voteAmount,
+		T6230.F09 AS month,
+		T6230.F32 AS loanDays,
+		T6230.F10 AS repaymentMode,
+		T6230.F28 AS isNoviceBid
+		FROM
+		s62.t6230 t6230
+		INNER JOIN flb.`t_plan_product_lib` tppl ON t6230.F01 = tppl.product_id
+		AND tppl.product_type = 1 AND tppl.is_bind = 1
+		WHERE
+		t6230.F20 = 'TBZ' AND t6230.F07 > 0
+		<if test="planId != null and planId != ''">
+			AND tppl.plan_id = #{planId}
+		</if>
+		<if test="!isGetAllPlanBindBids">
+			AND t6230.F07 <![CDATA[ <> ]]> t6230.F05
+		</if>
+		AND t6230.F36 = '0002'
+		AND t6230.F38 = 2
+		ORDER BY t6230.F01
+	</select>
+
+	<select id="lockBidById" resultType="com.fenlibao.model.pms.da.biz.plan.PlanBid">
+		SELECT
+			F01 AS bidId,
+			F02 AS userId,
+			F07 AS voteAmount,
+			F20 AS status
+		FROM
+			S62.T6230
+		WHERE
+			T6230.F01 = #{bidId} FOR UPDATE
+	</select>
+
+	<select id="lockInvestPlanById" resultType="com.fenlibao.model.pms.da.biz.plan.InvestPlanVO">
+		SELECT
+		id,
+		TYPE,
+		is_novice AS isNovice,
+		NAME as title,
+		number,
+		amount,
+		surplus_amount AS surplusAmount,
+		cycle,
+		cycle_type AS cycleType,
+		invest_rate AS investRate,
+		mo_increase_rate AS moIncreaseRate,
+		min_yearly_rate AS minYearlyRate,
+		max_yearly_rate AS maxYearlyRate,
+		raise_rate AS raiseRate,
+		display_time AS displayTime,
+		release_time AS releaseTime,
+		audit_time AS auditTime,
+		full_time AS fullTime,
+		settle_time AS settleTime,
+		bearrate_date AS bearrateTime,
+		expire_time AS expireTime,
+		overdue_rate AS overdueRate,
+		STATUS,
+		repay_mode AS repayMode,
+		fund_raising_period AS fundRaisingPeriod,
+		can_quit AS canQuit,
+		create_time AS createTime,
+		update_time AS updateTime,
+		is_cg AS isCG
+		FROM
+		flb.`t_invest_plan`
+		WHERE id = #{planId,jdbcType=INTEGER}
+		FOR UPDATE
+	</select>
+
+	<select id="getUserAccount" resultType="com.fenlibao.model.pms.da.biz.plan.UserAccount">
+		SELECT
+		a.F01 as accountId,a.F03 as type,a.F06 as balance,a.F02 as userId
+		FROM
+		S61.T6101 AS a
+		<where>
+			<if test="userId != null">
+				AND a.F02 = #{userId}
+			</if>
+			<if test="type != null">
+				AND a.F03 = #{type}
+			</if>
+		</where>
+	</select>
+
+	<select id="lockOrderById" resultType="com.fenlibao.model.pms.da.biz.plan.SysOrderVO">
+		SELECT
+		F01 AS orderId,
+		F03 AS status,
+		F07 AS level,
+		F08 AS userId,
+		F09 as adminId
+		FROM
+		S65.T6501
+		WHERE
+		T6501.F01 = #{orderId} FOR UPDATE
+	</select>
+
+	<select id="lockUserAccountById" resultType="com.fenlibao.model.pms.da.biz.plan.UserAccount">
+		SELECT
+		F01 AS accountId,
+		F02 AS userId,
+		F03 AS type,
+		F04 AS account,
+		F05 as accountName,
+		F06 AS balance
+		FROM
+		S61.T6101
+		WHERE
+		T6101.F01 = #{accountId} FOR UPDATE
+	</select>
+
+	<select id="getBidTypeByCode" resultType="int">
+		SELECT F01 FROM s62.`t6211` where F05 = #{code}
+	</select>
+
+	<select id="getUserIds" resultType="java.lang.String">
+		SELECT u.F01 FROM flb.t_special_account s INNER JOIN s61.t6110 u ON s.phone_num = u.F04
+		WHERE s.`status` = 1
+		<if test="uType != 0">
+			AND `type` = #{uType}
+		</if>
+		ORDER BY  seq_num DESC
+	</select>
+
+	<select id="getBidBorrowerUserNoBy" resultType="java.lang.String">
+		SELECT txp.borrower_platform_user_no FROM flb.t_xw_project txp WHERE txp.loan_id = #{bidId} limit 1
+	</select>
+
+	<insert id="addSysOrder" parameterType="com.fenlibao.model.pms.da.biz.plan.SysOrderVO"  useGeneratedKeys="true" keyProperty="orderId">
+		INSERT INTO S65.T6501 SET F02 = #{orderType}, F03 = #{status}, F04 = NOW(), F07 = #{level}, F08 = #{userId}
+	</insert>
+
+	<insert id="addPlanOrder">
+		INSERT INTO S65.plan_order SET id = #{orderId}, user_id = #{accountId}, plan_id = #{planId}, invest_amount = #{investAmount}
+	</insert>
+
+	<insert id="addTradeRecord" parameterType="com.fenlibao.model.pms.da.biz.plan.TradeRecord"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO S61.T6102 SET F02 = #{payAccountId}, F03 = #{payTypeId}, F04 = #{incomeAccountId}, F05 = NOW(), F06 = #{incomeAmount}, F07 = #{payAmount}, F08 = #{balance}, F09 = #{description}, order_id = #{orderId}
+	</insert>
+
+	<insert id="addErrorLog" parameterType="java.util.Map">
+		INSERT INTO S65.T6550 SET F02 = #{orderId}, F03 = #{exceptionStr}
+	</insert>
+
+	<insert id="addInvestBidRecord" parameterType="java.util.Map"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO S62.T6250 SET F02 = #{bidId}, F03 = #{investUser}, F04 = #{investAmount}, F05 = #{creditAmount}, F06 = NOW(), F09 = 'S'
+	</insert>
+    <!--  -->
+	<insert id="addXwTenders" parameterType="java.util.List">
+		INSERT INTO flb.t_xw_tender(bid_id, tender_id, pre_treat_request_no, investor_platform_user_no, borrower_platform_user_no) VALUES
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.bidId}, #{item.tenderId}, #{item.preRequestNo}, #{item.investorUserNo}, #{item.borrowerUserNo})
+		</foreach>
+	</insert>
+    <!-- -->
+	<insert id="addPlanProducts" parameterType="java.util.List">
+		INSERT INTO flb.t_user_plan_product(user_plan_id, product_type, product_id, tender_id, amount)
+		VALUES
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.userPlanId}, #{item.productType}, #{item.productId}, #{item.tenderId}, #{item.amount})
+		</foreach>
+	</insert>
+
+	<insert id="insertRecordForInvestPlan" parameterType="com.fenlibao.model.pms.da.biz.plan.InvestUserPlan" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.`t_user_plan`
+		SET user_id = #{userId} ,
+		plan_id = #{planId},
+		invest_amount = #{investAmount},
+		<if test="freezeAmount != null">
+			freeze_amount = #{freezeAmount},
+		</if>
+		status = 1
+	</insert>
+
+	<update id="unBindPlanBids">
+		UPDATE flb.t_plan_product_lib tpp INNER JOIN s62.t6230 t6230 ON t6230.F01 = tpp.product_id
+		SET tpp.plan_id = NULL, tpp.is_bind = 0
+		WHERE tpp.plan_id = #{planId}
+		AND tpp.product_type = 1
+		AND tpp.is_bind = 1
+		AND t6230.F20 = 'TBZ'
+		AND t6230.F05 = t6230.F07
+	</update>
+    <!---->
+	<update id="updateBids" parameterType="java.util.List">
+		UPDATE s62.t6230
+			<trim prefix="set" suffixOverrides=",">
+				<trim prefix=" F07 = case " suffix=" end,">
+					<foreach collection="list" item="item" index="index">
+						when F01 = #{item.bidId} then #{item.voteAmount}
+					</foreach>
+				</trim>
+				<trim prefix=" F20 = case " suffix=" end,">
+					<foreach collection="list" item="item" index="index">
+						when F01 = #{item.bidId} then #{item.status}
+					</foreach>
+				</trim>
+			</trim>
+		WHERE F01 IN
+			<foreach collection="list" separator="," item="item" index="index" open="(" close=")" >
+				#{item.bidId}
+			</foreach>
+	</update>
+    <!---->
+	<update id="updateBidFullTimes" parameterType="java.util.List">
+		UPDATE s62.t6231 SET F11 = NOW() WHERE F01 IN
+		<foreach collection="list" index="index" item="item"
+				 separator="," open="(" close=")">
+			#{item}
+		</foreach>
+	</update>
+
+	<update id="updateProductLib" parameterType="java.util.Map">
+		UPDATE flb.t_plan_product_lib tppl
+		SET
+			tppl.plan_id = #{planId},
+		 	tppl.is_bind = #{isBind}
+		WHERE tppl.id IN
+		<foreach collection="bindBids" index="index" item="item" open="(" separator= "," close=")">
+			#{item.planLibId}
+		</foreach>
+	</update>
+
+	<update id="releaseInvestPlan">
+		UPDATE flb.`t_invest_plan` SET `status` = 4, release_time = NOW(), update_time = NOW() WHERE id = #{planId}
+	</update>
+
+	<update id="updatePlanOrder"  parameterType="java.util.Map">
+		UPDATE s65.t6501
+		SET F03 = #{status},
+		 F05 = CASE
+		WHEN F03 = 'DQR' THEN
+			NOW()
+		WHEN F03 = 'YTJ' THEN
+		    NOW()
+		ELSE
+			F05
+		END,
+		 F06 = CASE
+		WHEN F03 = 'CG' THEN
+			NOW()
+		ELSE
+			F06
+		END
+		WHERE
+			F01 = #{orderId};
+	</update>
+
+	<update id="returnBackUserPlanId"  parameterType="java.util.Map">
+		UPDATE s65.plan_order
+		SET user_plan_id = #{userPlanId}
+		WHERE
+		id = #{orderId};
+	</update>
+
+	<update id="updateUserAmount">
+		UPDATE s61.t6101
+		SET F06 = #{balance}, F07 = NOW()
+		WHERE
+			F01 = #{accountId};
+	</update>
+
+	<update id="updateSurplusAmountForInvestPlan">
+		UPDATE flb.`t_invest_plan` tip
+		SET tip.`surplus_amount` = tip.`surplus_amount` - #{amount}
+		WHERE  tip.`id` = #{planId}
+		<![CDATA[
+		AND tip.`surplus_amount` - #{amount} >= 0
+		]]>
+	</update>
+
+</mapper>

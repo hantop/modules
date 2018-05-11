@@ -1,0 +1,442 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="PlanBidMapper">
+
+	<select id="getEnableReleasePlanConfig" parameterType="String" resultType="java.util.Map">
+		SELECT
+			F02 AS is_enabled
+		FROM
+			s10._1010 t_config
+		WHERE
+		    t_config.F01 = #{propertyKey}
+		LIMIT 1
+	</select>
+
+	<select id="getYqCount" resultType="int">
+		SELECT COUNT(1) FROM S62.T6252 WHERE F03 = #{accountId} AND F08 <![CDATA[ < ]]>  CURDATE() AND F09 = 'WH'
+	</select>
+
+	<select id="getPlanTemplates" resultType="com.fenlibao.p2p.model.entity.plan.PlanType">
+		SELECT
+			tpt.id AS id,
+			tpt.title as title,
+			tpt.rate AS  rate,
+			tpt.raised_rate AS raisedRate,
+			tpt.amount as amount,
+			tpt.cycle AS  cycle,
+			tpt.cycle_type AS cycleType,
+			tpt.repayment_type AS repaymentType,
+			tpt.stage_num AS stageNum,
+			tpt.description AS description,
+			tpt.is_novice_bid AS isNoviceBid,
+			tpt.priority AS priority,
+			tpt.create_time AS createTime,
+			tpt.update_time AS updateTime,
+			tpt.waitTime,
+			tpt.minAmount,
+			tpt.is_cg AS cgMode,
+			tpts.`status`,
+			tpt.total_user_assets AS totalUserAssets,
+			tpt.user_investing_amount AS userInvestingAmount,
+			tpt.user_accumulated_income AS userAccumulatedIncome,
+			tpt.target_user AS targetUser,
+			tpt.label AS label,
+			tpt.comment AS comment
+		FROM
+			flb.`t_plan_type` tpt
+		LEFT JOIN flb.`t_plan_type_status` tpts ON tpt.`id` = tpts.`plan_type_id`
+		WHERE
+			tpts.`status` = 'QY'
+		AND tpt.is_cg = 2
+		ORDER BY
+			priority DESC
+	</select>
+
+	<select id="getCountNewPlanBy" parameterType="com.fenlibao.p2p.model.entity.plan.PlanType" resultType="java.lang.Integer">
+		SELECT
+			IFNULL(COUNT(*),0)
+		FROM
+			flb.`t_invest_plan` tip
+		WHERE
+			tip.`status` IN (4, 8)
+		AND
+		IF (tip.`is_novice` = 1, 'S', 'F') = #{isNoviceBid}
+		AND tip.cycle = #{cycle}
+		AND tip.`cycle_type` = #{cycleType}
+		AND tip.`repay_mode` = #{repaymentType}
+		AND tip.`is_cg` = 2
+	</select>
+
+	<select id="getBidSumAmountBy" parameterType="java.util.Map" resultType="java.math.BigDecimal">
+		SELECT
+			IFNULL(SUM(t6230.F07),0)
+		FROM
+			s62.t6230 t6230
+		INNER JOIN flb.`t_plan_product_lib` tppl ON t6230.F01 = tppl.product_id
+		AND tppl.product_type = 1 AND tppl.is_bind = 0
+		WHERE
+			t6230.F20 = 'TBZ'
+		<if test="cycle != null and cycleType != null">
+			AND T6230.F32 = #{cycle} AND 'd' = #{cycleType}
+		</if>
+		<if test="repaymentType != null and repaymentType != ''">
+			AND t6230.F10 = #{repaymentType}
+		</if>
+		AND t6230.F36 = '0002'
+		AND t6230.F38 = 2
+	</select>
+
+	<select id="getBidsForPlanBy" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.vo.plan.BidForPlanVO">
+        SELECT
+        	tppl.id AS planLibId,
+        	tppl.plan_id AS planId,
+        	tppl.is_bind as bind,
+			t6230.F01 AS bidId,
+		    t6230.F02 AS userId,
+			t6230.F03 AS bidName,
+			t6230.F05 AS loanAmount,
+			t6230.F06 AS rate,
+			t6230.F07 AS voteAmount,
+			T6230.F09 AS month,
+			T6230.F32 AS loanDays,
+			T6230.F10 AS repaymentMode,
+			T6230.F28 AS isNoviceBid
+		FROM
+			s62.t6230 t6230
+		INNER JOIN flb.`t_plan_product_lib` tppl ON t6230.F01 = tppl.product_id
+		AND tppl.product_type = 1 AND tppl.is_bind = 0
+		WHERE
+			t6230.F20 = 'TBZ'
+		<if test="cycle != null and cycleType != null">
+			AND  T6230.F32 = #{cycle} AND 'd' = #{cycleType}
+		</if>
+		<if test="repaymentType != null and repaymentType != ''">
+			AND t6230.F10 = #{repaymentType}
+		</if>
+		AND t6230.F36 = '0002'
+		AND t6230.F38 = 2
+	</select>
+
+	<select id="getPlanBindBids" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.vo.plan.BidForPlanVO">
+		SELECT
+		tppl.id AS planLibId,
+		tppl.plan_id AS planId,
+		tppl.is_bind as bind,
+		t6230.F01 AS bidId,
+		t6230.F02 AS userId,
+		t6230.F03 AS bidName,
+		t6230.F05 AS loanAmount,
+		t6230.F06 AS rate,
+		t6230.F07 AS voteAmount,
+		T6230.F09 AS month,
+		T6230.F32 AS loanDays,
+		T6230.F10 AS repaymentMode,
+		T6230.F28 AS isNoviceBid
+		FROM
+		s62.t6230 t6230
+		INNER JOIN flb.`t_plan_product_lib` tppl ON t6230.F01 = tppl.product_id
+		AND tppl.product_type = 1 AND tppl.is_bind = 1
+		WHERE
+		t6230.F20 = 'TBZ' AND t6230.F07 > 0
+		<if test="planId != null and planId != ''">
+			AND tppl.plan_id = #{planId}
+		</if>
+		<if test="!isGetAllPlanBindBids">
+			AND t6230.F07 <![CDATA[ <> ]]> t6230.F05
+		</if>
+		AND t6230.F36 = '0002'
+		AND t6230.F38 = 2
+		ORDER BY t6230.F01
+	</select>
+
+	<select id="thisUserBorrowBidInPlan" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.vo.plan.BidForPlanVO">
+		SELECT
+		tppl.id AS planLibId,
+		tppl.plan_id AS planId,
+		tppl.is_bind as bind,
+		t6230.F01 AS bidId,
+		t6230.F02 AS userId,
+		t6230.F03 AS bidName,
+		t6230.F05 AS loanAmount,
+		t6230.F06 AS rate,
+		t6230.F07 AS voteAmount,
+		T6230.F09 AS month,
+		T6230.F32 AS loanDays,
+		T6230.F10 AS repaymentMode,
+		T6230.F28 AS isNoviceBid
+		FROM
+		flb.`t_plan_product_lib` tppl
+		INNER JOIN s62.t6230 t6230 ON t6230.F01 = tppl.product_id
+		AND tppl.product_type = 1 AND tppl.is_bind = 1
+		<where>
+			<if test="planId != null and planId != ''">
+				AND tppl.plan_id = #{planId}
+			</if>
+			<if test="userId != null and userId != ''">
+				AND t6230.F02 = #{userId}
+			</if>
+			AND t6230.F38 = 2
+		</where>
+	</select>
+
+	<select id="lockBidById" resultType="com.fenlibao.p2p.model.entity.plan.PlanBid">
+		SELECT
+			F01 AS bidId,
+			F02 AS userId,
+			F07 AS voteAmount,
+			F20 AS status
+		FROM
+			S62.T6230
+		WHERE
+			T6230.F01 = #{bidId} FOR UPDATE
+	</select>
+
+	<select id="lockOrderById" resultType="com.fenlibao.p2p.model.vo.plan.SysOrderVO">
+		SELECT
+		F01 AS orderId,
+		F03 AS status,
+		F07 AS level,
+		F08 AS userId,
+		F09 as adminId
+		FROM
+		S65.T6501
+		WHERE
+		T6501.F01 = #{orderId} FOR UPDATE
+	</select>
+
+	<select id="lockUserAccountById" resultType="com.fenlibao.p2p.model.entity.UserAccount">
+		SELECT
+		F01 AS accountId,
+		F02 AS userId,
+		F03 AS type,
+		F04 AS account,
+		F05 as accountName,
+		F06 AS balance
+		FROM
+		S61.T6101
+		WHERE
+		T6101.F01 = #{accountId} FOR UPDATE
+	</select>
+
+	<select id="getBidTypeByCode" resultType="int">
+		SELECT F01 FROM s62.`t6211` where F05 = #{code}
+	</select>
+
+	<select id="getNeedClosurePlans" resultType="com.fenlibao.p2p.model.entity.bid.InvestPlan">
+		SELECT F01 FROM s62.`t6211` where F05 = #{code}
+	</select>
+
+	<select id="getBidBorrowerUserNoBy" resultType="java.lang.String">
+		SELECT txp.borrower_platform_user_no FROM flb.t_xw_project txp WHERE txp.loan_id = #{bidId}
+	</select>
+
+	<select id="getRateManageRatio" resultType="java.math.BigDecimal">
+		SELECT tim.interest_percent FROM flb.t_interest_management tim WHERE tim.state = 1 ORDER BY tim.id DESC limit 1
+	</select>
+
+	<insert id="addInvestPlan" parameterType="com.fenlibao.p2p.model.entity.plan.PlanType" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.`t_invest_plan`
+		SET `type` = 2,
+			is_novice = IF('S'= #{isNoviceBid}, 1, 0),
+			name = #{title},
+			number = (SELECT * FROM (SELECT IF((SELECT MAX(number) FROM flb.t_invest_plan WHERE LENGTH(number) = 8 AND LEFT(number,4) = DATE_FORMAT(NOW(), '%y%m')) IS NULL, CONCAT(DATE_FORMAT(NOW(), '%y%m'),'0001'),(SELECT MAX(number)+1 FROM flb.t_invest_plan WHERE LENGTH(number) = 8 AND LEFT(number,4) = DATE_FORMAT(NOW(), '%y%m'))) FROM DUAL) tempNumber),
+			amount = #{amount},
+			surplus_amount = amount,
+			cycle = #{cycle},
+			cycle_type = #{cycleType},
+			invest_rate = #{rate},
+			raise_rate = #{raisedRate},
+			status = 3,
+			audit_time = NOW(),
+			update_time = NOW(),
+			fund_raising_period = (SELECT F02 * 24 FROM s10._1010 t_config WHERE t_config.F01 = 'CONSUMPTIONLOAN.RAISE_LINE' LIMIT 1),
+			can_quit = 0,
+			description = #{description},
+			repay_mode = #{repaymentType},
+			overdue_rate = (SELECT F02 FROM s10._1010 t_config WHERE t_config.F01 = 'CONSUMPTIONLOAN.INVEST_PLAN_YQFL' LIMIT 1),
+			is_cg = #{cgMode},
+			rate_manage_ratio = #{rateManageRatio}
+	</insert>
+
+	<insert id="addMarketSetting" parameterType="java.util.Map">
+		INSERT INTO flb.t_market_setting
+		SET product_type = #{productType},
+		 product_id = #{productId},
+		 total_user_assets = #{totalUserAssets},
+		 user_investing_amount = #{userInvestingAmount},
+		 user_accumulated_income = #{userAccumulatedIncome},
+		 target_user = #{targetUser},
+		 create_time = NOW(),
+		 update_time = NOW()
+	</insert>
+
+	<insert id="addProductLabel" parameterType="java.util.Map">
+		INSERT INTO flb.t_product_label
+		SET product_type = #{productType},
+		  product_id = #{productId},
+		  label = #{label},
+		  comment = #{comment},
+		  create_time = NOW(),
+		  update_time = NOW()
+	</insert>
+
+	<insert id="addSysOrder" parameterType="java.util.Map"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO S65.T6501 SET F02 = #{planOrderType}, F03 = #{status}, F04 = NOW(), F07 = #{orderFrom}, F08 = #{accountId}
+	</insert>
+
+	<insert id="addTradeRecord" parameterType="com.fenlibao.p2p.model.entity.plan.TradeRecord"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO S61.T6102 SET F02 = #{payAccountId}, F03 = #{payTypeId}, F04 = #{incomeAccountId}, F05 = NOW(), F06 = #{incomeAmount}, F07 = #{payAmount}, F08 = #{balance}, F09 = #{description}, order_id = #{orderId}
+	</insert>
+
+	<insert id="addBidOrder" parameterType="java.util.Map"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO S65.T6504 SET F01 = #{orderId}, F02 = #{accountId}, F03 = #{bidId}, F04 = #{investAmount}
+	</insert>
+
+	<insert id="addPlanOrder" parameterType="java.util.Map"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO S65.plan_order SET id = #{orderId}, user_id = #{accountId}, plan_id = #{planId}, invest_amount = #{investAmount}
+	</insert>
+
+	<insert id="addErrorLog" parameterType="java.util.Map">
+		INSERT INTO S65.T6550 SET F02 = #{orderId}, F03 = #{exceptionStr}
+	</insert>
+
+	<insert id="addUserPlanProduct" parameterType="java.util.Map">
+		INSERT INTO flb.`t_user_plan_product`
+		SET
+		user_plan_id = #{userPlanId},
+		product_type = #{productType},
+		product_id = #{productId},
+		amount = #{amount},
+		tender_id = #{tenderId}
+	</insert>
+
+	<insert id="addInvestBidRecord" parameterType="java.util.Map"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO S62.T6250 SET F02 = #{bidId}, F03 = #{investUser}, F04 = #{investAmount}, F05 = #{creditAmount}, F06 = NOW(), F09 = 'S'
+	</insert>
+
+	<insert id="addXwTenderRecord" parameterType="java.util.Map"  useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO flb.t_xw_tender SET bid_id = #{bidId}, tender_id = #{tenderId}, pre_treat_request_no = #{preRequestNo}, investor_platform_user_no = #{investorUserno}, borrower_platform_user_no = #{borrowerUserNo}
+	</insert>
+    <!--  -->
+	<insert id="addXwTenders" parameterType="java.util.Map">
+		INSERT INTO flb.t_xw_tender(bid_id, tender_id, pre_treat_request_no, investor_platform_user_no, borrower_platform_user_no) VALUES
+		<foreach collection="addXwTenders" item="item" index="index" separator=",">
+			(#{item.bidId}, #{item.tenderId}, #{item.preRequestNo}, #{item.investorUserNo}, #{item.borrowerUserNo})
+		</foreach>
+	</insert>
+    <!-- -->
+	<insert id="addPlanProducts" parameterType="java.util.Map">
+		INSERT INTO flb.t_user_plan_product(user_plan_id, product_type, product_id, tender_id, amount)
+		VALUES
+		<foreach collection="addPlanProducts" item="item" index="index" separator=",">
+			(#{item.userPlanId}, #{item.productType}, #{item.productId}, #{item.tenderId}, #{item.amount})
+		</foreach>
+	</insert>
+
+	<update id="unBindPlanBids">
+		UPDATE flb.t_plan_product_lib tpp INNER JOIN s62.t6230 t6230 ON t6230.F01 = tpp.product_id
+		SET tpp.plan_id = NULL, tpp.is_bind = 0
+		WHERE tpp.plan_id = #{planId}
+		AND tpp.product_type = 1
+		AND tpp.is_bind = 1
+		AND t6230.F20 = 'TBZ'
+		AND t6230.F05 = t6230.F07
+	</update>
+
+	<update id="updateBid" parameterType="com.fenlibao.p2p.model.entity.plan.PlanBid">
+		UPDATE s62.t6230 SET F07 = #{voteAmount}, F20 = #{status} WHERE F01 = #{bidId}
+	</update>
+    <!---->
+	<update id="updateBids" parameterType="java.util.List">
+		UPDATE s62.t6230
+			<trim prefix="set" suffixOverrides=",">
+				<trim prefix=" F07 = case " suffix=" end,">
+					<foreach collection="list" item="item" index="index">
+						when F01 = #{item.bidId} then #{item.voteAmount}
+					</foreach>
+				</trim>
+				<trim prefix=" F20 = case " suffix=" end,">
+					<foreach collection="list" item="item" index="index">
+						when F01 = #{item.bidId} then #{item.status}
+					</foreach>
+				</trim>
+			</trim>
+		WHERE F01 IN
+			<foreach collection="list" separator="," item="item" index="index" open="(" close=")" >
+				#{item.bidId}
+			</foreach>
+	</update>
+
+	<update id="updateBidExt">
+		UPDATE s62.t6231 SET F11 = NOW() WHERE F01 = #{bidId}
+	</update>
+    <!---->
+	<update id="updateBidFullTimes" parameterType="java.util.List">
+		UPDATE s62.t6231 SET F11 = NOW() WHERE F01 IN
+		<foreach collection="list" index="index" item="item"
+				 separator="," open="(" close=")">
+			#{item}
+		</foreach>
+	</update>
+
+	<update id="updateProductLib" parameterType="java.util.Map">
+		UPDATE flb.t_plan_product_lib tppl
+		SET
+			tppl.plan_id = #{planId},
+		 	tppl.is_bind = #{isBind}
+		WHERE tppl.id IN
+		<foreach collection="bindBids" index="index" item="item" open="(" separator= "," close=")">
+			#{item.planLibId}
+		</foreach>
+	</update>
+
+	<update id="updateBidsRate" parameterType="java.util.Map">
+		UPDATE s62.t6238 t6238
+		SET
+		t6238.repayment_rate = #{rate}
+		WHERE t6238.F01 IN
+		<foreach collection="bindBids" index="index" item="item" open="(" separator= "," close=")">
+			#{item.bidId}
+		</foreach>
+	</update>
+
+	<update id="releaseInvestPlan">
+		UPDATE flb.`t_invest_plan` SET `status` = 4, release_time = NOW(), update_time = NOW() WHERE id = #{planId}
+	</update>
+
+	<update id="updatePlanOrder"  parameterType="java.util.Map">
+		UPDATE s65.t6501
+		SET F03 = #{status},
+		 F05 = CASE
+		WHEN F03 = 'DQR' THEN
+			NOW()
+		WHEN F03 = 'YTJ' THEN
+		    NOW()
+		ELSE
+			F05
+		END,
+		 F06 = CASE
+		WHEN F03 = 'CG' THEN
+			NOW()
+		ELSE
+			F06
+		END
+		WHERE
+			F01 = #{orderId};
+	</update>
+
+	<update id="returnBackUserPlanId"  parameterType="java.util.Map">
+		UPDATE s65.plan_order
+		SET user_plan_id = #{userPlanId}
+		WHERE
+		id = #{orderId};
+	</update>
+
+	<update id="updateUserAmount"  parameterType="java.util.Map">
+		UPDATE s61.t6101
+		SET F06 = #{balance}, F07 = NOW()
+		WHERE
+			F01 = #{accountId};
+	</update>
+
+</mapper>

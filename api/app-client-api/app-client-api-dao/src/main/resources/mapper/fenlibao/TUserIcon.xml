@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TUserIconMapper">
+	<insert id="insertUserIcon" parameterType="TUserIcon">
+	     <selectKey keyProperty="count" resultType="int" order="BEFORE">
+            select count(*) from flb.t_user_icon where user_id = #{userId}
+         </selectKey>
+		 <if test="count > 0">
+		   update flb.t_user_icon 
+		   set pic_filename = #{picFilename},pic_url = #{picUrl},type = #{type}
+		   where user_id = #{userId}
+		 </if>
+		 <if test="count==0">
+		   insert into flb.t_user_icon (type,pic_filename,pic_url,user_id)
+           values (#{type,jdbcType=INTEGER}, #{picFilename,jdbcType=VARCHAR},#{picUrl,jdbcType=VARCHAR},#{userId,jdbcType=INTEGER})
+		 </if>
+	</insert>
+</mapper>

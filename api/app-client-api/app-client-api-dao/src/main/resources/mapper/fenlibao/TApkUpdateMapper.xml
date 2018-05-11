@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TApkUpdateMapper">
+	<select id="getApk" resultType="TApkUpdate" parameterType="java.util.Map">
+		SELECT
+		    id,version,
+			update_type as updateType,
+			app_url as appUrl,
+			update_content as updateContent,
+			update_flag as updateFlag,
+			create_time as createTime,
+			file_size as fileSize,
+			version_code as versionCode
+		FROM flb.t_apk_update where client_type=#{clientType}
+		<if test="channelCode != null">
+		   and channel_code = #{channelCode}
+		</if>
+		order by createTime desc limit 1
+	</select>
+</mapper>

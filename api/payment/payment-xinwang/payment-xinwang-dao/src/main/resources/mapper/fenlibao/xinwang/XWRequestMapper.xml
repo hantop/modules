@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="XWRequestMapper">
+
+    <insert id="createRequest" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest"  useGeneratedKeys="true" keyProperty="id">
+        INSERT flb.t_xw_request (interface_name,batch_no,request_no,order_id,platform_user_no,request_time,state,user_id) VALUES (#{interfaceName}, #{batchNo},#{requestNo}, #{orderId},#{platformUserNo},#{requestTime},#{state},#{userId})
+    </insert>
+
+    <insert id="saveRequestMessage" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWResponseMessage" >
+        INSERT flb.t_xw_response_message (batch_no,request_no,request_params,response_msg,update_time) VALUES (#{batchNo},#{requestNo},#{requestParams},#{responseMsg},now())
+    </insert>
+
+    <update id="updateRequest" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        update flb.t_xw_request
+        SET state= #{state},update_time= now()
+        <where>
+            <if test="requestNo!=null">
+                and request_no = #{requestNo}
+            </if>
+            <if test="batchNo!=null">
+                and batch_no = #{batchNo}
+            </if>
+            <if test="requestNos!=null">
+                and request_no IN
+                (
+
+                <foreach collection ="requestNos" item="requestNo" index= "index" separator =",">
+                    #{requestNo}
+                </foreach >
+                )
+            </if>
+        </where>
+    </update>
+
+    <update id="saveResponseMessage" parameterType="com.fenlibao.p2p.model.xinwang.entity.common.XWResponseMessage" >
+        UPDATE flb.t_xw_response_message SET response_msg = #{responseMsg},update_time = now()
+        <where>
+            <if test="requestNo!=null">
+                and request_no = #{requestNo}
+            </if>
+            <if test="batchNo!=null">
+                and batch_no = #{batchNo}
+            </if>
+            <if test="requestNos!=null">
+                and request_no IN
+                (
+                <foreach collection ="requestNos" item="requestNo" index= "index" separator =",">
+                    #{requestNo}
+                </foreach >
+                )
+            </if>
+        </where>
+    </update>
+
+    <select id="getByRequestNo" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        SELECT
+        txr.`id` AS id,
+        txr.`interface_name` AS interfaceName,
+        txr.`batch_no` batchNo,
+        txr.`request_no` AS requestNo,
+        txr.`order_id` AS orderId,
+        txr.`platform_user_no` AS platformUserNo,
+        txr.`request_time` AS requestTime,
+        txr.`state` AS `state`,
+        txr.`update_time` AS updateTime,
+        T6501.`F08` AS userId
+        from flb.t_xw_request txr
+        LEFT JOIN s65.T6501 ON txr.order_id = T6501.F01
+        <where>
+            <if test="requestNo!=null">
+                and txr.`request_no` = #{requestNo}
+            </if>
+        </where>
+        FOR UPDATE
+    </select>
+
+    <select id="getOrderNeedComfired" parameterType="java.util.Map" resultType="java.lang.String">
+        SELECT r.request_no FROM flb.t_xw_request r WHERE r.interface_name = #{interfaceName} AND r.state IN ('DTJ','DQR') AND r.request_time <![CDATA[<=]]> #{requestTime}
+    </select>
+
+    <select id="getUnbindOrder" parameterType="java.util.Map" resultType="com.fenlibao.p2p.model.xinwang.entity.common.XWRequest">
+        SELECT
+            r.`id` AS id,
+            r.`interface_name` AS interfaceName,
+            r.`batch_no` batchNo,
+            r.`request_no` AS requestNo,
+            r.`order_id` AS orderId,
+            r.`platform_user_no` AS platformUserNo,
+            r.`request_time` AS requestTime,
+            r.`state` AS `state`,
+            r.`update_time` AS updateTime,
+            r.`user_id` AS userId
+        FROM
+            flb.t_xw_request r
+        WHERE
+        r.interface_name = #{interfaceName} AND r.state = #{orderStatus}  AND r.request_time <![CDATA[<=]]> #{requestTime}
+    </select>
+
+    <update id="updateRequestStatus" parameterType="java.util.Map">
+        update flb.t_xw_request
+        SET state= #{state},update_time= now()
+        <where>
+            <if test="requestNo!=null">
+                and request_no = #{requestNo}
+            </if>
+            <if test="batchNo!=null">
+                and batch_no = #{batchNo}
+            </if>
+            AND state = #{preState}
+        </where>
+    </update>
+</mapper>

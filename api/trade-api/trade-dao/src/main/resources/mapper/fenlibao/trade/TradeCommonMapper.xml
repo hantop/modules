@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="TradeCommonMapper">
+
+    <select id="getCurrentTimestamp" resultType="java.sql.Timestamp">
+         SELECT CURRENT_TIMESTAMP()
+    </select>
+
+    <select id="getCurrentDate" resultType="java.sql.Date">
+         SELECT CURRENT_DATE()
+    </select>
+    
+    <insert id="insertT6123" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO S61.T6123 SET F02 = #{userId}, F03 = #{title}, F04 = CURRENT_TIMESTAMP(), F05 = #{state}
+    </insert>
+    
+    <insert id="insertT6124" parameterType="java.util.Map">
+        INSERT INTO S61.T6124 SET F01 = #{letterId}, F02 = #{content}
+    </insert>
+    
+    <select id="getSystemVariable" parameterType="java.util.Map" resultType="java.lang.String">
+         select F02 from s10._1010 where F01= #{id} limit 1
+    </select>
+    
+    <insert id="insertT1040" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO S10._1040(F02,F03,F04,F05) values(#{type}, #{content}, CURRENT_TIMESTAMP(),'w')
+    </insert>
+    
+    <insert id="insertT1041" parameterType="java.util.Map">
+        INSERT INTO S10._1041(F01,F02) VALUES( #{msgId}, #{mobile})
+    </insert>
+    
+    <insert id="insertT6102s" parameterType="java.util.List">
+        insert into s61.t6102 (F02,F03,F04,F05,F06,F07,F08,F09,F12) values
+        <foreach collection="list" item="item" index="index"  separator=",">
+        (#{item.F02}, #{item.F03}, #{item.F04}, NOW(), #{item.F06}, #{item.F07}, #{item.F08}, #{item.F09}, #{item.F12})
+        </foreach>
+    </insert>
+</mapper>

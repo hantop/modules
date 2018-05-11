@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.platformstatistics.PlatformstatisticsMapper">
+    <select id="getPlatformstatistics" resultType="platformstatistics">
+        SELECT
+            IFNULL(SUM(register_num), 0) registerNum,
+            -- 投标人数
+            (
+                SELECT
+                    COUNT(DISTINCT tender.F03)
+                FROM
+                    S62.T6250 tender
+                INNER JOIN s62.t6230 bid ON bid.F01 = tender.F02
+                <where>
+                    <![CDATA[AND tender.F06 >= #{startTime}]]>
+                    <![CDATA[AND tender.F06 <= #{endTime}]]>
+                </where>
+            ) tenderNum,
+            -- 债权转让人数
+            (
+                SELECT
+                    COUNT(DISTINCT record.F12)
+                FROM
+                    s62.t6262 record
+                <where>
+                    <![CDATA[AND record.F07 >= #{startTime}]]>
+                    <![CDATA[AND record.F07 <= #{endTime}]]>
+                </where>
+            ) transferinNum,
+            IFNULL(SUM(recharge_money), 0) rechargeMoney,
+            IFNULL(SUM(tender_money), 0) tenderMoney,
+            IFNULL(SUM(transferin_money), 0) transferinMoney,
+            IFNULL(SUM(withdraw_money), 0) withdrawMoney,
+            IFNULL(SUM(earnings_money), 0) earningsMoney,
+            IFNULL(SUM(loan_money), 0) loanMoney,
+            IFNULL(SUM(creditassigment_fee), 0) creditassigmentFee,
+            IFNULL(SUM(bid_fee), 0) bidFee,
+            IFNULL((SUM(creditassigment_fee) + SUM(bid_fee)), 0) turnoverFee,
+            -- 首投人数
+            (
+				SELECT
+					COUNT(DISTINCT invest_info.user_id)
+				FROM
+					(
+						SELECT
+							first_invest.*
+						FROM
+							(
+								SELECT
+									_invest_info.user_id,
+									_invest_info.invest_money invest_money,
+									DATE_FORMAT(
+										_invest_info.create_time,
+										'%Y-%m-%d'
+									) create_time
+								FROM
+									(
+										-- 投标金额
+										SELECT
+											tender.F03 user_id,
+											IFNULL(tender.F04, 0) invest_money,
+											tender.F06 create_time
+										FROM
+											S62.T6250 tender
+										UNION ALL
+											-- 债权转让金额
+											SELECT
+												record.F03 user_id,
+												IFNULL(record.F05, 0) invest_money,
+												record.F07 create_time
+											FROM
+												s62.t6262 record
+									) _invest_info
+								ORDER BY
+									_invest_info.create_time ASC,
+									_invest_info.invest_money DESC
+							) first_invest
+						GROUP BY
+							first_invest.user_id
+					) invest_info
+					<where>
+						<![CDATA[invest_info.create_time >= DATE_FORMAT(#{startTime}, '%Y-%m-%d')]]>
+						<![CDATA[AND invest_info.create_time <= DATE_FORMAT(#{endTime}, '%Y-%m-%d')]]>
+					</where>
+            ) firstInvestNum
+        FROM
+            pms.da_daily_statistics
+        <where>
+            <![CDATA[AND statistics_date >= DATE_FORMAT(#{startTime}, '%Y-%m-%d')]]>
+            <![CDATA[AND statistics_date <= DATE_FORMAT(#{endTime}, '%Y-%m-%d')]]>
+        </where>
+    </select>
+
+    <select id="getPlatformstatisticsTotal" resultType="PlatformstatisticsTotal">
+        SELECT
+            IFNULL(SUM(register_num), 0) registerNum,
+            IFNULL((SELECT invest_num FROM pms.da_daily_statistics WHERE statistics_date = DATE_SUB(CURDATE(),INTERVAL 1 DAY)), 0) investNum,
+            IFNULL(SUM(profitmoney_forinvestor), 0) profitMoneyForInvestor,
+            IFNULL(SUM(tender_money), 0) + IFNULL(SUM(transferin_money), 0) investMoeny,
+            IFNULL((SELECT receivable_money FROM pms.da_daily_statistics WHERE statistics_date = DATE_SUB(CURDATE(),INTERVAL 1 DAY)), 0) receivableMoney,
+            IFNULL((SUM(creditassigment_fee) + SUM(bid_fee)), 0) turnoverFee
+        FROM
+            pms.da_daily_statistics
+    </select>
+</mapper>

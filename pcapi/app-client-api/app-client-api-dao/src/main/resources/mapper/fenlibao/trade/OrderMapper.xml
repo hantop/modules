@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="OrderMapper">
+	<!-- 获取订单的创建时间(T6501) -->
+	<select id="getOrderCreateTime" parameterType="int" resultType="java.sql.Timestamp">
+		SELECT F04 FROM s65.t6501 WHERE F01 = #{orderId} LIMIT 1
+	</select>
+	<!-- 获取用户ID(T6501) -->
+	<select id="getUserId" parameterType="int" resultType="java.lang.Integer">
+		SELECT F08 FROM s65.t6501 WHERE F01 = #{orderId} LIMIT 1
+	</select>
+	<!-- 记录订单与客户端类型的关系 -->
+	<insert id="insertOrderIdAndClientType" parameterType="java.util.Map">
+		INSERT INTO flb.t_order_clienttype (order_id, client_type) VALUES (#{orderId}, #{clientType})
+	</insert>
+</mapper>

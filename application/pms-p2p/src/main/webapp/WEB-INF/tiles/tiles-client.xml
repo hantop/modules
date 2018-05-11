@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+        "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+        "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+    <definition extends="ancestor" name="client/index">
+        <put-attribute name="body" value="/WEB-INF/page/client/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-client.jsp"/>
+    </definition>
+    <!-- 客户端启动页 -->
+    <definition extends="ancestor" name="client/startup/index">
+        <put-attribute name="body" value="/WEB-INF/page/client/startup/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-client.jsp"/>
+    </definition>
+    <!-- 客户端广告页 -->
+    <definition extends="ancestor" name="client/advert/index">
+        <put-attribute name="body" value="/WEB-INF/page/client/advert/index.jsp"/>
+        <put-attribute name="menu" value="/WEB-INF/page/template/menu/menu-client.jsp"/>        
+    </definition>
+</tiles-definitions>

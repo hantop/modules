@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="MemberPointsMapper">
+    <select id="getMyPointsNum" parameterType="java.util.Map" resultType="MyPoint">
+		SELECT
+			p.numbers pointNum,p.point_status pointStatus
+		FROM mp.mp_member_points p
+		where  p.user_id= #{userId} for update
+	</select>
+	
+	<!-- 用户最近30天积分使用记录查询 
+	<select id="getPointRecordsThirty" parameterType="java.util.Map" resultType="UserPointDetail">
+		select t.type_name pName,
+			   t.type_logo pLogo,
+			   s.numbers pNum, 
+			   s.change_type pChangeType,
+			   s.create_time createTime
+		from mp.mp_member_points_sheet s 
+		inner join mp.mp_points_type t on s.t_id = t.id 
+		where s.user_id = #{userId}
+		and (TO_DAYS(#{nowDatetime}) - TO_DAYS(s.create_time)) <![CDATA[ <= ]]>  30
+		order by s.create_time desc
+	</select>
+	-->
+	<!-- 用户最近30条积分使用记录查询 -->
+	<select id="getPointRecordsThirty" parameterType="java.util.Map" resultType="UserPointDetail">
+		select t.type_name pName,
+			   t.type_logo pLogo,
+			   s.numbers pNum, 
+			   s.change_type pChangeType,
+			   s.create_time createTime
+		from mp.mp_member_points_sheet s 
+		inner join mp.mp_points_type t on s.t_id = t.id 
+		where s.user_id = #{userId}
+		order by s.create_time desc limit 30
+	</select>
+	
+	<!-- 积分使用记录查询(全部/收入/支出) -->
+	<select id="getPointRecords" parameterType="java.util.Map" resultType="UserPointDetail">
+		select t.type_name pName,
+			   t.type_logo pLogo,
+			   s.numbers pNum, 
+			   s.change_type pChangeType,
+			   s.create_time createTime
+		from mp.mp_member_points_sheet s 
+		inner join mp.mp_points_type t on s.t_id = t.id 
+		where s.user_id = #{userId}
+		<if test="changeType >0 ">
+			and s.change_type = #{changeType}
+		</if>
+		<if test="createTime != null ">
+			<![CDATA[ and s.create_time  < #{createTime}]]> 
+		</if>
+		order by s.create_time desc	limit 10
+	</select>
+	
+	<!-- 获取积分兑换金额 配置信息-->
+	<select id="getPointsExchangeCashConfigInfo" parameterType="java.util.Map" resultType="PointsExchangeCashInfo">
+		select u.t_id typeId,
+			u.total_use_frequency totalUseFrequency,
+			u.max_use_number maxUseNumber,
+			u.min_use_number minUseNumber,
+			u.exchange_amount exchangeAmount,
+			u.is_by_year isByYear,
+			u.year_frequency yearFrequency,
+			u.is_by_month isByMonth,
+			u.month_frequency monthFrequency,
+			u.is_by_day isByDay,
+			u.day_frequency dayFrequency,
+			u.start_time startTime,
+			u.end_time endTime
+		from mp.mp_points_consume_use_config u
+		inner join mp.mp_points_type p on u.t_id = p.id
+		where p.type_code = #{pTypeCode}
+		and #{nowDatetime} between u.start_time and u.end_time 
+		limit 1
+	</select>
+	
+	<!-- 获取积分类型父节点信息-->
+	<select id="getPointsExchangeCashParentInfo" parameterType="java.util.Map" resultType="PointsType">
+		select t1.id id,
+			t1.parent_id parentId,
+			t1.type_name typeName,
+			t1.type_code typeCode,
+			t1.change_type changeType,
+			t1.is_root isRoot 
+		from mp.mp_points_type t1
+		inner join mp.mp_points_type t2 on t2.parent_id = t1.id
+		where t2.type_code = #{pTypeCode} 
+		limit 1
+	</select>
+	
+	<!-- 获取积分类型信息-->
+	<select id="getPointsTypeInfo" parameterType="java.util.Map" resultType="PointsType">
+		select t1.id id,
+			t1.parent_id parentId,
+			t1.type_name typeName,
+			t1.type_code typeCode,
+			t1.change_type changeType,
+			t1.is_root isRoot 
+		from mp.mp_points_type t1
+		where t1.type_code = #{pTypeCode} 
+		limit 1
+	</select>
+	
+	<!-- 获取积分成功兑换记录-->
+	<select id="getPointsTypeChildrenList" parameterType="java.util.Map" resultType="PointsType">
+		select t2.id id,
+			t2.parent_id parentId,
+			t2.type_name typeName,
+			t2.type_code typeCode,
+			t2.change_type changeType,
+			t2.is_root isRoot
+		from mp.mp_points_type t1
+		inner join mp.mp_points_type t2 on t2.parent_id = t1.id
+		where t1.type_code = #{pTypeCode} 
+	</select>
+	
+	<!-- 获取消费金额兑换积分配置信息-->
+	<select id="getConsumeExchangePointsConfigInfo" parameterType="java.util.Map" resultType="ConsumeExchangePointsInfo">
+		select c.t_id,
+			c.exchange_point pointUnitNum,
+			c.start_time startTime,
+			c.end_time endTime
+		from mp.mp_consume_points_config c
+		inner join mp.mp_points_type p on c.t_id = p.id
+		where p.type_code = #{pTypeCode}
+		and #{nowDatetime} between c.start_time and c.end_time
+		limit 1
+	</select>
+	
+	<!-- 添加积分兑换记录 -->
+	<insert id="addPointsUseRecord" useGeneratedKeys="true" keyProperty="rId" parameterType="java.util.Map" >  
+	    insert into
+	    mp.mp_member_points_use_info (t_id,user_id,numbers,amount,exchange_status,create_time)
+		values (#{typeId},#{userId},#{pNum},#{cashAmount},#{exStatus},#{nowDatetime}) 
+	</insert> 
+	
+	<!-- 添加积分兑换明细记录 -->
+	<insert id="addPointsSheetRecord" useGeneratedKeys="true" keyProperty="sId" parameterType="java.util.Map" >  
+	    insert into mp.mp_member_points_sheet (t_id,user_id,numbers,change_type,remark,create_time)
+		values (#{typeId},#{userId},#{pNum},#{changeType},#{remark},#{nowDatetime})
+	</insert> 
+	
+	<!-- 获取积分成功兑换记录-->
+	<select id="getUserPointsUseSucRecord" parameterType="java.util.Map" resultType="PointsUseRecord">
+		select u.t_id typeId,
+			u.numbers numbers,
+			u.amount amount,
+			u.exchange_status exchangeStatus
+		from mp.mp_member_points_use_info u
+		inner join mp.mp_points_type t on t.id=u.t_id
+		where u.user_id = #{userId} and u.exchange_status != 3 and t.type_code in
+		<foreach collection="pTypeCodeList" item="pTypeCode" index="index"
+            open="(" close=")" separator=",">
+            #{pTypeCode}
+        </foreach>
+        <if test="isByYear == 1">
+        	<![CDATA[ and date_format(u.create_time,'%Y') = date_format(#{nowDatetime},'%Y') ]]> 
+        </if>
+        <if test="isByMonth == 1">
+        	<![CDATA[ and date_format(u.create_time,'%Y-%m') = date_format(#{nowDatetime},'%Y-%m') ]]> 
+        </if>
+        <if test="isByDay == 1">
+        	<![CDATA[ and date_format(u.create_time,'%Y-%m-%d') = date_format(#{nowDatetime},'%Y-%m-%d') ]]> 
+        </if>
+	</select>
+	
+	<!-- 更新积分使用记录状态 -->
+	<update id="updatePointsUseRecordStatus" parameterType="java.util.Map" >
+        update mp.mp_member_points_use_info 
+        set exchange_status=#{exStatus},end_time=#{nowDatetime}
+        where id = #{id}
+    </update>
+    
+    <!-- 减少用户账户积分 -->
+	<update id="minusUserAccountPoints" parameterType="java.util.Map" >
+        update mp.mp_member_points 
+        set numbers = #{remainPointNum}
+        where user_id = #{userId}
+    </update>
+
+	<!-- 修改用户账户积分 -->
+	<update id="modifyUserAccountPoints" parameterType="java.util.Map" >
+		update mp.mp_member_points
+		set numbers = #{remainPointNum}
+		where user_id = #{userId}
+		and point_status = 1
+	</update>
+
+	<!-- 2.2.0 用户积分信息 -->
+	<select id="getMyPoints" parameterType="java.util.Map" resultType="MyPointInfo">
+		SELECT
+			p.numbers as totallPoint,
+			p.point_status as pointStatus,
+			a.totallInvestAmout+c.totalPlanAmout as totallInvestAmout,
+			b.usedPoints as usedPoints,
+			(case when a.totallInvestAmout+c.totalPlanAmout-usedPoints > 0
+			 then a.totallInvestAmout+c.totalPlanAmout-usedPoints else 0 end) myPoint
+		FROM
+		(select * from mp.mp_member_points
+		 	WHERE mp_member_points.user_id = #{userId}) p
+		,(SELECT IFNULL(sum(t6250.f04),0) as totallInvestAmout from s62.t6250
+			where t6250.F03 = #{userId}
+			and t6250.F06>'2016-06-01'
+			and t6250.F01 NOT in(
+			SELECT t_user_plan_product.tender_id
+			from flb.t_user_plan
+			INNER JOIN flb.t_user_plan_product on t_user_plan.id = t_user_plan_product.user_plan_id
+			where t_user_plan.user_id = #{userId} )) a
+		,(select  IFNULL(sum(use_info.numbers),0) as usedPoints from mp.mp_member_points_use_info as use_info
+			where use_info.user_id = #{userId} and use_info.exchange_status in(1,2)
+			and use_info.create_time>'2016-11-24'
+			<![CDATA[and use_info.t_id<>8) b]]>
+		,(select IFNULL(sum(t_user_plan.invest_amount),0) as totalPlanAmout
+		from flb.t_user_plan where t_user_plan.user_id = #{userId}) c
+	</select>
+	<!-- 积分兑换记录查询 -->
+	<select id="getExchangeRecords" parameterType="java.util.Map" resultType="MyPointExchangeDetail">
+		SELECT
+		t.remark pName,
+		s.numbers pNum,
+		s.create_time exchangeTime,
+		(CASE WHEN s.exchange_status=1 then '已申请'
+			  WHEN s.exchange_status=2 then '兑换成功'
+			  WHEN s.exchange_status=3 then '兑换失败' end) exchangeState
+		FROM
+			mp.mp_member_points_use_info s
+		INNER JOIN mp.mp_points_type t ON s.t_id = t.id
+		WHERE
+			s.user_id =  #{userId}
+		AND s.exchange_status in(2,3)
+		ORDER BY
+			s.create_time DESC
+		LIMIT #{startPageIndex},#{limit}
+	</select>
+</mapper>

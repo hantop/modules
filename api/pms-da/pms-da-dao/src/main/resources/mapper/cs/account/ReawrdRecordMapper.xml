@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.cs.account.ReawrdRecordMapper">
+    <select id="findReawrdRecord" resultType="ReawrdRecord">
+        SELECT
+            reawrd.*
+        FROM
+        (
+            SELECT
+                1 reawrdtype,
+                red_returncash.`red_money` reawrdmoney,
+                red_returncash.reawrdTime,
+                red_returncash.userId
+            FROM
+            (
+                SELECT
+                    redpacket.`red_money`,
+                    u.`F09` reawrdTime,
+                    u.`F01` userId
+                FROM
+                    flb.`t_user_redpackets` user_redpacket
+                INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+                INNER JOIN s61.`t6110` u ON u.`F01` = user_redpacket.`user_id`
+                <where>
+                    user_redpacket.`grant_status` = 1
+                    AND redpacket.`red_type` = 1
+                    AND user_redpacket.grant_id IS NULL
+                    <if test="startTime != null">
+                        <![CDATA[AND u.`F09` >= #{startTime}]]>
+                    </if>
+                    <if test="endTime != null">
+                        <![CDATA[AND u.`F09` <= #{endTime}]]>
+                    </if>
+                    AND u.`F01` = #{userId}
+                </where>
+                UNION ALL
+                SELECT
+                    redpacket.`red_money`,
+                    record.grant_time reawrdTime,
+                    user_redpacket.`user_id` userId
+                FROM
+                    flb.`t_user_redpackets` user_redpacket
+                INNER JOIN flb.`t_red_packet` redpacket ON redpacket.`id` = user_redpacket.`redpacket_id`
+                INNER JOIN pms.`da_reward_record` record ON record.`id` = user_redpacket.grant_id
+                <where>
+                    user_redpacket.`grant_status` = 1
+                    AND redpacket.`red_type` = 1
+                    AND record.is_granted = 1
+                    AND record.reward_type = 3
+                    <if test="startTime != null">
+                        <![CDATA[AND record.grant_time >= #{startTime}]]>
+                    </if>
+                    <if test="endTime != null">
+                        <![CDATA[AND record.grant_time <= #{endTime}]]>
+                    </if>
+                    AND user_redpacket.`user_id` = #{userId}
+                </where>
+            ) red_returncash
+            UNION ALL
+            SELECT
+                2 reawrdtype,
+                fundflow.F06 reawrdmoney,
+                fundflow.F05 reawrdTime,
+                account.F02 userId
+            FROM
+                s61.`t6101` account
+            INNER JOIN s61.`t6102` fundflow ON fundflow.F02 = account.F01
+            <where>
+                account.F03 = 'WLZH'
+                AND fundflow.F03 = 5118
+                <if test="startTime != null">
+                    <![CDATA[AND fundflow.F05 >= #{startTime}]]>
+                </if>
+                <if test="endTime != null">
+                    <![CDATA[AND fundflow.F05 <= #{endTime}]]>
+                </if>
+                AND account.F02 = #{userId}
+            </where>
+            UNION ALL
+            SELECT
+                3 reawrdtype,
+                (
+                    FLOOR((experience_gold.experience_gold * experience_gold.year_yield / 100 / 365) * 100) / 100 * experience_gold.effect_day
+                ) reawrdmoney,
+                experience_gold.reawrdTime,
+                experience_gold.userId
+            FROM
+            (
+                SELECT
+                    user_experience.id user_experience_id,
+                    u.F09 reawrdTime,
+                    u.F01 userId,
+                    experience_gold.`year_yield`,
+                    experience_gold.`effect_day`,
+                    experience_gold.`experience_gold`
+                FROM
+                    flb.`t_user_experience` user_experience
+                INNER JOIN flb.`t_experience_gold` experience_gold ON experience_gold.id = user_experience.gold_id
+                INNER JOIN s61.`t6110` u ON u.`F01` = user_experience.`user_id`
+                <where>
+                    user_experience.grant_status = 1
+                    AND user_experience.grant_id IS NULL
+                    <if test="startTime != null">
+                        <![CDATA[AND u.F09 >= #{startTime}]]>
+                    </if>
+                    <if test="endTime != null">
+                        <![CDATA[AND u.F09 <= #{endTime}]]>
+                    </if>
+                    AND u.F01 = #{userId}
+                </where>
+                UNION ALL
+                SELECT
+                    user_experience.id user_experience_id,
+                    record.grant_time reawrdTime,
+                    user_experience.user_id userId,
+                    experience_gold.`year_yield`,
+                    experience_gold.`effect_day`,
+                    experience_gold.`experience_gold`
+                FROM
+                    flb.`t_user_experience` user_experience
+                INNER JOIN flb.`t_experience_gold` experience_gold ON experience_gold.id = user_experience.gold_id
+                INNER JOIN pms.`da_reward_record` record ON record.`id` = user_experience.grant_id
+                <where>
+                    user_experience.grant_status = 1
+                    AND record.is_granted = 1
+                    AND record.reward_type = 1
+                    <if test="startTime != null">
+                        <![CDATA[AND record.grant_time >= #{startTime}]]>
+                    </if>
+                    <if test="endTime != null">
+                        <![CDATA[AND record.grant_time <= #{endTime}]]>
+                    </if>
+                    AND user_experience.user_id = #{userId}
+                </where>
+            ) experience_gold
+        ) reawrd
+        INNER JOIN s61.`t6110` u ON u.`F01` = reawrd.userId
+        ORDER BY reawrd.reawrdTime DESC
+    </select>
+    
+    <select id="getUserRedpackets" resultType="UserRedpackets">
+        SELECT 0 reawrdtype, ufx.`user_id` AS userId,ufx.`status`,DATE_FORMAT(ufx.`valid_time`, '%Y-%m-%d') AS validTime,
+        IF(UNIX_TIMESTAMP(ufx.`create_timestamp`) > 1462440263,ufx.`create_timestamp`,NULL) AS createTime,
+        IF(UNIX_TIMESTAMP(ufx.`update_timestamp`) > 1462440263,ufx.`update_timestamp`,NULL) AS updateTime,
+        cfx.id AS redpacketId,cfx.`effect_day` AS effectDay,
+        cfx.`red_money` AS redMoney,cfx.`invest_money` AS investMoney,
+        cfx.activity_code, cfx.remarks
+        FROM flb.`t_user_redpackets` AS ufx
+        INNER JOIN flb.`t_red_packet` AS cfx ON ufx.redpacket_id = cfx.`id`
+        <where>
+            ufx.user_id = #{userId}
+            <if test="cashBackStatus == 3">
+                AND ufx.status = 1
+                <![CDATA[AND ufx.valid_time < now()]]>
+            </if>
+            <if test="cashBackStatus == 1">
+                AND  ufx.status = #{cashBackStatus}
+                <![CDATA[AND ufx.valid_time > now()]]>
+            </if>
+            <if test="cashBackStatus == 2">
+                AND  ufx.status = #{cashBackStatus}
+            </if>
+            <if test="startTime != null">
+                <![CDATA[AND DATE_FORMAT(ufx.create_timestamp,'%Y-%m-%d %H:%i:%s') >= #{startTime}]]>
+            </if>
+            <if test="endTime != null">
+                <![CDATA[AND DATE_FORMAT(ufx.create_timestamp,'%Y-%m-%d %H:%i:%s') <= #{endTime}]]>
+            </if>
+            <if test="minInvestMoney != null">
+                AND cfx.red_money &gt;= #{minInvestMoney}
+            </if>
+            <if test="maxInvestMoney != null">
+                AND cfx.red_money &lt;= #{maxInvestMoney}
+            </if>
+        </where>
+    </select>
+
+    <select id="getCashRedPackets" resultType="ReawrdRecord">
+        SELECT
+        1 reawrdtype,
+        fundflow.F06 reawrdmoney,
+        fundflow.F05 reawrdTime,
+        account.F02 userId
+        FROM
+        s61.`t6101` account
+        INNER JOIN s61.`t6102` fundflow ON fundflow.F02 = account.F01
+        <where>
+            account.F03 = 'WLZH'
+            AND fundflow.F03 = 5118
+            <if test="startTime != null">
+                <![CDATA[AND fundflow.F05 >= #{startTime}]]>
+            </if>
+            <if test="endTime != null">
+                <![CDATA[AND fundflow.F05 <= #{endTime}]]>
+            </if>
+            AND account.F02 = #{userId}
+        </where>
+    </select>
+
+    <select id="getUserExperienceGold" resultType="ReawrdRecord">
+        SELECT
+        2 reawrdtype,
+        (
+        FLOOR((experience_gold.experience_gold * experience_gold.year_yield / 100 / 365) * 100) / 100 * experience_gold.effect_day
+        ) reawrdmoney,
+        experience_gold.reawrdTime,
+        experience_gold.userId,
+        experience_gold.`year_yield` AS yearYield,
+        experience_gold.`effect_day` AS effectDay,
+        experience_gold.`experience_gold` AS experienceGold
+        FROM
+        (
+        SELECT
+        user_experience.id user_experience_id,
+        user_experience.`start_time` reawrdTime,
+        u.F01 userId,
+        experience_gold.`year_yield`,
+        experience_gold.`effect_day`,
+        experience_gold.`experience_gold`
+        FROM
+        flb.`t_user_experience` user_experience
+        INNER JOIN flb.`t_experience_gold` experience_gold ON experience_gold.id = user_experience.gold_id
+        INNER JOIN s61.`t6110` u ON u.`F01` = user_experience.`user_id`
+        <where>
+            user_experience.grant_status = 1
+            <if test="startTime != null">
+                <![CDATA[AND user_experience.`start_time` >= #{startTime}]]>
+            </if>
+            <if test="endTime != null">
+                <![CDATA[AND user_experience.`start_time` <= #{endTime}]]>
+            </if>
+            AND u.F01 = #{userId}
+        </where>
+        ) experience_gold
+    </select>
+
+    <select id="getUserRateCoupon" resultType="RateCouponReawrdRecordVO">
+        SELECT
+			3 reawrdtype,
+			uc.user_id,
+			uc.coupon_status,
+			uc.grant_id,
+			DATE_FORMAT(uc.create_time,'%Y-%m-%d %H:%i:%s') create_time,
+			DATE_FORMAT(uc.update_time,'%Y-%m-%d %H:%i:%s') activate_time,
+            c.id couponId,
+			c.effect_day,
+			c.scope,
+			c.min_invest_day,
+			c.max_invest_day,
+			c.min_invest_money,
+			c.max_invest_money,
+			c.coupon_code,
+			bid.F03 bid_name
+		FROM
+			flb.t_user_coupon uc
+		INNER JOIN flb.t_coupon c ON c.id = uc.coupon_id
+		LEFT JOIN s62.t6250 tender ON tender.F01 = uc.tender_id
+		LEFT JOIN s62.t6230 bid ON bid.F01 = tender.F02
+        <where>
+            AND c.coupon_type_id = 1
+            AND uc.user_id = #{userId}
+            <if test="cashBackStatus == 3">
+                AND uc.coupon_status = 1
+                <![CDATA[AND uc.valid_time < now()]]>
+            </if>
+            <if test="cashBackStatus == 1">
+                AND  uc.coupon_status = #{cashBackStatus}
+                <![CDATA[AND uc.valid_time > now()]]>
+            </if>
+            <if test="cashBackStatus == 2">
+                AND  uc.coupon_status = #{cashBackStatus}
+            </if>
+            <if test="startTime != null">
+                <![CDATA[AND DATE_FORMAT(uc.create_time,'%Y-%m-%d %H:%i:%s') >= #{startTime}]]>
+            </if>
+            <if test="endTime != null">
+                <![CDATA[AND DATE_FORMAT(uc.create_time,'%Y-%m-%d %H:%i:%s') <= #{endTime}]]>
+            </if>
+        </where>
+    </select>
+
+</mapper>

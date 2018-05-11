@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.platform.dao.member.MemberMapper">
+    <select id="getIdByPhoneNum" parameterType="java.lang.String" resultType="java.lang.Integer">
+    	select f01 from s61.t6110 where f04 = #{phoneNum} limit 1
+    </select>
+
+    <select id="getOpenid" parameterType="java.lang.String" resultType="java.lang.String">
+    	SELECT openid FROM pf.pf_merchant_member WHERE pf_user_id = #{userId} LIMIT 1
+    </select>
+
+    <insert id="createMemberInfo" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="memberId">
+    	INSERT INTO pf.pf_merchant_member (m_id, openid, pf_user_id, create_time) VALUES (#{businessId}, #{openid}, #{userId}, SYSDATE())
+    </insert>
+
+    <insert id="addUser" useGeneratedKeys="true" keyProperty="userId">
+		INSERT INTO S61.T6110
+		  SET
+			  F02 = #{username},
+			  F03 = #{password},
+			  F06 = #{userType},
+			  F07 = #{userStatus},
+			  F08 = #{registerOrigin},
+			  F09 = CURRENT_TIMESTAMP(),
+			  F10 = #{guarantorFlag},
+			  F04 = #{phone}
+	</insert>
+
+	<insert id="addUserSecurityAuthentication">
+		INSERT INTO s61.t6118 
+		(F01,F02,F03,F04,F05,F06,F07)
+		VALUES
+		(#{userId},#{cardIDAuth},#{phoneAuth},#{emailAuth},#{tradPasswordAuth},#{phoneNum},#{email})
+	</insert>
+
+	<insert id="addUserBaseInfo" parameterType="java.lang.String">
+		INSERT INTO S61.T6141
+		  SET F01 = #{userId}, F03 = 'LC'
+	</insert>
+
+	<insert id="addUserAccount" parameterType="java.util.Map">
+		INSERT INTO S61.T6101
+		  SET
+		  	F02 = #{userId},
+		  	F03 = #{type},
+		  	F04 = #{account},
+		  	F05 = #{accountName}
+	</insert>
+
+	<insert id="addUserCredit" parameterType="java.lang.String">
+		INSERT INTO S61.T6116
+		  SET F01 = #{userId}
+	</insert>
+
+	<insert id="addUserFinancing" parameterType="java.lang.String">
+		INSERT INTO S61.T6115
+		  SET F01 = #{userId}
+	</insert>
+
+	<insert id="addUserBestFinancing" parameterType="java.lang.String">
+		INSERT INTO S64.T6413
+		  SET F01 = #{userId}
+	</insert>
+
+	<select id="getCreditAuthItem" resultType="java.lang.Integer">
+		SELECT F01 FROM S51.T5123
+	</select>
+
+	<insert id="addUserCreditAuthInfo">
+		INSERT INTO S61.T6120
+		  SET
+			  F01 = #{userId},
+			  F02 = #{creditAuthInfoId}
+	</insert>
+
+	<insert id="addUserCreditArchive" parameterType="java.lang.String">
+		INSERT INTO S61.T6144
+		  SET F01 = #{userId}
+	</insert>
+
+	<insert id="addUserOrigin">
+		INSERT INTO flb.t_user_origin
+		SET channel_code = #{channelCode},
+		 user_id = #{userId},
+		 client_type_id = #{clientTypeId}
+	</insert>
+
+	<insert id="initIntegralAccount" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="pointsAccountId">
+		INSERT INTO mp.mp_member_points (user_id, numbers, point_status, create_time) VALUES (#{userId}, 0, 1, SYSDATE())
+	</insert>
+
+	<select id="getMerchantMember" resultType="MerchantMember">
+		SELECT id, m_id mId, openid, pf_user_id pfUserId, create_time createTime from `pf`.`pf_merchant_member` where openid=#{openid}
+	</select>
+
+	<insert id="saveConsumeRecord" parameterType="MemberConsumeRecord">
+		INSERT INTO `mp`.`mp_member_consume_sheet`
+		(openid, m_id, amount, create_time,d_id, pos_c_id)
+		VALUES
+		(#{openid}, #{mId}, #{amount}, sysdate(), #{dId}, #{posCId})
+	</insert>
+
+    <select id="getAppidAndSecret" resultType="Restriction">
+        select
+          app_id appid,
+          app_secret secret
+        from `pf`.`pf_merchant_access_config`
+        where app_id = #{appid} and app_secret = #{secret}
+    </select>
+    
+    <select id="getSecret" parameterType="java.lang.String" resultType="java.lang.String">
+    	SELECT app_secret FROM pf.pf_merchant_access_config WHERE app_id = #{appid} LIMIT 1
+    </select>
+
+	<select id="getActivityRedPacketByType" parameterType="java.lang.Integer" resultType="UserRedPacketInfo">
+    	SELECT
+        id AS hbId,
+        red_money AS hbBalance,
+        red_type AS type,
+        effect_day AS effectDay,
+        invest_money AS conditionBalance
+        FROM
+        flb.t_red_packet
+        <where>
+            AND red_type = #{type}
+            AND NOW() BETWEEN time_start AND time_end
+        </where>
+    </select>
+
+	<insert id="addUserRedpacket">
+        INSERT INTO flb.t_user_redpackets
+        SET user_id = #{userId},
+        redpacket_id = #{redPacketId},
+        `status` = 1,
+        valid_time = #{validTime},
+        grant_status = 1
+    </insert>
+	
+	<insert id="addMemberPhoneNum">
+		INSERT INTO pf.pf_member_info (phone_num,merchant_member_id,member_points_id,channel_code) VALUES (#{phoneNum},#{memberId},#{pointsAccountId},#{channelCode})
+	</insert>
+
+	<select id="getOpenidByPhoneNum" resultType="java.lang.String">
+		  SELECT mm.openid FROM pf.pf_member_info mi INNER JOIN pf.pf_merchant_member mm ON mi.merchant_member_id = mm.id WHERE mi.phone_num = #{phoneNum} LIMIT 1
+	</select>
+</mapper>

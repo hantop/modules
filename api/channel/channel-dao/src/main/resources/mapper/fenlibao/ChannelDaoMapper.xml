@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ChannelDaoMapper">
+    <select id="getChannel" parameterType="java.util.Map" resultType="ChannelVO">
+		SELECT
+			channel.id,
+			channel.parent_id AS parentId,
+			channel.code,
+			channel.name
+		FROM flb.t_channel channel
+		<where>
+			<if test="code != null">
+			AND channel.code = #{code}
+			</if>
+		</where>
+	</select>
+
+	<insert id="addUserOrigin" parameterType="java.util.Map">
+		INSERT INTO flb.t_user_origin
+		SET channel_code = #{channelCode},
+		 user_id = #{userId},
+		 client_type_id = #{clientTypeId}
+	</insert>
+</mapper>

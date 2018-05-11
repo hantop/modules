@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="UserInfoMapper">
+
+	<select id="getUserInfoByPhoneNumOrUsername" parameterType="java.util.Map" resultType="UserInfo">
+		SELECT
+		a.F01 as userId,
+		a.F02 as username,
+		a.F03 AS password,
+		a.F04 as phone,
+		a.F06 as userType,
+		a.F09 as registerTime,
+		a.F14 AS nickName,
+		b.F02 AS fullName,
+		b.F05 as userUrl,
+		b.F07 as idCardEncrypt,
+		b.F06 as idCard,
+		b.F04 as authStatus
+		FROM s61.t6110 as a left join s61.t6141 as b on a.F01=b.F01
+		<where>
+			<if test="phoneNum != null">
+				and a.F04 = #{phoneNum}
+			</if>
+			<if test="username != null">
+				and a.F02 = #{username}
+			</if>
+			<if test="userId != null">
+				and a.F01 = #{userId}
+			</if>
+		</where>
+	</select>
+
+	<insert id="addUserSecurityAuthentication" parameterType="UserSecurityAuthentication">
+		INSERT INTO s61.t6118 
+		(
+			F01,
+			F02,
+			F03,
+			F04,
+			F05,
+			F06,
+			F07
+		)
+		VALUES
+		(
+			#{userId},
+			#{cardIDAuth},
+			#{phoneAuth},
+			#{emailAuth},
+			#{tradPasswordAuth},
+			#{phoneNum},
+			#{email}
+		)
+	</insert>
+
+	<update id="updateUserName" parameterType="java.util.Map">
+		UPDATE S61.T6110 user_info
+	       SET user_info.F02 = #{username}
+		   WHERE user_info.F01 = #{userId}
+	</update>
+
+	<select id="checkUserCount" parameterType="java.util.Map" resultType="int">
+		SELECT
+			COUNT(user_info.F01)
+		FROM
+			S61.T6110 AS user_info
+		<where>
+			<if test="phoneNum != null">
+				AND (user_info.F04 = #{phoneNum} OR user_info.F02 = #{phoneNum})
+			</if>
+			<if test="username != null">
+				AND user_info.F02 = #{username}
+			</if>
+			AND user_info.F13 = 'F'
+			AND user_info.F06 = 'ZRR'
+		</where>			
+	</select>
+
+	<insert id="addUser" parameterType="UserInfo">
+		INSERT INTO S61.T6110
+		  SET
+		     <if test="userId != null">
+			  F01 = #{userId},
+		     </if>
+			  F02 = #{username},
+			  F03 = #{password},
+			  F06 = #{userType},
+			  F07 = #{userStatus},
+			  F08 = #{registerOrigin},
+			  F09 = CURRENT_TIMESTAMP(),
+			  F10 = #{guarantorFlag},
+			  F04 = #{phone}
+	</insert>
+
+	<update id="updatePassword" parameterType="java.util.Map">
+		UPDATE S61.T6110 user_info
+	       SET user_info.F03 = #{password}
+		   WHERE user_info.F01 = #{userId}
+	</update>
+
+	<select id="getUserAccountInfo" parameterType="java.util.Map" resultMap="UserAccountInfoRM">
+		SELECT
+			user_info.F01 as userId,
+			user_info.F02 AS username,
+			user_info.F03 AS password,
+			user_info.F04 AS phone,
+			user_info.F09 AS registerTime,
+			user_info.F14 AS nickName,
+		  	icon.pic_url AS userurl,
+			account.F06 AS balance,
+			safe.F02 AS bIdentitycard,
+			safe.F03 AS bPhone,
+			safe.F04 AS bMail,
+			safe.F05 AS dealpasswordFlag,
+			safe.F10 AS noDealpasswordFlag,
+			T6114.F06 AS bankNum,
+			T6114.F07 AS bankNumEncrypt,
+			T6114.F01 AS bankCardId,
+			T6114.F04 AS districtId,
+			T6114.F05 AS brabankName,
+			T6114.F13 AS bankAuthStatus,
+			T6114.reserved_phone AS bankPhone,
+			bank.F02 AS bankName,
+			bank.F04 AS bankCode,
+			user_baseinfo.F02 AS identityName,
+			user_baseinfo.F06 AS identitycard,
+		    user_baseinfo.F07 AS idCard
+		FROM
+			s61.T6110 AS user_info
+		LEFT JOIN flb.t_user_icon icon ON icon.user_id = user_info.F01
+		LEFT JOIN S61.T6101 account ON (account.F02 = user_info.F01 AND account.F03 = 'WLZH' )
+		LEFT JOIN S61.T6118 safe ON safe.F01 = user_info.F01
+		LEFT JOIN S61.T6114 ON (S61.T6114.F02 = user_info.F01  AND S61.T6114.F13 != 'WRZ' AND S61.T6114.F08 != 'TY')
+		LEFT JOIN s50.T5020 bank ON bank.F01 = T6114.F03
+		LEFT JOIN s61.T6141 user_baseinfo ON user_info.F01 = user_baseinfo.F01
+		<where>
+			<if test="username != null">
+				AND user_info.F02 = #{username}
+			</if>
+			<if test="phoneNum != null">
+				AND user_info.F04 = #{phoneNum}
+			</if>
+			<if test="userId != null">
+				AND user_info.F01 = #{userId}
+			</if>
+			AND user_info.F06 = 'ZRR'
+		</where>
+	</select>
+	
+	<resultMap type="UserAccountInfoVO" id="UserAccountInfoRM" autoMapping="true">
+		<association autoMapping="true" property="accountCheckStatus" javaType="AccountCheckStatusVO">
+		</association>
+		<collection autoMapping="true" property="bankCards" ofType="BankCard">
+		</collection>
+	</resultMap>
+
+	<select id="getUserInfo" parameterType="java.util.Map" resultType="UserInfo">
+		SELECT
+		    a.F01 as userId,
+			a.F02 as username,
+			a.F03 AS password,
+			a.F04 as phone,
+			a.F14 AS nickName,
+			b.F02 AS fullName,
+			b.F05 as userUrl,
+			b.F07 as idCardEncrypt,
+			b.F04 as authStatus,
+			a.F12 AS isFirstLogin,
+			a.F09 AS registerTime
+		FROM s61.t6110 as a left join s61.t6141 as b on a.F01=b.F01
+		<where>
+			<if test="userId != null">
+				a.F01 = #{userId}
+			</if>
+			<if test="email != null">
+				and a.F05 = #{email}
+			</if>
+			<if test="phoneNum != null">
+				and a.F04 = #{phoneNum}
+			</if>
+		</where>
+		and  a.F06='ZRR'
+	</select>
+	
+	<select id="getUserCount" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(F01) FROM s61.t6110
+		<where>
+			<if test="phoneNum != null">
+				F04 = #{phoneNum}
+			</if>
+			<if test="email != null">
+				and F05 = #{email}
+			</if>
+		</where>
+	</select>
+	
+	<update id="updateUser" parameterType="java.util.Map">
+	    update s61.T6110
+	    <set>
+	       <if test="phoneNum!=null">
+	         F04=#{phoneNum,jdbcType=VARCHAR},
+	       </if>
+	       <if test="email!=null">
+	         F04=#{email,jdbcType=VARCHAR},
+	       </if>
+	    </set>
+		where F01=#{userId}
+	</update>
+	
+	<!-- 修改昵称 -->
+	<update id="modifyNickName" parameterType="java.util.Map">
+	    update s61.T6110
+	    <set>
+	       <if test="nickname != null">
+	         F14=#{nickname,jdbcType=VARCHAR}
+	       </if>
+	    </set>
+		where F01=#{userId}
+	</update>
+	<!-- 验证接口（验证用户名和密码） -->
+	<select id="verifyUser" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT 
+			F01 FROM s61.t6110 
+		<where>
+			F01 = #{userId} AND F03 = #{password}
+		</where>
+			LIMIT 1
+	</select>
+	<!-- 判断用户名是否存在 -->
+	<select id="existUsername" parameterType="java.lang.String" resultType="java.lang.Integer">
+		SELECT 
+			F01 FROM s61.t6110 
+		<where>
+			F02 = #{userName}
+		</where>
+	</select>
+
+	<!--连连 实名认证记录 -->
+	<insert id="addLianLianAuth" parameterType="java.util.Map">
+		INSERT INTO flb.t_ll_auth
+		(
+		status,
+		name_card,
+		ret_code,
+		product_id,
+		sign_type,
+		ret_msg,
+		outorder_no,
+		id_card,
+		order_fee,
+		order_no,
+		createtime,
+		user_id,
+		use_type
+		)
+		VALUES
+		(
+		#{result},
+		#{name_card},
+		#{ret_code},
+		#{product_id},
+		#{sign_type},
+		#{ret_msg},
+		#{outorder_no},
+		#{id_card},
+		#{order_fee},
+		#{order_no},
+		CURRENT_TIMESTAMP(),
+		#{userId},
+		#{useType}
+		)
+	</insert>
+
+	<!--连连 实名认证错误记录 -->
+	<select id="getUserLoginError" parameterType="java.lang.String" resultType="java.lang.Integer">
+		SELECT F03 FROM S11._1037 WHERE F01 = #{userName}
+	</select>
+
+	<!--连连 实名认证错误日志记录 -->
+	<select id="getUserAuthError" parameterType="int" resultType="int">
+		select count(*) from flb.t_ll_auth where user_id = #{id} AND use_type = 1
+	</select>
+
+
+	<!--连连 实名认证错误记录更新 -->
+	<insert id="updateUserLoginError" parameterType="java.util.Map">
+		<selectKey keyProperty="count" resultType="int" order="BEFORE">
+			select count(*) from S11._1037 where F01 = #{userName}
+		</selectKey>
+		<if test="count > 0">
+			update S11._1037
+			set F03 = F03 + 1
+			where F01 = #{userName}
+		</if>
+		<if test="count==0">
+			insert into S11._1037 (F01,F02,F03)
+			values (#{userName,jdbcType=VARCHAR}, #{addr,jdbcType=VARCHAR},0)
+		</if>
+	</insert>
+	<select id="verifyIdentity" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT F01 FROM s61.t6141 WHERE F02 = #{identityName} AND F07 = #{identityNo} LIMIT 1
+	</select>
+	
+	<select id="getAuthStatus" parameterType="java.lang.Integer" resultType="Auth">
+		SELECT F02 identityStatus, F03 phoneStatus, F05 tradePwdStatus FROM s61.t6118 WHERE F01 = #{userId} LIMIT 1
+	</select>
+	
+	<insert id="addMemberPointsAccount" parameterType="java.util.Map">
+		INSERT INTO 
+		mp.mp_member_points(user_id,numbers,point_status,create_time) 
+		VALUES(#{userId}, 0, 1,#{nowDatetime});
+	</insert>
+
+	<select id="getUserFirstLoginState" parameterType="int" resultType="String">
+		SELECT
+			IFNULL(t.F12, 'F')
+		FROM
+			s61.t6110 t
+		WHERE
+			t.F01 = #{userId}
+	</select>
+
+	<update id="updateUserFirstLoginState" parameterType="java.util.Map">
+		update s61.T6110
+		set F12=#{isLoginState,jdbcType=VARCHAR}
+		where F01=#{userId}
+	</update>
+
+	<select id="getChannelInfo" parameterType="java.lang.Integer" resultType="RegisterChannelVO">
+		SELECT
+		c.`code`,c.`name`,c.parent_id parentId
+		FROM flb.t_user_origin u INNER JOIN flb.t_channel c ON u.channel_code = c.`code`
+		WHERE u.user_id = #{userId} LIMIT 1
+	</select>
+
+	<select id="checkWhiteBoard" parameterType="java.util.Map" resultType="java.lang.Integer">
+		SELECT count(1)
+		FROM flb.`t_anytimequit_bid_white_board` a
+		INNER JOIN s61.t6110 b ON b.F04 = a.phone
+		WHERE
+			b.F01 = #{userId}
+	</select>
+
+	<select id="getMemberInfo" parameterType="java.lang.String" resultType="UserMemberInfoVO">
+		SELECT phone_num phoneNum,merchant_member_id memberId,member_points_id pointsId,create_time createTime,channel_code channelCode FROM pf.pf_member_info WHERE phone_num = #{phoneNum} LIMIT 1
+	</select>
+
+	<update id="updatePointsAccount" parameterType="java.util.Map">
+		UPDATE mp.mp_member_points SET user_id = #{userId} WHERE id = #{pointsAccountId} LIMIT 1
+	</update>
+
+	<update id="updatePointsConsumeRecord" parameterType="java.util.Map">
+		UPDATE mp.mp_member_points_sheet mps
+		INNER JOIN mp.mp_member_consume_sheet mcs ON mps.id = mcs.d_id
+		INNER JOIN pf.pf_merchant_member pmm ON mcs.openid = pmm.openid
+		SET mps.user_id = #{userId},pmm.pf_user_id = #{userId} WHERE pmm.id = #{memberId}
+	</update>
+
+	<update id="updateMerchantMemberUserId" parameterType="java.util.Map">
+		UPDATE pf.pf_merchant_member pmm SET pmm.pf_user_id = #{userId} WHERE pmm.id = #{memberId}
+	</update>
+
+	<select id="getUserBaofooCardInfo" parameterType="java.util.Map" resultType="java.util.Map">
+		SELECT
+			b.F02 AS bankName,
+			u.F07 AS bankNum,
+			b.F04 AS bankCode,
+			1 AS bankType,
+			u.F01 AS bankCardId,
+			1 AS bankInfoCompleteFlag,
+			2 AS bankAuthStatus,
+			u.reserved_phone AS bankPhone
+		FROM
+			s61.t6114 u
+		left JOIN s50.t5020 b ON b.F01 = u.F03
+		WHERE
+			u.F02 = #{userId}
+
+	</select>
+
+	<select id="isXWaccount" parameterType="java.util.Map" resultType="java.lang.String">
+		SELECT id FROM flb.t_xw_account WHERE user_id=#{userId} AND user_role = 'INVESTOR'
+	</select>
+
+	<select id="getEnterpriseInfo" parameterType="java.lang.Integer" resultType="java.util.Map">
+		SELECT
+			a.F04 enterpriseName,
+			a.F05 taxNo,
+			a.bank_license bankLicense,
+			a.F19 bankcardNo,
+			a.F11 legal,
+			a.F12 legalIdCardNo,
+			a.F03 businessLicense,
+			a.credit_code creditCode,
+			a.F06 orgNo,
+			a.unified_code unifiedCode,
+			b.F07 contact,
+			b.F06 contactPhone,
+			b.F04 enterprisePhone
+		FROM
+			S61.T6161 a
+			LEFT JOIN s61.t6164 b ON (a.F01 = b.F01)
+		WHERE
+			a.F01 = #{userId};
+	</select>
+</mapper>

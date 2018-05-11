@@ -1,0 +1,32 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+	<groupId>com.fenlibao.sms-api</groupId>
+    <artifactId>xuanwu-sms</artifactId>
+    <name>xuanwu-sms</name>
+    <packaging>pom</packaging>	
+	
+	<parent>
+        <artifactId>sms-api</artifactId>
+        <groupId>com.fenlibao</groupId>
+		 <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+        <dependency>
+            <groupId>com.fenlibao.sms-api.common-sms</groupId>
+            <artifactId>common-sms-service</artifactId>
+			<version>${depedency.version}</version>
+         </dependency>
+    </dependencies>
+	
+    <modules>
+		<module>xuanwu-sms-config</module>		
+		<module>xuanwu-sms-service</module>
+	</modules>
+</project>

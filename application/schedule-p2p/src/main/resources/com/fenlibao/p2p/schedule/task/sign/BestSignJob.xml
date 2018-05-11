@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+<!-- 上上签-->
+	<bean id="bestSignJob"
+		class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.sign.BestSignJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler 
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to 
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="bestSignTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="bestSignJob" />
+		<!-- 线上频率15min-->
+		<property name="cronExpression" value="0 0/15 * * * ?" />
+	</bean>
+
+	<!-- 上上签 备灾计划-->
+	<bean id="bestSignPreparednessJob"
+		  class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.sign.BestSignPreparednessJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="bestSignPreparednessTrigger"
+		  class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="bestSignPreparednessJob" />
+		<!-- 线上频率 1 h-->
+		<property name="cronExpression" value="0 0 0/1 * * ?" />
+	</bean>
+
+	<!-- 上上签-三方合同-->
+	<bean id="bestSignTripleagreementJob"
+		  class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.sign.BestSignTripleagreementJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="bestSignTripleagreementTrigger"
+		  class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="bestSignTripleagreementJob" />
+		<!-- 线上频率 30 min-->
+		<property name="cronExpression" value="0 0/30 * * * ?" />
+	</bean>
+
+
+	<!-- 上上签-上传图片-->
+	<bean id="bestSignUploadImageJob"
+		  class="org.springframework.scheduling.quartz.JobDetailFactoryBean">
+		<property name="jobClass" value="com.fenlibao.p2p.schedule.task.sign.BestSignUploadImageJob" />
+		<!-- if a job is non-durable, it is automatically deleted from the scheduler
+			once there are no longer any active triggers associated with it. -->
+		<property name="durability" value="true" />
+		<!-- job fail-over (if the JobDetail's “request recovery” flag is set to
+			true) -->
+		<property name="requestsRecovery" value="true" />
+	</bean>
+
+	<bean id="bestSignUploadImageTrigger"
+		  class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="jobDetail" ref="bestSignUploadImageJob" />
+
+		<property name="cronExpression" value="0 0/5 * * * ?" />
+	</bean>
+
+</beans>

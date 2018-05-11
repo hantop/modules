@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.dao.pms.da.statistics.first.FirstInvestMapper">
+
+    <select id="findFirstInvest" resultType="FirstInvest">
+        SELECT
+            s61.t6110.F01 userId,
+            s61.t6110.F04 phoneNum,
+            date_format(
+            s61.t6110.F09,
+            '%Y-%m-%d %H:%i:%S'
+            ) regtime,
+            CONCAT(
+            LEFT (t6141.F02, 1),
+
+            REPEAT
+            (
+            '*',
+            CHAR_LENGTH(t6141.F02) - 1
+            )
+            ) realName,
+            tab_invest.createTime,
+            tab_invest.money,
+            tab_invest.limitTime
+        FROM
+        s61.t6110
+        LEFT JOIN flb.t_user_origin ON t6110.f01 = flb.t_user_origin.user_id
+        LEFT JOIN s61.t6141 ON t6110.f01 = t6141.F01
+        RIGHT JOIN (
+            SELECT
+				first_invest.*
+			FROM
+			(
+				SELECT tab_1.id userId,tab_1.money money,tab_1.createTime createTime, tab_1.limitTime limitTime FROM (
+					-- 放款前，投标中、待放款、已流标
+					SELECT
+						u.F01 id,
+						tender.F04 AS money,
+						tender.F06 AS createTime,
+						(
+							CASE
+								WHEN bid.F09 > 0 THEN
+								CONCAT(bid.F09, '月')
+								WHEN bid.F32 > 0 THEN
+								CONCAT(bid.F32, '天')
+							END
+						) limitTime
+					FROM 
+						s62.T6250 tender
+					INNER JOIN s62.t6230 bid ON bid.`F01` = tender.`F02`
+					INNER JOIN s61.T6110 u ON u.F01 = tender.F03
+					WHERE
+						bid.F20 IN ('TBZ', 'DFK', 'YLB')
+					UNION ALL
+					-- 债权转出
+					SELECT
+							s61.T6110.F01 id,
+							t6251.F05 AS money,
+							t6251.F09 AS createTime,
+							CASE
+							WHEN s62.t6230.F09 > 0 THEN CONCAT(s62.t6230.F09, '月')
+							WHEN s62.t6230.F32 > 0 THEN CONCAT(s62.t6230.F32, '天')
+							END limitTime
+					FROM
+						S62.t6251
+					INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+					LEFT  JOIN s62.t6230 ON s62.t6251.F03 = s62.t6230.F01
+					WHERE
+						S62.T6251.F12 > 0
+					UNION ALL
+					-- 债权转入和投标
+					SELECT
+							s61.T6110.F01 id,
+							t6251.F06 AS money,
+							S62.t6251.F09 AS createTime,
+							(
+								CASE
+								WHEN s62.t6230.F09 > 0 THEN CONCAT(s62.t6230.F09, '月')
+								WHEN s62.t6230.F32 > 0 THEN CONCAT(s62.t6230.F32, '天')
+								END
+							) limitTime
+					FROM
+						S62.t6251
+					INNER JOIN s62.t6252 ON s62.t6252.F11 = S62.t6251.F01
+					INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+					LEFT  JOIN s62.t6230 ON s62.t6251.F03 = s62.t6230.F01
+					WHERE
+					 S62.T6251.F12 = 0
+				) tab_1
+				ORDER BY tab_1.createTime ASC, tab_1.money DESC
+			) first_invest
+			GROUP BY first_invest.userId
+        ) tab_invest ON tab_invest.userId = s61.t6110.f01
+		
+    </select>
+
+
+    <select id="getFirstInvestTotal" resultType="FirstInvest">
+        SELECT
+        COUNT(tab_invest.id) totalInvestor
+        FROM
+        s61.t6110
+        RIGHT JOIN (
+        SELECT
+        id,
+        COUNT(id)
+        FROM
+        (
+        SELECT
+        s61.T6110.F01 id,
+        t6251.F09 AS createTime
+        FROM
+        S62.t6251
+        INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+        WHERE
+         S62.T6251.F12 > 0
+        <if test="investStartTime != null">
+            AND t6251.F09 &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="investEndTime != null">
+            AND t6251.F09 &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+        </if>
+        UNION ALL
+        SELECT
+        s61.T6110.F01 id,
+        date_format(T6250.f06, '%Y-%m-%d') AS createTime
+        FROM
+        S62.t6251
+        INNER JOIN s61.T6110 ON s61.T6110.F01 = t6251.F04
+        INNER JOIN s62.t6250 ON t6250.F01 = t6251.F11
+        WHERE
+         s62.t6251.F07 > 0
+        AND S62.T6251.F12 = 0
+        <if test="investStartTime != null">
+            AND date_format(T6250.f06, '%Y-%m-%d') &gt;= #{investStartTime,jdbcType=TIMESTAMP}
+        </if>
+        <if test="investEndTime != null">
+            AND date_format(T6250.f06, '%Y-%m-%d') &lt;= #{investEndTime,jdbcType=TIMESTAMP}
+        </if>
+        ) tab_1
+        GROUP BY id
+        HAVING count(id) = 1
+        ) tab_invest ON tab_invest.id = s61.t6110.f01
+        <where>
+            <if test="regStartTime != null">
+                AND s61.t6110.F09 &gt;= #{regStartTime,jdbcType=TIMESTAMP}
+            </if>
+            <if test="regEndTime != null">
+                AND s61.t6110.F09 &lt;= #{regEndTime,jdbcType=TIMESTAMP}
+            </if>
+        </where>
+    </select>
+</mapper>

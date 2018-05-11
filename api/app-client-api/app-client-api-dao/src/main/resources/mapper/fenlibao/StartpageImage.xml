@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="StartpageImageMapper">
+    <select id="getStartpageImage" parameterType="java.util.Map" resultType="TStartupImage">
+      SELECT
+      		t_startupimg_file.server_path as imgServer,
+			t_startupimg_file.relative_path as imgName
+			
+		FROM
+			flb.t_startupimg
+		INNER JOIN flb.t_startupimg_clienttype ON t_startupimg.id = t_startupimg_clienttype.startup_image_id
+		INNER JOIN flb.t_startupimg_file ON t_startupimg.id = t_startupimg_file.startup_image_id
+		INNER JOIN flb.t_screen_type ON flb.t_screen_type.id = flb.t_startupimg_file.screen_type
+		WHERE
+			t_startupimg_clienttype.client_type = #{clientTypeId}
+		AND t_screen_type.code = #{screenTypeId}
+		AND t_startupimg.`status`=1
+        ORDER BY t_startupimg.id DESC limit 1
+	</select>
+</mapper>

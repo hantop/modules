@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="InviteMapper">
+
+	<select id="getMyInviteInfo" parameterType="java.lang.Integer" resultType="java.util.Map">
+		select count(a.userId) inviteUserRegNum,
+			   count(a.zqId) inviteUserInvNum from(
+				select 
+					t.F01 userId,t.F04 invitecells,z.F01 zqId,z.F05
+					from s61.t6111 t
+					INNER JOIN s61.t6110 u on u.F04 = t.F04
+					LEFT  JOIN s62.T6251 z on z.F04 = t.F01
+					LEFT  JOIN s62.t6230 b on b.F01 = z.F03
+					where u.F01 = #{userId}
+					group by t.F01
+			)a
+	</select>
+	<select id="getUserInviteInfoList" parameterType="java.lang.Integer" resultType="UserInviteInfo">
+	
+		select * from (
+			SELECT
+				'' userName,
+				u1.F04 userCell, 
+				u1.F09 userRegTime,
+				0.00 userInvestSum,
+				u1.F09 orderTime
+					FROM
+						s61.t6111 t
+					INNER JOIN s61.t6110 u1 on u1.F01 = t.F01 
+					INNER JOIN s61.t6110 u2 on u2.F04 = t.F04
+	 				where u2.F01 =#{userId} 
+			UNION ALL
+			SELECT
+				n.F02 userName,
+				u1.F04 userCell, 
+				u1.F09 userRegTime,
+				z.F05 userInvestSum,
+				e.F12 orderTime
+					FROM
+						s61.t6111 t
+					INNER JOIN s61.t6110 u1 on u1.F01 = t.F01 
+					INNER JOIN s61.t6141 n  ON n.F01 = t.F01
+					INNER JOIN s61.t6110 u2 on u2.F04 = t.F04
+					INNER JOIN s62.t6251 z on z.F04 = u1.F01
+					INNER JOIN s62.t6230 b on b.F01 =z.F03
+					INNER JOIN s62.t6231 e on e.F01 =z.F03
+	 				where t.F04 != '' and u2.F01 =#{userId} and b.F20 != 'YLB'
+			) A 
+		ORDER BY
+		orderTime DESC limit #{startPageIndex},10
+	</select>
+	
+	<!-- 2.0统计我的邀请信息接口 -->
+	<select id="countMyInviteInfo" parameterType="java.lang.Integer" resultType="java.util.Map">
+		select count(a.userId) inviteUserRegNum,b.amount from(
+		select 
+			t.F01 userId,t.F04 invitecells, u.F01 inviteId
+			from s61.t6111 t
+			INNER JOIN s61.t6110 u on u.F04 = t.F04
+			where u.F01 =  #{userId}
+		)a
+		LEFT JOIN(
+		SELECT t.spread_user_id,SUM(t.award_money) amount
+		FROM
+		pms.da_daily_spreadaward_threetier t
+		where t.spread_user_id= #{userId}
+		AND t.statistics_date <![CDATA[ < ]]> '2018-2-2 9:30:00'
+		)b  ON  a.inviteId=b.spread_user_id
+	</select>
+	<!-- 2.0我邀请注册列表 -->
+	<select id="getMyInviteInfoList" parameterType="java.lang.Integer" resultType="UserInviteInfo">
+		SELECT
+			a.uid,
+			a.userName,
+			a.userCell,
+			a.userRegTime,
+			b.userInvestSum
+		FROM
+			(
+				SELECT
+					t.F01 uid,
+					n.F02 userName,
+					u1.F04 userCell,
+					u1.F09 userRegTime,
+					u1.F09 orderTime
+				FROM
+					s61.t6111 t
+				LEFT JOIN s61.t6110 u1 ON u1.F01 = t.F01
+				LEFT JOIN s61.t6141 n ON n.F01 = t.F01
+				LEFT JOIN s61.t6110 u2 ON u2.F04 = t.F04
+				WHERE
+					u2.F01 = #{userId}
+			) a
+		LEFT JOIN (
+			SELECT
+				t.F01 uid,
+				n.F02 userName,
+				u1.F04 userCell,
+				u1.F09 userRegTime,
+				SUM(z.F05) userInvestSum,
+				e.F12 orderTime
+			FROM
+				s61.t6111 t
+			LEFT JOIN s61.t6110 u1 ON u1.F01 = t.F01
+			LEFT JOIN s61.t6141 n ON n.F01 = t.F01
+			LEFT JOIN s61.t6110 u2 ON u2.F04 = t.F04
+			LEFT JOIN s62.t6251 z ON z.F04 = u1.F01
+			LEFT JOIN s62.t6230 b ON b.F01 = z.F03
+			LEFT JOIN s62.t6231 e ON e.F01 = z.F03
+			WHERE
+				t.F04 != ''
+			AND u2.F01 = #{userId}
+			AND b.F20 != 'YLB'
+			GROUP BY
+				t.F01
+		) b ON a.uid = b.uid
+		ORDER BY
+			userRegTime DESC
+		LIMIT #{pageNo},#{pagesize}
+	</select>
+	 
+	 <!-- 我的返现奖励记录 -->
+	<select id="getMyAwordInfoList" parameterType="java.lang.Integer" resultType="MyAwordInfo">
+		SELECT
+			a.invest_sum AS investAmout,
+			a.phonenum,
+			a.award_money AS award,
+			a.statistics_date AS countDate,
+			s61.t6141.F02 as realname
+		FROM
+			pms.da_daily_spreadaward_threetier a
+		INNER JOIN s61.t6141 ON a.user_id = s61.t6141.F01
+		WHERE
+			a.spread_user_id = #{userId}
+		AND a.statistics_date <![CDATA[ < ]]> '2018-2-2 9:30:00'
+		AND
+			a.award_money>0
+		ORDER BY
+			a.statistics_date DESC
+		LIMIT #{pageNo},#{pagesize}
+	</select>
+</mapper>

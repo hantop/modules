@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="HXUserMapper">
+
+	<insert id="saveEAccount" parameterType="java.util.Map">
+		INSERT INTO flb.t_hx_account (user_id,account_no) VALUES (#{userId}, #{eAccount})
+	</insert>
+
+	<select id="getAccountInfo" resultType="HXAccountInfo">
+		SELECT user_id userId,account_no acNo,is_bind_bankcard isBindBankcard,auto_tender_flag autoTenderFlag,auto_repayment_flag autoRepaymentFlag,
+		i.F02 acName
+		FROM flb.t_hx_account a LEFT JOIN s61.t6141 i ON a.user_id = i.F01
+		WHERE user_id = #{userId} LIMIT 1
+	</select>
+	
+	<insert id="createFundAcount" parameterType="java.util.List">
+		INSERT INTO flb.t_hx_funds_account (user_id,ac_type) VALUES
+		<foreach collection="list" index="index" item="item" separator="," >
+			(#{item.userId},#{item.type})
+		</foreach>
+	</insert>
+	
+	<update id="updateAccountInfo" parameterType="HXAccountInfo">
+		UPDATE flb.t_hx_account
+		<set>
+			<if test="isBindBankCard != null">
+				is_bind_bankcard = #{isBindBankCard},
+			</if>
+			<if test="autoRepaymentFlag != null">
+				auto_repayment_flag = #{autoRepaymentFlag},
+			</if>
+			<if test="autoTenderFlag != null">
+				auto_tender_flag = #{autoTenderFlag}
+			</if>
+		</set>
+		<where>
+			user_id = #{userId} LIMIT 1
+		</where>
+	</update>
+	
+	<select id="getUserFundAccount" parameterType="java.util.Map" resultType="FundAccount">
+		SELECT id,user_id userId,ac_type `type`,balance FROM flb.t_hx_funds_account WHERE user_id = #{userId}  AND ac_type = #{accountType} LIMIT 1 FOR UPDATE
+	</select>
+
+</mapper>

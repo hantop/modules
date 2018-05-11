@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.fenlibao.platform.dao.CommonMapper">
+    <select id="getExistIP" resultType="IPConfig">
+        select
+          id,
+          c_id cId,
+          ip,
+          current_status status,
+          create_time createTime
+        from `pf`.`pf_merchant_access_config_ip`
+        where ip = #{ip} and current_status = 1 LIMIT 1
+    </select>
+
+    <select id="getSecret" parameterType="java.lang.String" resultType="java.lang.String">
+    	SELECT app_secret FROM pf.pf_merchant_access_config WHERE current_status = 1 and app_id = #{appid} LIMIT 1
+    </select>
+
+    <update id="updateSecret">
+        UPDATE pf.pf_merchant_access_config
+        <set>
+            <if test="secret != null">
+                app_secret = #{secret},
+            </if>
+            <if test="status != null">
+                current_status = #{status}
+            </if>
+        </set>
+        WHERE app_id = #{appid} LIMIT 1
+    </update>
+
+    <select id="getIp" parameterType="java.lang.String" resultType="java.lang.String">
+    	SELECT i.ip FROM pf.pf_merchant_access_config c INNER JOIN pf.pf_merchant_access_config_ip i ON c.id = i.c_id WHERE c.app_id = #{appid} AND i.current_status = 1
+    </select>
+
+    <select id="getMerchantId" resultType="java.lang.Integer">
+		SELECT m_id FROM pf.pf_merchant_access_config WHERE app_id = #{appid} AND current_status = 1 LIMIT 1
+	</select>
+
+    <insert id="addIp">
+    	INSERT INTO pf.pf_merchant_access_config_ip (c_id, ip, create_time, current_status) VALUES (#{configId}, #{ip}, SYSDATE(), 1)
+    </insert>
+
+    <update id="updateIpStatus">
+    	UPDATE pf.pf_merchant_access_config_ip SET current_status = #{status} WHERE c_id = #{configId} AND ip = #{ip} LIMIT 1
+    </update>
+
+    <select id="getMerchantConfig" parameterType="java.lang.Integer" resultType="MerchantConfigVO">
+    	SELECT id, m_id merchantId, app_id appid, app_secret secret, create_time createTime, current_status `status` FROM pf.pf_merchant_access_config WHERE m_id = #{merchantId} LIMIT 1
+    </select>
+
+    <select id="getChannelCode" parameterType="java.lang.Integer" resultType="java.lang.String">
+    	SELECT channel_code FROM pf.pf_merchant_channel WHERE merchant_id = #{merchantId} LIMIT 1
+    </select>
+
+    <select id="getUserId" resultType="java.lang.String">
+    	SELECT pf_user_id FROM pf.pf_merchant_member WHERE m_id = #{merchantId} AND openid = #{openid} LIMIT 1
+    </select>
+
+    <select id="getAesSecret" resultType="java.lang.String">
+        SELECT aes_secret FROM pf.pf_merchant_access_config WHERE app_id = #{appid} LIMIT 1
+    </select>
+
+    <select id="getBusinessUser" parameterType="java.util.Map" resultType="java.lang.Integer">
+        select IFNULL(count(1),0)
+        from flb.t_business_user_info info
+        where 1 = 1
+        <if test="phoneNum != null">
+            AND info.user_phone = #{phoneNum}
+        </if>
+        <if test="userNo != null">
+            AND info.user_no = #{userNo}
+        </if>
+        <if test="bankcardNo != null">
+            AND info.bankcard_No = #{bankcardNo}
+        </if>
+        <if test="userName != null">
+            AND info.user_name = #{userName}
+        </if>
+    </select>
+
+    <insert id="addBusinessRequest" parameterType="java.util.Map" useGeneratedKeys="true" keyProperty="id">
+        insert into flb.t_business_user_request (phone_num,request_status,update_time)
+        values (#{phoneNum}, #{status},SYSDATE())
+    </insert>
+
+    <update id="updateBusinessRequest" parameterType="java.util.Map" useGeneratedKeys="true"  keyProperty="id">
+        UPDATE flb.t_business_user_request SET request_status = #{status},update_time = SYSDATE() WHERE phone_num = #{phoneNum} LIMIT 1
+    </update>
+
+    <insert id="addBusinessUserInfo" parameterType="BusinessInfo"  useGeneratedKeys="true" keyProperty="id">
+        insert into flb.t_business_user_info (request_id,user_id,user_role,user_type,user_no,user_name,user_phone,app_id,update_time,bankcard_no)
+        values (#{requestId}, #{userId},'ENTRUST_BORROWERS','PERSONAL',#{idNo},#{idName},#{phoneNum},#{appid},SYSDATE(),#{bankcardNo})
+    </insert>
+
+    <select id="getBusinessRequest" parameterType="java.util.Map" resultType="java.lang.String">
+        select id
+        from flb.t_business_user_request info
+        where info.phone_num = #{phoneNum}
+        <if test="status != null">
+            AND info.request_status = #{status}
+        </if> FOR UPDATE
+    </select>
+
+    <insert id="addBusinessAgreement" parameterType="BusinessAgreement">
+        insert into flb.t_business_agreement (business_id,agreement_sign_id,agreement_doc_id,flb_page_num,flb_sign_x,flb_sign_y,xinwang_page_num,xinwang_sign_x,xinwang_sign_y,agreement_type,update_time,user_id,agreement_number)
+        values (#{businessId}, #{agreementSignId},#{agreementDocId},#{flbPageNum},#{flbSignX},#{flbSignY},#{xinwangPageNum},#{xinwangSignX},#{xinwangSignY},1,SYSDATE(),#{userId},#{agreementNumber})
+    </insert>
+
+    <update id="updateAgreement" parameterType="java.util.Map">
+        UPDATE flb.t_business_agreement SET business_id = #{businessId},update_time = SYSDATE() WHERE user_id = #{userId} LIMIT 1
+    </update>
+
+    <select id="getAgreement" parameterType="java.lang.Integer" resultType="java.lang.Integer">
+        select  IFNULL(count(1),0)
+        from flb.t_business_agreement
+        where user_id = #{userId}
+    </select>
+
+    <insert id="addUserExceptionResopnse" parameterType="java.util.Map">
+        insert into flb.t_entrust_account_response (user_no,bankcard_no,user_name,user_phone,response_code,response_msg,description,create_time)
+        values (#{userNo}, #{bankcardNo},#{userName},#{phone},#{code},#{message},#{description},now())
+    </insert>
+</mapper>

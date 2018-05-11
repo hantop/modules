@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="GraphValidateCode">
+    <insert id="addGraphCode" parameterType="GraphValidateCode">
+	   insert into flb.t_graph_validate_code (vkey, vcode, create_time,out_time)
+      values (#{vkey}, #{vcode}, #{createTime},#{outTime})
+	</insert>
+	<select id="getGraphCode" parameterType="String" resultType="GraphValidateCode">
+		SELECT
+		    id,vkey,vcode,create_time as createTime,out_time as outTime,status FROM
+			flb.t_graph_validate_code where vkey = #{vkey} limit 1
+	</select>
+	<update id="updateGraphValidateCode" parameterType="java.util.Map">
+    	UPDATE flb.t_graph_validate_code set status = #{status}
+    	where vkey = #{vkey}
+    </update>
+</mapper>
